@@ -38,10 +38,6 @@ bld/
 # Environment-specific files (create appsettings.local.json instead if needed)
 # .env
 
-# Test/temporary files
-PostgresConnectionTest.cs
-PostgresTest/
-
 # NuGet
 *.nupkg
 *.snupkg
