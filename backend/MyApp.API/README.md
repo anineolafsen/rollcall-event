@@ -22,11 +22,11 @@ The API will be available at: **http://localhost:5118/swagger**
 
 ## Testing Database Connection
 
-To verify your PostgreSQL connection is working:
+To verify your PostgreSQL connection is working before running the full API:
 
 ```bash
-cd ../PostgresTest
+cd backend/MyApp.API/test
 dotnet run
 ```
 
-This test will confirm connectivity to your database before running the full application.
+This will test connectivity to your Azure PostgreSQL database and display the PostgreSQL version if successful.
