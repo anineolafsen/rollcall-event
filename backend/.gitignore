@@ -1,0 +1,52 @@
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+[Xx]64/
+[Xx]86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options
+.vs/
+.vscode/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.csproj.user
+*.vbproj.user
+*.vcxproj.user
+
+# Rider IDE
+.idea/
+*.sln.iml
+
+# Local appsettings overrides (uncomment if needed for truly local-only config)
+# appsettings.Development.json
+
+# Environment-specific files (create appsettings.local.json instead if needed)
+# .env
+
+# Test/temporary files
+PostgresConnectionTest.cs
+PostgresTest/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# dotnet
+.dotnet/
+.tool-versions

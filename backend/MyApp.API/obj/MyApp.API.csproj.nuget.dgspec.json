@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\cecil\\ReactProsjekter\\bachelor\\rollcall-event\\backend\\MyApp.API\\MyApp.API.csproj": {}
+    "C:\\Users\\nordi\\Documents\\rollcall-event\\backend\\MyApp.API\\MyApp.API.csproj": {}
   },
   "projects": {
-    "C:\\Users\\cecil\\ReactProsjekter\\bachelor\\rollcall-event\\backend\\MyApp.API\\MyApp.API.csproj": {
+    "C:\\Users\\nordi\\Documents\\rollcall-event\\backend\\MyApp.API\\MyApp.API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\cecil\\ReactProsjekter\\bachelor\\rollcall-event\\backend\\MyApp.API\\MyApp.API.csproj",
+        "projectUniqueName": "C:\\Users\\nordi\\Documents\\rollcall-event\\backend\\MyApp.API\\MyApp.API.csproj",
         "projectName": "MyApp.API",
-        "projectPath": "C:\\Users\\cecil\\ReactProsjekter\\bachelor\\rollcall-event\\backend\\MyApp.API\\MyApp.API.csproj",
-        "packagesPath": "C:\\Users\\cecil\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\cecil\\ReactProsjekter\\bachelor\\rollcall-event\\backend\\MyApp.API\\obj\\",
+        "projectPath": "C:\\Users\\nordi\\Documents\\rollcall-event\\backend\\MyApp.API\\MyApp.API.csproj",
+        "packagesPath": "C:\\Users\\nordi\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\nordi\\Documents\\rollcall-event\\backend\\MyApp.API\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\cecil\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\nordi\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -63,6 +63,10 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[10.0.3, )"
+            },
+            "Npgsql": {
+              "target": "Package",
+              "version": "[10.0.1, )"
             },
             "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
