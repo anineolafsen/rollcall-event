@@ -5,7 +5,7 @@ using MyApp.API.Models;
 namespace MyApp.API.Controllers
 {
   [ApiController]
-  [Route("api/[controller]")]
+  [Route("api/users")]
   public class UserController : ControllerBase
   {
     private readonly UserService _userService;

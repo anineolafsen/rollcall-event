@@ -32,11 +32,13 @@ bld/
 .idea/
 *.sln.iml
 
-# Local appsettings overrides (uncomment if needed for truly local-only config)
-# appsettings.Development.json
+# Local appsettings overrides - DO NOT COMMIT SECRETS
+appsettings.Development.json
+appsettings.*.json
 
-# Environment-specific files (create appsettings.local.json instead if needed)
-# .env
+# Environment-specific files
+.env
+.env.local
 
 # NuGet
 *.nupkg

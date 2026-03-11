@@ -6,8 +6,20 @@ import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link } from 'expo-router';
+import { Button } from '@react-navigation/elements';
 
 export default function HomeScreen() {
+
+  const testAPI = async () => {
+  try {
+    const response = await fetch('http://localhost:5118/api/users'); // Adjust URL/port
+    const data = await response.json();
+    console.log('API Response:', data);
+  } catch (error) {
+    console.error('API Error:', error);
+  }
+};
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -20,6 +32,7 @@ export default function HomeScreen() {
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Welcome!</ThemedText>
         <HelloWave />
+        <Button onPress={testAPI} >Test API!</Button>
       </ThemedView>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>

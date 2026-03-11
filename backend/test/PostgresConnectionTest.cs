@@ -4,7 +4,7 @@ using Npgsql;
 
 class PostgresConnectionTest
 {
-    static async Task Main(string[] args)
+    public static async Task TestConnection()
     {
         Console.WriteLine("PostgreSQL Connection Test");
         Console.WriteLine("==========================\n");
@@ -56,7 +56,7 @@ class PostgresConnectionTest
         }
     }
 
-    static void LoadEnvFile(string envPath)
+    private static void LoadEnvFile(string envPath)
     {
         if (!File.Exists(envPath))
             return;
