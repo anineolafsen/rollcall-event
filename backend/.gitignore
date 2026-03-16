@@ -1,0 +1,50 @@
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+[Xx]64/
+[Xx]86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options
+.vs/
+.vscode/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.csproj.user
+*.vbproj.user
+*.vcxproj.user
+
+# Rider IDE
+.idea/
+*.sln.iml
+
+# Local appsettings overrides - DO NOT COMMIT SECRETS
+appsettings.Development.json
+appsettings.*.json
+
+# Environment-specific files
+.env
+.env.local
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# dotnet
+.dotnet/
+.tool-versions
