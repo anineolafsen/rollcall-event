@@ -11,7 +11,15 @@ export function AppNavbar() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: '#00C49A',
+        tabBarInactiveTintColor: '#00C49A',
+        tabBarStyle: {
+          backgroundColor: '#343434',
+          borderTopColor: '#343434',
+        },
+        tabBarLabelStyle: {
+          color: '#F4FAFF', 
+        },
         headerShown: false,
       }}>
       <Tabs.Screen
@@ -28,10 +36,10 @@ export function AppNavbar() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="trips"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Trips',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="suitcase.fill" color={color} />,
         }}
       />
     </Tabs>
