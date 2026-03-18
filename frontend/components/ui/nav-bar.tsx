@@ -1,5 +1,7 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
+import { PlatformPressable } from '@react-navigation/elements';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
@@ -11,8 +13,8 @@ export function AppNavbar() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#00C49A',
-        tabBarInactiveTintColor: '#00C49A',
+        tabBarActiveTintColor: '#77C6FE',
+        tabBarInactiveTintColor: '#77C6FE',
         tabBarStyle: {
           backgroundColor: '#343434',
           borderTopColor: '#343434',
@@ -20,6 +22,18 @@ export function AppNavbar() {
         tabBarLabelStyle: {
           color: '#F4FAFF', 
         },
+        tabBarButton: (props) => (
+          <PlatformPressable
+            {...props}
+            style={[
+              props.style,
+              styles.tabButton,
+              props.accessibilityState?.selected && styles.tabButtonActive,
+            ]}
+          >
+            {props.children}
+          </PlatformPressable>
+        ),
         headerShown: false,
       }}>
       <Tabs.Screen
@@ -45,3 +59,13 @@ export function AppNavbar() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabButton: {
+    borderTopWidth: 2,
+    borderTopColor: 'transparent',
+  },
+  tabButtonActive: {
+    borderTopColor: '#77C6FE',
+  },
+});
