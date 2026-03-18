@@ -34,7 +34,6 @@ export default function SignUpPage() {
       setLoading(true);
       setError("");
       console.log("Starting sign up...");
-      console.log("Starting sign up...");
 
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Timed out after 10s")), 10000)
@@ -83,7 +82,6 @@ export default function SignUpPage() {
 
       if (completeSignUp.status === "complete") {
         await setActive({ session: completeSignUp.createdSessionId });
-        router.replace("/");
       } else {
         console.log(
           "Sign up not complete:",
@@ -111,6 +109,7 @@ export default function SignUpPage() {
 
   return (
     <View style={styles.container}>
+      <View id="clerk-captcha" />
       <ThemedText style={styles.title}>
         {pendingVerification ? "Verify your email" : "Create Account"}
       </ThemedText>
@@ -164,8 +163,6 @@ export default function SignUpPage() {
           />
         </>
       )}
-
-      <View id="clerk-captcha" />
     </View>
   );
 }
