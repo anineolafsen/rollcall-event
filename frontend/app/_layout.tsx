@@ -19,7 +19,6 @@ const tokenCache = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  console.log("Clerk key:", process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
   return (
     <ClerkProvider
       publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}
