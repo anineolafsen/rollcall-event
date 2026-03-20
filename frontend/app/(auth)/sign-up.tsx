@@ -1,6 +1,6 @@
-import { View, StyleSheet, Alert, Platform } from "react-native";
+import { View, StyleSheet, Alert } from "react-native";
 import { useState } from "react";
-import { useSignUp, useAuth } from "@clerk/clerk-expo";
+import { useSignUp, useAuth } from "@clerk/expo";
 import { useRouter, Redirect } from "expo-router";
 
 import AuthInput from "@/components/AuthInput";
@@ -8,7 +8,7 @@ import AuthButton from "@/components/AuthButton";
 import ThemedText from "@/components/ThemedText";
 
 export default function SignUpPage() {
-  const { signUp, setActive, isLoaded } = useSignUp();
+  const { signUp } = useSignUp();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const router = useRouter();
 
@@ -22,44 +22,47 @@ export default function SignUpPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const getErrorMessage = (err: any, fallback: string) =>
+    err?.errors?.[0]?.longMessage ||
+    err?.errors?.[0]?.message ||
+    err?.message ||
+    fallback;
+
   // Redirect if already signed in
   if (authLoaded && isSignedIn) {
     return <Redirect href="/" />;
   }
 
   const onSignUpPress = async () => {
-    if (!isLoaded || loading) return;
+    if (!signUp || loading) return;
 
     try {
       setLoading(true);
       setError("");
       console.log("Starting sign up...");
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timed out after 10s")), 10000)
-      );
-
-      const result = await Promise.race([
-        signUp.create({ emailAddress: email.trim(), password }),
-        timeoutPromise,
-      ]);
-
-      console.log("signUp.create success:", result);
-
-      await signUp.prepareEmailAddressVerification({
-        strategy: "email_code",
+      await signUp.create({
+        emailAddress: email.trim(),
       });
 
-      console.log("prepareEmailAddressVerification success");
+      await signUp.password({
+        password,
+      });
+
+      console.log("signUp.create and password success");
+
+      await signUp.verifications.sendEmailCode();
+
+      console.log("sendEmailCode success");
 
       setPendingVerification(true);
     } catch (err: any) {
       console.log("Sign up error:", JSON.stringify(err, null, 2));
 
-      const message =
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
-        "Something went wrong during sign up.";
+      const message = getErrorMessage(
+        err,
+        "Something went wrong during sign up."
+      );
 
       setError(message);
       Alert.alert("Sign Up Failed", message);
@@ -70,22 +73,23 @@ export default function SignUpPage() {
   };
 
   const onVerifyPress = async () => {
-    if (!isLoaded) return;
+    if (!signUp) return;
 
     try {
       setLoading(true);
       setError("");
 
-      const completeSignUp = await signUp.attemptEmailAddressVerification({
+      await signUp.verifications.verifyEmailCode({
         code: code.trim(),
       });
 
-      if (completeSignUp.status === "complete") {
-        await setActive({ session: completeSignUp.createdSessionId });
+      if (signUp.status === "complete") {
+        await signUp.finalize();
+        router.replace("/");
       } else {
         console.log(
           "Sign up not complete:",
-          JSON.stringify(completeSignUp, null, 2)
+          JSON.stringify(signUp, null, 2)
         );
 
         const message = "Verification was not completed. Please try again.";
@@ -95,10 +99,10 @@ export default function SignUpPage() {
     } catch (err: any) {
       console.log("Verification error:", JSON.stringify(err, null, 2));
 
-      const message =
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
-        "Invalid or expired verification code.";
+      const message = getErrorMessage(
+        err,
+        "Invalid or expired verification code."
+      );
 
       setError(message);
       Alert.alert("Verification Failed", message);
@@ -124,8 +128,6 @@ export default function SignUpPage() {
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
-            id="email"
-            name="email"
           />
 
           <AuthInput
@@ -133,8 +135,6 @@ export default function SignUpPage() {
             secureTextEntry
             value={password}
             onChangeText={setPassword}
-            id="password"
-            name="password"
           />
 
           <AuthButton
@@ -153,8 +153,6 @@ export default function SignUpPage() {
             value={code}
             onChangeText={setCode}
             keyboardType="number-pad"
-            id="code"
-            name="code"
           />
 
           <AuthButton

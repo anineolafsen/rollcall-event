@@ -1,5 +1,5 @@
 import { Redirect, Slot } from "expo-router";
-import { useAuth } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/expo";
 
 export default function AppLayout() {
   const { isSignedIn, isLoaded } = useAuth();
