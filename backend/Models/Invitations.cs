@@ -6,9 +6,9 @@ using System.Text;
 
 namespace MyApp.API.Models
 {
-  public class User
+  public class Invitations
   {
-    public required int Id { get; set; }
-    public required string Name { get; set; }
+    public required int TripID { get; set; }
+    public required string UserMail { get; set; }
   }
 }
