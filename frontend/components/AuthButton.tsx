@@ -1,15 +1,10 @@
 // components/AuthButton.tsx
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  type TouchableOpacityProps,
-} from "react-native";
+import { TouchableOpacity, Text, StyleSheet } from "react-native";
 
-type AuthButtonProps = {
+interface AuthButtonProps {
   title: string;
-  onPress?: TouchableOpacityProps["onPress"];
-};
+  onPress: () => void;
+}
 
 export default function AuthButton({ title, onPress }: AuthButtonProps) {
   return (
