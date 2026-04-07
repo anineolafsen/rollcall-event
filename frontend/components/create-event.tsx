@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { AppButton } from '@/components/ui/button';
+import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date-field';
 import { FormField } from '@/components/ui/form-field';
 import { SelectionChip } from '@/components/ui/selection-chip';
 
@@ -40,16 +41,80 @@ const initialFormValues: FormValues = {
   attendanceMode: 'mandatory',
 };
 
+type DateFieldName = 'dateFrom' | 'dateTo';
+
 export function CreateEventScreen() {
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
+  const minimumStartValue = formatDateValue(new Date());
 
   const capacityHint = formValues.hasUnlimitedCapacity
     ? 'No participant limit is set for this event.'
     : formValues.capacity
       ? `This event will allow up to ${formValues.capacity} participants.`
-      : 'Set a clear participant limit for planning and safety.';
+      : '';
+
+  const getDateErrors = (values: Pick<FormValues, 'dateFrom' | 'dateTo'>) => {
+    const nextErrors: Pick<FormErrors, 'dateFrom' | 'dateTo'> = {};
+    const now = new Date();
+
+    if (values.dateFrom) {
+      const startDate = parseDateValue(values.dateFrom);
+
+      if (startDate < now) {
+        nextErrors.dateFrom = 'Start date and time cannot be in the past.';
+      }
+    }
+
+    if (values.dateFrom && values.dateTo) {
+      const startDate = parseDateValue(values.dateFrom);
+      const endDate = parseDateValue(values.dateTo);
+
+      if (endDate < startDate) {
+        nextErrors.dateTo = 'End date and time cannot be earlier than the start date and time.';
+      }
+    }
+
+    return nextErrors;
+  };
+
+  const updateDateField = (field: DateFieldName, value: string) => {
+    setFormValues((currentValues) => {
+      const nextValues = {
+        ...currentValues,
+        [field]: value,
+      };
+
+      if (
+        field === 'dateFrom' &&
+        nextValues.dateTo &&
+        parseDateValue(nextValues.dateTo) < parseDateValue(value)
+      ) {
+        nextValues.dateTo = '';
+      }
+
+      return nextValues;
+    });
+
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      dateFrom: undefined,
+      dateTo: undefined,
+      ...getDateErrors({
+        dateFrom: field === 'dateFrom' ? value : formValues.dateFrom,
+        dateTo:
+          field === 'dateTo'
+            ? value
+            : field === 'dateFrom' && formValues.dateTo && parseDateValue(formValues.dateTo) < parseDateValue(value)
+              ? ''
+              : formValues.dateTo,
+      }),
+    }));
+
+    setSuccessMessage('');
+  };
 
   const updateField = <K extends keyof FormValues>(field: K, value: FormValues[K]) => {
     setFormValues((currentValues) => ({
@@ -93,6 +158,8 @@ export function CreateEventScreen() {
       nextErrors.dateTo = 'Add an end date.';
     }
 
+    Object.assign(nextErrors, getDateErrors(formValues));
+
     if (!formValues.description.trim()) {
       nextErrors.description = 'Add a short description.';
     }
@@ -131,6 +198,10 @@ export function CreateEventScreen() {
     Alert.alert('Event created', 'The frontend form is complete and ready to connect to real data.');
   };
 
+  const toggleDatePicker = (field: DateFieldName) => {
+    setActiveDateField((currentField) => (currentField === field ? null : field));
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -161,21 +232,27 @@ export function CreateEventScreen() {
 
           <View style={styles.row}>
             <View style={styles.rowField}>
-              <FormField
-                label="Date from"
-                placeholder="YYYY-MM-DD"
+              <DateField
+                label="Date and time from"
                 value={formValues.dateFrom}
-                onChangeText={(value) => updateField('dateFrom', value)}
+                minValue={minimumStartValue}
+                onToggle={() => toggleDatePicker('dateFrom')}
+                onChange={(value) => updateDateField('dateFrom', value)}
+                onClose={() => setActiveDateField(null)}
+                isOpen={activeDateField === 'dateFrom'}
                 error={formErrors.dateFrom}
               />
             </View>
 
             <View style={styles.rowField}>
-              <FormField
-                label="Date to"
-                placeholder="YYYY-MM-DD"
+              <DateField
+                label="Date and time to"
                 value={formValues.dateTo}
-                onChangeText={(value) => updateField('dateTo', value)}
+                minValue={formValues.dateFrom || minimumStartValue}
+                onToggle={() => toggleDatePicker('dateTo')}
+                onChange={(value) => updateDateField('dateTo', value)}
+                onClose={() => setActiveDateField(null)}
+                isOpen={activeDateField === 'dateTo'}
                 error={formErrors.dateTo}
               />
             </View>
