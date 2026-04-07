@@ -11,5 +11,6 @@ namespace MyApp.API.Data
 
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Trip> Trips { get; set; } = null!;
+    public DbSet<Event> Events { get; set; } = null!;
   }
 }

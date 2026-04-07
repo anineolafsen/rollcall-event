@@ -48,6 +48,7 @@ export function CreateEventScreen() {
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const minimumStartValue = formatDateValue(new Date());
 
   const capacityHint = formValues.hasUnlimitedCapacity
@@ -189,13 +190,46 @@ export function CreateEventScreen() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) {
       return;
     }
 
-    setSuccessMessage('Event draft is ready. Connect this form to the backend create endpoint next.');
-    Alert.alert('Event created', 'The frontend form is complete and ready to connect to real data.');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:5118/api/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formValues.title,
+          location: formValues.location,
+          startDate: formValues.dateFrom,
+          endDate: formValues.dateTo,
+          description: formValues.description,
+          capacity: formValues.hasUnlimitedCapacity ? null : Number(formValues.capacity),
+          hasUnlimitedCapacity: formValues.hasUnlimitedCapacity,
+          attendanceMode: formValues.attendanceMode,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      await response.json();
+      setSuccessMessage('Event created successfully!');
+      setFormValues(initialFormValues);
+      setActiveDateField(null);
+      Alert.alert('Success', 'Event has been created and saved to the database.');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create event';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleDatePicker = (field: DateFieldName) => {
@@ -306,7 +340,7 @@ export function CreateEventScreen() {
 
           {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
 
-          <AppButton label="Create event" onPress={handleSubmit} />
+          <AppButton label={isLoading ? 'Creating event...' : 'Create event'} onPress={handleSubmit} disabled={isLoading} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
