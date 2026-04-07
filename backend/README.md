@@ -59,7 +59,7 @@ See each folder's README for more details.
 
 ## Database
 
-**PostgreSQL** hosted on Azure (20.251.131.28:5432)
+**PostgreSQL** hosted on Azure
 
 Credentials are in `appsettings.Development.json` (local development only).
 

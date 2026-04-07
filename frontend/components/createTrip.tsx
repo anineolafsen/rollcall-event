@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter, usePathname } from 'expo-router';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -6,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -31,9 +33,13 @@ const initialFormValues: FormValues = {
 };
 
 export function CreateTripScreen() {
+    const router = useRouter();
+    const pathname = usePathname();
+
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const updateField = <K extends keyof FormValues>(field: K, value: FormValues[K]) => {
     setFormValues((currentValues) => ({
@@ -77,13 +83,41 @@ export function CreateTripScreen() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) {
       return;
     }
 
-    setSuccessMessage('Trip draft is ready. Connect this form to the backend create endpoint next.');
-    Alert.alert('Trip created', 'The frontend form is complete and ready to connect to real data.');
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:5118/api/trips', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formValues.title,
+          startDate: formValues.dateFrom,
+          endDate: formValues.dateTo,
+          destination: formValues.destination,
+          description: formValues.description,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setSuccessMessage('Trip created successfully!');
+      setFormValues(initialFormValues);
+      Alert.alert('Success', 'Trip has been created and saved to the database.');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create trip';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -95,6 +129,11 @@ export function CreateTripScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
+
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
+          
           <Text style={styles.title}>Create New Trip</Text>
           <View style={styles.titleDivider} />
 
@@ -118,7 +157,7 @@ export function CreateTripScreen() {
             <View style={styles.rowField}>
               <FormField
                 label="Date from"
-                placeholder="YYYY-MM-DD"
+                placeholder="DD.MM.YYYY"
                 value={formValues.dateFrom}
                 onChangeText={(value) => updateField('dateFrom', value)}
                 error={formErrors.dateFrom}
@@ -128,7 +167,7 @@ export function CreateTripScreen() {
             <View style={styles.rowField}>
               <FormField
                 label="Date to"
-                placeholder="YYYY-MM-DD"
+                placeholder="DD.MM.YYYY"
                 value={formValues.dateTo}
                 onChangeText={(value) => updateField('dateTo', value)}
                 error={formErrors.dateTo}
@@ -147,7 +186,7 @@ export function CreateTripScreen() {
 
           {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
 
-          <AppButton label="Create trip" onPress={handleSubmit} />
+          <AppButton label={isLoading ? 'Creating trip...' : 'Create trip'} onPress={handleSubmit} disabled={isLoading} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -183,6 +222,15 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 28,
     marginHorizontal: 28,
+  },
+  backButton: {
+    marginBottom: 24,
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 15,
+    color: '#4a7ca8',
+    fontWeight: '600',
   },
   row: {
     flexDirection: 'row',

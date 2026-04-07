@@ -1,4 +1,4 @@
-import { CreateTripScreen } from '@/components/create-trip';
+import { CreateTripScreen } from '@/components/createTrip';
 
 export default function TripsScreen() {
   return <CreateTripScreen />;
