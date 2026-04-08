@@ -1,81 +1,111 @@
-// Import View to create containers and layout
-import { View } from 'react-native';
-// Import Text component to display text
-import { Text, StyleSheet, ScrollView } from 'react-native';
+import { Image } from 'expo-image';
+import { Platform, StyleSheet } from 'react-native';
 
-// Home screen component - this is the main tab screen
-export default function Home() {
+import { HelloWave } from '@/components/hello-wave';
+import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Link } from 'expo-router';
+import { Button } from '@react-navigation/elements';
+
+export default function HomeScreen() {
+
+  const testAPI = async () => {
+  try {
+    const response = await fetch('http://localhost:5118/api/users'); // Adjust URL/port
+    const data = await response.json();
+    console.log('API Response:', data);
+  } catch (error) {
+    console.error('API Error:', error);
+  }
+};
+
   return (
-    // ScrollView allows content to be scrollable if it exceeds screen height
-    <ScrollView style={styles.container}>
+    <ParallaxScrollView
+      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerImage={
+        <Image
+          source={require('@/assets/images/partial-react-logo.png')}
+          style={styles.reactLogo}
+        />
+      }>
+      <ThemedView style={styles.titleContainer}>
+        <ThemedText type="title">Welcome!</ThemedText>
+        <HelloWave />
+        <Button onPress={testAPI} >Test API!</Button>
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
+        <ThemedText>
+          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
+          Press{' '}
+          <ThemedText type="defaultSemiBold">
+            {Platform.select({
+              ios: 'cmd + d',
+              android: 'cmd + m',
+              web: 'F12',
+            })}
+          </ThemedText>{' '}
+          to open developer tools.
+        </ThemedText>
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/modal">
+          <Link.Trigger>
+            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
+          </Link.Trigger>
+          <Link.Preview />
+          <Link.Menu>
+            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
+            <Link.MenuAction
+              title="Share"
+              icon="square.and.arrow.up"
+              onPress={() => alert('Share pressed')}
+            />
+            <Link.Menu title="More" icon="ellipsis">
+              <Link.MenuAction
+                title="Delete"
+                icon="trash"
+                destructive
+                onPress={() => alert('Delete pressed')}
+              />
+            </Link.Menu>
+          </Link.Menu>
+        </Link>
 
-      {/* Main content area with padding */}
-      <View style={styles.content}>
-
-        {/* Display a title */}
-        <Text style={styles.title}>Welcome Home! 🏠</Text>
-        
-        {/* Display a subtitle with explanation */}
-        <Text style={styles.subtitle}>
-          This is your home screen. Add your app content here.
-        </Text>
-        
-        {/* Example section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Getting Started:</Text>
-          <Text style={styles.sectionText}>• Create your app components here</Text>
-          <Text style={styles.sectionText}>• Use View for layout and spacing</Text>
-          <Text style={styles.sectionText}>• Use Text to display content</Text>
-        </View>
-      </View>
-    </ScrollView>
+        <ThemedText>
+          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+        </ThemedText>
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
+        <ThemedText>
+          {`When you're ready, run `}
+          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
+          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
+          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
+          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+        </ThemedText>
+      </ThemedView>
+    </ParallaxScrollView>
   );
 }
 
-// StyleSheet.create() optimizes your styles for better performance
 const styles = StyleSheet.create({
-  // Container style for the entire screen
-  container: {
-    flex: 1, // Takes up all available space
-    backgroundColor: '#fff', // White background
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  // Content area with padding
-  content: {
-    padding: 20, // Space around all sides
-  },
-  // Main title style
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#000',
-  },
-  // Subtitle style
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
-    lineHeight: 24,
-  },
-  // Section container
-  section: {
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  // Section title
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#333',
-  },
-  // Section text items
-  sectionText: {
-    fontSize: 20,
-    color: '#555',
+  stepContainer: {
+    gap: 8,
     marginBottom: 8,
-    lineHeight: 20,
+  },
+  reactLogo: {
+    height: 178,
+    width: 290,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
   },
 });
