@@ -7,7 +7,7 @@ namespace MyApp.API.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public int InvitationId { get; set; }
         
         public int TripID { get; set; }
         
