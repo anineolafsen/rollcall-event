@@ -10,5 +10,11 @@ namespace MyApp.API.Data
     }
 
     public DbSet<User> Users { get; set; } = null!;
+    public DbSet<Trip> Trips { get; set; } = null!;
+
+    public DbSet<Participant> Participants { get; set; } = null!;
+
+    public DbSet<Invitation> Invitations { get; set; } = null!;
+
   }
 }

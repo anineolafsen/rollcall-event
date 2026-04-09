@@ -17,3 +17,6 @@ Thumbs.db
 
 # Git
 .gitkeep
+
+# Config files
+expo-env.d.ts
