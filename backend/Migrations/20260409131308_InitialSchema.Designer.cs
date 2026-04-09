@@ -11,8 +11,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyApp.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260408114021_AddInvitationAndParticipantPrimaryKeys")]
-    partial class AddInvitationAndParticipantPrimaryKeys
+    [Migration("20260409131308_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -26,31 +26,32 @@ namespace MyApp.API.Migrations
 
             modelBuilder.Entity("MyApp.API.Models.Invitation", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("InvitationId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("InvitationId"));
 
                     b.Property<int>("TripID")
                         .HasColumnType("integer");
 
                     b.Property<string>("UserEmail")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
-                    b.HasKey("Id");
+                    b.HasKey("InvitationId");
 
                     b.ToTable("Invitations");
                 });
 
             modelBuilder.Entity("MyApp.API.Models.Participant", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("ParticipantID")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ParticipantID"));
 
                     b.Property<int>("TripID")
                         .HasColumnType("integer");
@@ -59,7 +60,7 @@ namespace MyApp.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.HasKey("Id");
+                    b.HasKey("ParticipantID");
 
                     b.ToTable("Participants");
                 });

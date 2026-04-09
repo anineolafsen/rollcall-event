@@ -65,51 +65,52 @@ namespace MyApp.API.Migrations
 
             modelBuilder.Entity("MyApp.API.Models.Invitation", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("InvitationId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("InvitationId"));
 
-                    b.Property<string>("TripID")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("TripID")
+                        .HasColumnType("integer");
 
                     b.Property<string>("UserEmail")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.HasKey("Id");
+                    b.HasKey("InvitationId");
 
                     b.ToTable("Invitations");
                 });
 
             modelBuilder.Entity("MyApp.API.Models.Participant", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("ParticipantID")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ParticipantID"));
 
-                    b.Property<string>("TripID")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("TripID")
+                        .HasColumnType("integer");
 
                     b.Property<string>("UserID")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.HasKey("Id");
+                    b.HasKey("ParticipantID");
 
                     b.ToTable("Participants");
                 });
 
             modelBuilder.Entity("MyApp.API.Models.Trip", b =>
                 {
-                    b.Property<string>("TripID")
-                        .HasColumnType("text");
+                    b.Property<int>("TripID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TripID"));
 
                     b.Property<string>("Description")
                         .HasColumnType("text");

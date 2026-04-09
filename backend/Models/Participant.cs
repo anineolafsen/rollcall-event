@@ -5,7 +5,7 @@ namespace MyApp.API.Models
     public class Participant
     {
         [Key]
-        public int Id { get; set; }
+        public int ParticipantID { get; set; }
         
         public int TripID { get; set; }
         
