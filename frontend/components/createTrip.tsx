@@ -109,9 +109,18 @@ export function CreateTripScreen() {
       }
 
       const result = await response.json();
+      console.log('Trip creation response:', result);
       setSuccessMessage('Trip created successfully!');
-      setFormValues(initialFormValues);
-      Alert.alert('Success', 'Trip has been created and saved to the database.');
+      // Navigate to invitations page with trip details
+      const tripId = result.tripID || result.tripId || result.id || 1;
+      console.log('Extracted tripId:', tripId);
+      router.push({
+        pathname: '/invitations',
+        params: {
+          tripId,
+          tripName: formValues.title,
+        },
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create trip';
       Alert.alert('Error', errorMessage);
@@ -128,8 +137,9 @@ export function CreateTripScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
+        
+        {/* Trip Creation Form */}
         <View style={styles.content}>
-
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
@@ -202,7 +212,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   content: {
-    flex: 1,
     backgroundColor: '#eef5fb',
     paddingHorizontal: 22,
     paddingTop: 80,
