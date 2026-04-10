@@ -23,5 +23,23 @@ namespace MyApp.API.Services
       _context.SaveChanges();
       return user;
     }
+
+     // Henter allergier og otherInfo for innlogget bruker
+    public User? GetUserNeeds(string clerkUserId)
+    {
+      return _context.Users.FirstOrDefault(u => u.ClerkUserId == clerkUserId);
+    }
+
+    // Oppdaterer allergier og otherInfo for innlogget bruker
+    public User? UpdateUserNeeds(string clerkUserId, UpdateUserNeeds dto)
+    {
+      var user = _context.Users.FirstOrDefault(u => u.ClerkUserId == clerkUserId);
+      if (user == null) return null;
+
+      user.Allergies = dto.Allergies;
+      user.OtherInfo = dto.OtherInfo;
+      _context.SaveChanges();
+      return user;
+    }
   }
 }
