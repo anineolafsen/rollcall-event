@@ -35,7 +35,18 @@ namespace MyApp.API.Controllers
     [HttpPost]
     public IActionResult CreateTrip([FromBody] Trip trip)
     {
-      return Ok(_tripService.CreateTrip(trip));
+      try
+      {
+        return Ok(_tripService.CreateTrip(trip));
+      }
+      catch (InvalidOperationException ex)
+      {
+        return BadRequest(new { error = ex.Message });
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = "An unexpected error occurred.", details = ex.Message });
+      }
     }
 
     [HttpDelete("{id}")]

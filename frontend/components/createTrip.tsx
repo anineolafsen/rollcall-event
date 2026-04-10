@@ -24,6 +24,42 @@ type FormValues = {
 
 type FormErrors = Partial<Record<'title' | 'destination' | 'dateFrom' | 'dateTo' | 'description', string>>;
 
+// Helper: Validate and parse date from DD.MM.YYYY format
+const parseDate = (dateStr: string): Date | null => {
+  const trimmed = dateStr.trim();
+  // Try DD.MM.YYYY format
+  const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const [, day, month, year] = ddmmyyyyMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    // Validate that the date is valid (e.g., not Feb 30)
+    if (date.getDate() === parseInt(day)) {
+      return date;
+    }
+    return null;
+  }
+  
+  // Try ISO format (YYYY-MM-DD)
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (date.getDate() === parseInt(day)) {
+      return date;
+    }
+    return null;
+  }
+  
+  return null;
+};
+
+// Helper: Format date to ISO string (backend expects this)
+const formatDateToISO = (dateStr: string): string | null => {
+  const date = parseDate(dateStr);
+  if (!date) return null;
+  return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+};
+
 const initialFormValues: FormValues = {
   title: '',
   destination: '',
@@ -67,10 +103,28 @@ export function CreateTripScreen() {
 
     if (!formValues.dateFrom.trim()) {
       nextErrors.dateFrom = 'Add a start date.';
+    } else {
+      const startDate = parseDate(formValues.dateFrom);
+      if (!startDate) {
+        nextErrors.dateFrom = 'Invalid date format. Use DD.MM.YYYY (e.g., 15.05.2026).';
+      }
     }
 
     if (!formValues.dateTo.trim()) {
       nextErrors.dateTo = 'Add an end date.';
+    } else {
+      const endDate = parseDate(formValues.dateTo);
+      if (!endDate) {
+        nextErrors.dateTo = 'Invalid date format. Use DD.MM.YYYY (e.g., 15.05.2026).';
+      }
+    }
+
+    if (!nextErrors.dateFrom && !nextErrors.dateTo) {
+      const startDate = parseDate(formValues.dateFrom)!;
+      const endDate = parseDate(formValues.dateTo)!;
+      if (endDate <= startDate) {
+        nextErrors.dateTo = 'End date must be after start date.';
+      }
     }
 
     if (!formValues.description.trim()) {
@@ -89,22 +143,35 @@ export function CreateTripScreen() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:5118/api/trips', {
+      // Convert dates to ISO format for backend
+      const startDateISO = formatDateToISO(formValues.dateFrom);
+      const endDateISO = formatDateToISO(formValues.dateTo);
+
+      if (!startDateISO || !endDateISO) {
+        throw new Error('Failed to parse dates');
+      }
+
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL 
+        ? `${process.env.EXPO_PUBLIC_API_URL}/api`
+        : 'http://localhost:5118/api';
+
+      const response = await fetch(`${apiUrl}/trips`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           name: formValues.title,
-          startDate: formValues.dateFrom,
-          endDate: formValues.dateTo,
+          startDate: startDateISO,
+          endDate: endDateISO,
           destination: formValues.destination,
           description: formValues.description,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
@@ -170,6 +237,7 @@ export function CreateTripScreen() {
                 value={formValues.dateFrom}
                 onChangeText={(value) => updateField('dateFrom', value)}
                 error={formErrors.dateFrom}
+                inputType="date"
               />
             </View>
 
@@ -180,6 +248,7 @@ export function CreateTripScreen() {
                 value={formValues.dateTo}
                 onChangeText={(value) => updateField('dateTo', value)}
                 error={formErrors.dateTo}
+                inputType="date"
               />
             </View>
           </View>

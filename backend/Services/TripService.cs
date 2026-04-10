@@ -22,8 +22,43 @@ namespace MyApp.API.Services
       return _context.Trips.FirstOrDefault(t => t.TripID == id);
     }
 
+    private bool TryParseDate(string dateStr, out DateTime date)
+    {
+      // Try ISO format (YYYY-MM-DD or ISO 8601)
+      if (DateTime.TryParse(dateStr, out date))
+      {
+        return true;
+      }
+      
+      // Try DD.MM.YYYY format
+      if (DateTime.TryParseExact(dateStr, "dd.MM.yyyy", 
+        System.Globalization.CultureInfo.InvariantCulture, 
+        System.Globalization.DateTimeStyles.None, out date))
+      {
+        return true;
+      }
+
+      return false;
+    }
+
     public Trip CreateTrip(Trip trip)
     {
+      // Validate dates
+      if (!TryParseDate(trip.StartDate, out var startDate))
+      {
+        throw new InvalidOperationException($"Invalid start date format: {trip.StartDate}. Use YYYY-MM-DD or DD.MM.YYYY format.");
+      }
+
+      if (!TryParseDate(trip.EndDate, out var endDate))
+      {
+        throw new InvalidOperationException($"Invalid end date format: {trip.EndDate}. Use YYYY-MM-DD or DD.MM.YYYY format.");
+      }
+
+      if (endDate <= startDate)
+      {
+        throw new InvalidOperationException("End date must be after start date.");
+      }
+
       _context.Trips.Add(trip);
       _context.SaveChanges();
       return trip;
