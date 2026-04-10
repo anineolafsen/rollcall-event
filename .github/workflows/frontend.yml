@@ -30,9 +30,6 @@ jobs:
       - name: Run TypeScript check
         run: npx tsc --noEmit
 
-      - name: Run lint
-        run: npm run lint
-
       - name: Run tests
         run: npm test
 
@@ -41,3 +38,6 @@ jobs:
 
       - name: Build Expo
         run: expo export
+
+      - name: Run lint
+        run: npm run lint
