@@ -16,5 +16,6 @@ namespace MyApp.API.Data
 
     public DbSet<Invitation> Invitations { get; set; } = null!;
 
+    public DbSet<Event> Events { get; set; } = null!;
   }
 }
