@@ -8,7 +8,12 @@ namespace MyApp.API.Models
 {
   public class User
   {
-    public required int Id { get; set; }
+    [Key]
+    public int Id { get; set; }
     public required string Name { get; set; }
+    // Clerk user ID (string, globally unique)
+    public required string ClerkUserId { get; set; }
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
   }
 }

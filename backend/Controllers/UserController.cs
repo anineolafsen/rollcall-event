@@ -24,6 +24,11 @@ namespace MyApp.API.Controllers
     [HttpPost]
     public IActionResult CreateUser([FromBody] User user)
     {
+
+      if (string.IsNullOrEmpty(user.ClerkUserId))
+      {
+        return BadRequest("ClerkUserId is required.");
+      }
       return Ok(_userService.CreateUser(user));
     }
   }
