@@ -29,6 +29,27 @@ namespace MyApp.API.Services
       return appEvent;
     }
 
+    public Event? UpdateEvent(int id, Event updatedEvent)
+    {
+      var existingEvent = _context.Events.FirstOrDefault(e => e.EventID == id);
+      if (existingEvent == null)
+      {
+        return null;
+      }
+
+      existingEvent.Name = updatedEvent.Name;
+      existingEvent.Location = updatedEvent.Location;
+      existingEvent.StartDate = updatedEvent.StartDate;
+      existingEvent.EndDate = updatedEvent.EndDate;
+      existingEvent.Description = updatedEvent.Description;
+      existingEvent.Capacity = updatedEvent.Capacity;
+      existingEvent.HasUnlimitedCapacity = updatedEvent.HasUnlimitedCapacity;
+      existingEvent.AttendanceMode = updatedEvent.AttendanceMode;
+
+      _context.SaveChanges();
+      return existingEvent;
+    }
+
     public bool DeleteEvent(int id)
     {
       var appEvent = _context.Events.FirstOrDefault(e => e.EventID == id);

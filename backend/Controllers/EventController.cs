@@ -39,6 +39,18 @@ namespace MyApp.API.Controllers
       return Ok(_eventService.CreateEvent(appEvent));
     }
 
+    [HttpPut("{id}")]
+    public IActionResult UpdateEvent(int id, [FromBody] Event appEvent)
+    {
+      var updatedEvent = _eventService.UpdateEvent(id, appEvent);
+      if (updatedEvent == null)
+      {
+        return NotFound();
+      }
+
+      return Ok(updatedEvent);
+    }
+
     [HttpDelete("{id}")]
     public IActionResult DeleteEvent(int id)
     {

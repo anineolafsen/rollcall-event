@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -15,7 +16,21 @@ import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date
 import { FormField } from '@/components/ui/form-field';
 import { SelectionChip } from '@/components/ui/selection-chip';
 
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
+
 type AttendanceMode = 'mandatory' | 'signup-required';
+
+type EventItem = {
+  eventID: number;
+  name: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  description?: string | null;
+  capacity?: number | null;
+  hasUnlimitedCapacity: boolean;
+  attendanceMode: AttendanceMode;
+};
 
 type FormValues = {
   title: string;
@@ -43,13 +58,57 @@ const initialFormValues: FormValues = {
 
 type DateFieldName = 'dateFrom' | 'dateTo';
 
+const mapEventToFormValues = (event: EventItem): FormValues => ({
+  title: event.name,
+  location: event.location,
+  dateFrom: event.startDate,
+  dateTo: event.endDate,
+  description: event.description ?? '',
+  capacity: event.capacity ? String(event.capacity) : '',
+  hasUnlimitedCapacity: event.hasUnlimitedCapacity,
+  attendanceMode: event.attendanceMode,
+});
+
+const formatDateTime = (value: string) =>
+  new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(parseDateValue(value));
+
 export function CreateEventScreen() {
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetchingEvents, setIsFetchingEvents] = useState(true);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [editingEventId, setEditingEventId] = useState<number | null>(null);
   const minimumStartValue = formatDateValue(new Date());
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/events`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: EventItem[] = await response.json();
+      setEvents(data);
+    } catch {
+      Alert.alert('Error', 'Failed to load events.');
+    } finally {
+      setIsFetchingEvents(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
   const capacityHint = formValues.hasUnlimitedCapacity
     ? 'No participant limit is set for this event.'
@@ -64,7 +123,7 @@ export function CreateEventScreen() {
     if (values.dateFrom) {
       const startDate = parseDateValue(values.dateFrom);
 
-      if (startDate < now) {
+      if (editingEventId === null && startDate < now) {
         nextErrors.dateFrom = 'Start date and time cannot be in the past.';
       }
     }
@@ -190,16 +249,36 @@ export function CreateEventScreen() {
     }
   };
 
+  const resetForm = () => {
+    setFormValues(initialFormValues);
+    setFormErrors({});
+    setSuccessMessage('');
+    setActiveDateField(null);
+    setEditingEventId(null);
+  };
+
+  const handleEdit = (event: EventItem) => {
+    setEditingEventId(event.eventID);
+    setFormValues(mapEventToFormValues(event));
+    setFormErrors({});
+    setSuccessMessage('');
+    setActiveDateField(null);
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
+
+    const isEditing = editingEventId !== null;
+    const url = isEditing ? `${API_BASE_URL}/api/events/${editingEventId}` : `${API_BASE_URL}/api/events`;
+    const method = isEditing ? 'PUT' : 'POST';
 
     try {
-      const response = await fetch('http://localhost:5118/api/events', {
-        method: 'POST',
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -220,15 +299,20 @@ export function CreateEventScreen() {
       }
 
       await response.json();
-      setSuccessMessage('Event created successfully!');
+      await fetchEvents();
+
+      const nextMessage = isEditing ? 'Event updated successfully!' : 'Event created successfully!';
+      setSuccessMessage(nextMessage);
       setFormValues(initialFormValues);
+      setFormErrors({});
       setActiveDateField(null);
-      Alert.alert('Success', 'Event has been created and saved to the database.');
+      setEditingEventId(null);
+      Alert.alert('Success', nextMessage);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create event';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save event';
       Alert.alert('Error', errorMessage);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -245,7 +329,7 @@ export function CreateEventScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          <Text style={styles.title}>Create New Event</Text>
+          <Text style={styles.title}>{editingEventId ? 'Edit Event' : 'Create New Event'}</Text>
           <View style={styles.titleDivider} />
 
           <FormField
@@ -340,7 +424,59 @@ export function CreateEventScreen() {
 
           {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
 
-          <AppButton label={isLoading ? 'Creating event...' : 'Create event'} onPress={handleSubmit} disabled={isLoading} />
+          <AppButton
+            label={
+              isSubmitting
+                ? editingEventId
+                  ? 'Saving event...'
+                  : 'Creating event...'
+                : editingEventId
+                  ? 'Save changes'
+                  : 'Create event'
+            }
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          />
+
+          {editingEventId ? (
+            <TouchableOpacity style={styles.secondaryButton} onPress={resetForm}>
+              <Text style={styles.secondaryButtonText}>Cancel editing</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          <View style={styles.eventsSection}>
+            <Text style={styles.eventsSectionTitle}>Existing events</Text>
+            <View style={styles.eventsDivider} />
+
+            {isFetchingEvents ? (
+              <Text style={styles.helperText}>Loading events...</Text>
+            ) : events.length === 0 ? (
+              <Text style={styles.helperText}>No events created yet.</Text>
+            ) : (
+              <View style={styles.eventsList}>
+                {events.map((event) => (
+                  <View key={event.eventID} style={styles.eventCard}>
+                    <View style={styles.eventCardHeader}>
+                      <View style={styles.eventCardBody}>
+                        <Text style={styles.eventTitle}>{event.name}</Text>
+                        <Text style={styles.eventMeta}>{formatDateTime(event.startDate)}</Text>
+                        <Text style={styles.eventMeta}>{event.location}</Text>
+                        {event.description ? (
+                          <Text style={styles.eventDescription}>{event.description}</Text>
+                        ) : null}
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => handleEdit(event)}>
+                        <Text style={styles.editButtonText}>Edit</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -356,7 +492,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   content: {
-    flex: 1,
     backgroundColor: '#eef5fb',
     paddingHorizontal: 22,
     paddingTop: 80,
@@ -387,53 +522,128 @@ const styles = StyleSheet.create({
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+    marginBottom: 8,
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#b8c1c9',
-    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#8db3d5',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#ffffff',
   },
   checkboxChecked: {
-    borderColor: '#0b0b0b',
+    backgroundColor: '#76b6ee',
+    borderColor: '#76b6ee',
   },
   checkboxInner: {
-    width: 12,
-    height: 12,
+    width: 10,
+    height: 10,
     borderRadius: 3,
-    backgroundColor: '#0b0b0b',
+    backgroundColor: '#ffffff',
   },
   checkboxLabel: {
-    fontSize: 15,
-    color: '#111111',
+    fontSize: 14,
+    color: '#1a3d5c',
+    fontWeight: '500',
   },
   helperText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#53616c',
-    marginTop: 4,
     marginBottom: 20,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#5a7a94',
   },
   sectionLabel: {
-    fontSize: 17,
-    fontWeight: '500',
-    color: '#111111',
     marginBottom: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a3d5c',
   },
   optionRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   successMessage: {
     marginBottom: 16,
     color: '#246b3f',
     fontSize: 14,
     lineHeight: 20,
+  },
+  secondaryButton: {
+    marginTop: 12,
+    alignSelf: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4a7ca8',
+  },
+  eventsSection: {
+    marginTop: 40,
+  },
+  eventsSectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#090909',
+    textAlign: 'center',
+  },
+  eventsDivider: {
+    height: 2,
+    backgroundColor: '#d9e8f5',
+    borderRadius: 999,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  eventsList: {
+    gap: 12,
+  },
+  eventCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+  },
+  eventCardHeader: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  eventCardBody: {
+    flex: 1,
+  },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#090909',
+    marginBottom: 6,
+  },
+  eventMeta: {
+    fontSize: 13,
+    color: '#4a7ca8',
+    marginBottom: 4,
+  },
+  eventDescription: {
+    marginTop: 6,
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#5a7a94',
+  },
+  editButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#76b6ee',
+  },
+  editButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
