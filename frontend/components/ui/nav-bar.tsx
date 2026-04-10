@@ -4,12 +4,8 @@ import { Tabs } from 'expo-router';
 import { PlatformPressable } from '@react-navigation/elements';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export function AppNavbar() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{

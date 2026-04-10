@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Platform, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
