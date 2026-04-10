@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -7,23 +8,27 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 
-import EmailInviteUploader from '@/components/invitationsFileUpload';
+import EmailInviteUploader, { type UploadState } from '@/components/invitationsFileUpload';
 
 export default function InvitationsView() {
   const router = useRouter();
   const searchParams = useLocalSearchParams();
   const tripId = Number(searchParams.tripId) || 1;
   const tripName = searchParams.tripName as string || 'Trip';
+  const [uploadState, setUploadState] = useState<UploadState>('idle');
 
   const handleBack = () => {
     router.push('/trips');
   };
 
   const handleComplete = () => {
-    router.push('/trips');
+    router.replace('/trips');
   };
+
+  const isLoading = uploadState === 'submitting';
 
   return (
     <KeyboardAvoidingView
@@ -49,12 +54,21 @@ export default function InvitationsView() {
           <EmailInviteUploader
             tripId={tripId}
             apiUrl={process.env.EXPO_PUBLIC_API_URL ? `${process.env.EXPO_PUBLIC_API_URL}/api` : 'http://localhost:5118/api'}
+            onStateChange={setUploadState}
           />
         </View>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.completeButton} onPress={handleComplete}>
-            <Text style={styles.completeButtonText}>Done</Text>
+          <TouchableOpacity 
+            style={[styles.completeButton, isLoading && styles.completeButtonLoading]}
+            onPress={handleComplete}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.completeButtonText}>Done</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -122,6 +136,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
+  },
+  completeButtonLoading: {
+    opacity: 0.7,
   },
   completeButtonText: {
     color: '#FFFFFF',
