@@ -1,6 +1,6 @@
 // app/(app)/(tabs)/profile.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,9 +19,36 @@ export default function ProfileScreen() {
   const [allergies, setAllergies] = useState("");
   const [otherInfo, setOtherInfo] = useState("");
 
-  const handleEditProfile = () => {
-    // TODO: send til backend
-    console.log({ name, phoneNumber, allergies, otherInfo });
+  useEffect(() => {
+    const fetchUserNeeds = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/users/profile/needs`
+        );
+        const data = await response.json();
+        setAllergies(data.allergies ?? "");
+        setOtherInfo(data.otherInfo ?? "");
+      } catch (error) {
+        console.error("Feil ved henting av data:", error);
+      }
+    };
+
+    fetchUserNeeds();
+  }, []);
+
+  const handleEditProfile = async () => {
+    try {
+      // TODO: legg til endepunkt for å oppdatere name og phoneNumber
+      await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/api/users/profile/needs`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ allergies, otherInfo }),
+      });
+    } catch (error) {
+      console.error("Feil ved oppdatering:", error);
+    }
   };
 
   return (

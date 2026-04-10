@@ -15,9 +15,18 @@ export default function PopupUserNeeds() {
   const [allergies, setAllergies] = useState("");
   const [otherInfo, setOtherInfo] = useState("");
 
-  const handleSave = () => {
-  // TODO: send til backend og lukk visningen
-  console.log({ allergies, otherInfo });
+const handleSave = async () => {
+  try {
+    await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/api/users/profile/needs`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ allergies, otherInfo }),
+    });
+  } catch (error) {
+    console.error("Feil ved lagring:", error);
+  }
 };
 
 const handleSkip = () => {
