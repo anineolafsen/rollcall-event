@@ -1,5 +1,5 @@
-import { CreateEventScreen } from '@/components/create-event';
+import { UpcomingEventsScreen } from '@/components/upcoming-events';
 
 export default function EventsScreen() {
-  return <CreateEventScreen />;
+  return <UpcomingEventsScreen />;
 }

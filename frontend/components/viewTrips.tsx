@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 import {
   View,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { AppButton } from '@/components/ui/button';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -25,7 +26,6 @@ interface Trip {
 
 export function ViewTripsScreen() {
   const router = useRouter();
-  const pathname = usePathname();
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +41,7 @@ export function ViewTripsScreen() {
       }
       const data: Trip[] = await response.json();
       setTrips(data);
-    } catch (err) {
+    } catch {
       setError('Could not load trips. Please try again.');
     } finally {
       setLoading(false);
@@ -135,11 +135,12 @@ export function ViewTripsScreen() {
             }
           />
         )}
-        <TouchableOpacity
+        <AppButton
+          variant="create"
           style={styles.createButton}
-          onPress={() => router.push('/trips/create')}>
-          <Text style={styles.createButtonText}>+ Create Trip</Text>
-        </TouchableOpacity>
+          label="Create new trip +"
+          onPress={() => router.push('/trips/create')}
+        />
         
       </View>
     </SafeAreaView>
@@ -261,14 +262,7 @@ const styles = StyleSheet.create({
   },
   createButton: {
     marginTop: 20,
-    backgroundColor: '#76b6ee',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    alignSelf: 'center',
+    minWidth: 290,
   },
 });
