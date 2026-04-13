@@ -12,6 +12,8 @@ import {
   RefreshControl,
 } from 'react-native';
 
+import { ParticipationModal } from './ParticipationModal';
+
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 interface Trip {
@@ -30,6 +32,7 @@ export function ViewTripsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const fetchTrips = async () => {
     try {
@@ -134,13 +137,23 @@ export function ViewTripsScreen() {
             }
           />
         )}
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => router.push('/trips/create')}>
-          <Text style={styles.createButtonText}>+ Create Trip</Text>
-        </TouchableOpacity>
-        
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.participationButton}
+            onPress={() => setModalVisible(true)}>
+            <Text style={styles.participationButtonText}>👤 My Invitations</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => router.push('/trips/create')}>
+            <Text style={styles.createButtonText}>+ Create Trip</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+      <ParticipationModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -258,8 +271,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7a9ab8',
   },
+  buttonContainer: {
+    gap: 12,
+  },
+  participationButton: {
+    backgroundColor: '#d9e8f5',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  participationButtonText: {
+    color: '#4a7ca8',
+    fontSize: 15,
+    fontWeight: '700',
+  },
   createButton: {
-    marginTop: 20,
+    marginTop: 8,
     backgroundColor: '#76b6ee',
     borderRadius: 10,
     paddingVertical: 14,
