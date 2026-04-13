@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MyApp.API.Services;
 using MyApp.API.Models;
-
+using Microsoft.AspNetCore.Authorization;
 namespace MyApp.API.Controllers
 {
   [ApiController]
@@ -15,10 +15,20 @@ namespace MyApp.API.Controllers
       _tripService = tripService;
     }
 
+
+
     [HttpGet]
     public IActionResult GetTrips()
     {
       return Ok(_tripService.GetAllTrips());
+    }
+
+    // GET api/trips/my will now only return trips for the current cclerk user that is being used
+    [HttpGet("my")]
+    [Authorize]
+    public IActionResult GetMyTrips()
+    {
+      return Ok();
     }
 
     [HttpGet("{id}")]

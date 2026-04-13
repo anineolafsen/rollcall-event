@@ -85,6 +85,22 @@ export default function SignUpPage() {
 
       if (signUp.status === "complete") {
         await signUp.finalize();
+
+        // This is for fetching Clerk user info after signing up
+        try {
+          await fetch("http://localhost:5118/api/users", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: email.trim(),
+            }),
+          });
+        } catch (e) {
+          console.log("Failed to sync user to backend", e);
+        }
+
         router.replace("/");
       } else {
         console.log(

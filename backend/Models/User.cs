@@ -8,7 +8,11 @@ namespace MyApp.API.Models
 {
   public class User
   {
-    public required int Id { get; set; }
+    [Key] //This makes sure the database automatically assigns a unique id to the user when created and saved.
+    public int Id { get; set; }
     public required string Name { get; set; }
+    // Clerk user ID (string, globally unique)
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
   }
 }
