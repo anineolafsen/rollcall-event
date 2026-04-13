@@ -48,6 +48,15 @@ export function formatAttendanceMode(value?: string) {
     .join(' ');
 }
 
+export function isEventWithinNext24Hours(event: Pick<EventRecord, 'startDate' | 'endDate'>) {
+  const now = Date.now();
+  const next24Hours = now + 24 * 60 * 60 * 1000;
+  const startTimestamp = getEventTimestamp(event.startDate);
+  const endTimestamp = getEventTimestamp(event.endDate);
+
+  return (startTimestamp >= now && startTimestamp <= next24Hours) || (startTimestamp <= now && endTimestamp >= now);
+}
+
 export function getUpcomingEvents(events: EventRecord[]) {
   const now = Date.now();
 

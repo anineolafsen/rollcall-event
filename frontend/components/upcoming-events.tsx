@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 
 import { AppButton } from '@/components/ui/button';
-import { formatEventDate, formatEventTime, getUpcomingEvents } from '@/lib/event-format';
+import { formatEventDate, formatEventTime, getUpcomingEvents, isEventWithinNext24Hours } from '@/lib/event-format';
 import { getEvents, type EventRecord } from '@/lib/events';
 
 export function UpcomingEventsScreen() {
@@ -46,30 +46,39 @@ export function UpcomingEventsScreen() {
     fetchEvents();
   };
 
-  const renderEvent = ({ item }: { item: EventRecord }) => (
-    <TouchableOpacity onPress={() => router.push(`/events/${item.eventID}`)}>
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.eventName}>{item.name}</Text>
-        </View>
+  const renderEvent = ({ item }: { item: EventRecord }) => {
+    const isStartingSoon = isEventWithinNext24Hours(item);
 
-        <View style={styles.cardDivider} />
-
-        <View style={styles.metaBlock}>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Date:</Text>
-            <Text style={styles.metaValue}>{formatEventDate(item.startDate)}</Text>
+    return (
+      <TouchableOpacity onPress={() => router.push(`/events/${item.eventID}`)}>
+        <View style={[styles.card, isStartingSoon && styles.cardSoon]}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.eventName}>{item.name}</Text>
+            {isStartingSoon ? (
+              <View style={styles.soonBadge}>
+                <Text style={styles.soonBadgeText}>Within 24h</Text>
+              </View>
+            ) : null}
           </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Time:</Text>
-            <Text style={styles.metaValue}>{formatEventTime(item.startDate)}</Text>
-          </View>
-        </View>
 
-        {item.location ? <Text style={styles.location}>{item.location}</Text> : null}
-      </View>
-    </TouchableOpacity>
-  );
+          <View style={[styles.cardDivider, isStartingSoon && styles.cardDividerSoon]} />
+
+          <View style={styles.metaBlock}>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Date:</Text>
+              <Text style={styles.metaValue}>{formatEventDate(item.startDate)}</Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Time:</Text>
+              <Text style={styles.metaValue}>{formatEventTime(item.startDate)}</Text>
+            </View>
+          </View>
+
+          {item.location ? <Text style={styles.location}>{item.location}</Text> : null}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -185,20 +194,53 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: '#75baf0',
   },
+  cardSoon: {
+    backgroundColor: '#fff2c7',
+    borderColor: '#f0b429',
+    shadowColor: '#f0b429',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    elevation: 3,
+  },
   cardHeader: {
     marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   eventName: {
     fontSize: 22,
     lineHeight: 28,
     fontWeight: '900',
     color: '#090909',
+    flex: 1,
+  },
+  soonBadge: {
+    backgroundColor: '#f0b429',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  soonBadgeText: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '800',
+    color: '#3f2a00',
+    textTransform: 'uppercase',
   },
   cardDivider: {
     height: 4,
     width: '72%',
     backgroundColor: '#3b3b3b',
     marginBottom: 18,
+  },
+  cardDividerSoon: {
+    backgroundColor: '#c78300',
   },
   metaBlock: {
     gap: 10,
