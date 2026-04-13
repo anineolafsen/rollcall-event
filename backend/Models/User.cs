@@ -10,8 +10,9 @@ namespace MyApp.API.Models
   {
     [Key] //This makes sure the database automatically assigns a unique id to the user when created and saved.
     public int Id { get; set; }
-    public required string Name { get; set; }
-    // Clerk user ID (string, globally unique)
+    public string? Name { get; set; }
+
+    [Required] //email is the only thing that is required for the usermodel
     public string? Email { get; set; }
     public string? Phone { get; set; }
   }
