@@ -17,18 +17,6 @@ namespace MyApp.API.Services
       return _context.Trips.ToList();
     }
 
-    // Returns only trips where the user you are authenticated with is a participant
-    public List<Trip> GetTripsForUser(string clerkUserId)
-    {
-      var tripIds = _context.Participants
-        .Where(p => p.UserID == clerkUserId)
-        .Select(p => p.TripID)
-        .ToList();
-      return _context.Trips
-        .Where(t => tripIds.Contains(t.TripID))
-        .ToList();
-    }
-
     public Trip? GetTripById(int id)
     {
       return _context.Trips.FirstOrDefault(t => t.TripID == id);

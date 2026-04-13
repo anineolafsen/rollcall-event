@@ -15,12 +15,7 @@ namespace MyApp.API.Controllers
       _tripService = tripService;
     }
 
-    // Helps to extract the ClerkUserId from JWT claims
-    private string? GetClerkUserId()
-    {
-      var claim = User.Claims.FirstOrDefault(c => c.Type == "sub");
-      return claim?.Value;
-    }
+
 
     [HttpGet]
     public IActionResult GetTrips()
@@ -33,13 +28,7 @@ namespace MyApp.API.Controllers
     [Authorize]
     public IActionResult GetMyTrips()
     {
-      var clerkUserId = GetClerkUserId();
-      if (string.IsNullOrEmpty(clerkUserId))
-      {
-        return Unauthorized();
-      }
-      var trips = _tripService.GetTripsForUser(clerkUserId);
-      return Ok(trips);
+      return Ok();
     }
 
     [HttpGet("{id}")]
