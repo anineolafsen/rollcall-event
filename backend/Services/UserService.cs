@@ -23,5 +23,15 @@ namespace MyApp.API.Services
       _context.SaveChanges();
       return user;
     }
+
+    public void DeleteUser(int id)
+    {
+      var user = _context.Users.FirstOrDefault(u => u.Id == id);
+      if (user != null)
+      {
+        _context.Users.Remove(user);
+        _context.SaveChanges();
+      }
+    }
   }
 }
