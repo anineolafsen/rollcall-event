@@ -1,5 +1,6 @@
 using MyApp.API.Models;
 using MyApp.API.Data;
+using System.Security.Cryptography;
 
 namespace MyApp.API.Services
 {
@@ -59,6 +60,7 @@ namespace MyApp.API.Services
         throw new InvalidOperationException("End date must be after start date.");
       }
 
+      trip.TripID = GenerateUniqueTripId();
       _context.Trips.Add(trip);
       _context.SaveChanges();
       return trip;
@@ -74,6 +76,28 @@ namespace MyApp.API.Services
       _context.Trips.Remove(trip);
       _context.SaveChanges();
       return true;
+      }
+
+    private int GenerateUniqueTripId()
+    {
+      var bytes = new byte[4];
+
+      while (true)
+      {
+        RandomNumberGenerator.Fill(bytes);
+        var id = BitConverter.ToInt32(bytes, 0) & int.MaxValue;
+
+        if (id == 0)
+        {
+          continue;
+        }
+
+        var exists = _context.Trips.Any(t => t.TripID == id);
+        if (!exists)
+        {
+          return id;
+        }
+      }
     }
   }
 }
