@@ -9,10 +9,12 @@ namespace MyApp.API.Controllers
   public class TripController : ControllerBase
   {
     private readonly TripService _tripService;
+    private readonly EventService _eventService;
 
-    public TripController(TripService tripService)
+    public TripController(TripService tripService, EventService eventService)
     {
       _tripService = tripService;
+      _eventService = eventService;
     }
 
 
@@ -40,6 +42,18 @@ namespace MyApp.API.Controllers
         return NotFound();
       }
       return Ok(trip);
+    }
+
+    [HttpGet("{id}/events")]
+    public IActionResult GetTripEvents(int id)
+    {
+      var trip = _tripService.GetTripById(id);
+      if (trip == null)
+      {
+        return NotFound();
+      }
+
+      return Ok(_eventService.GetEventsByTrip(id));
     }
 
     [HttpPost]

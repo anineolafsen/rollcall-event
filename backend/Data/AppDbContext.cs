@@ -17,5 +17,20 @@ namespace MyApp.API.Data
     public DbSet<Invitation> Invitations { get; set; } = null!;
 
     public DbSet<Event> Events { get; set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+      base.OnModelCreating(modelBuilder);
+
+      modelBuilder.Entity<Event>()
+        .HasOne(eventItem => eventItem.Trip)
+        .WithMany(trip => trip.Events)
+        .HasForeignKey(eventItem => eventItem.TripID)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      modelBuilder.Entity<Event>()
+        .HasIndex(eventItem => new { eventItem.TripID, eventItem.EventCode })
+        .IsUnique();
+    }
   }
 }

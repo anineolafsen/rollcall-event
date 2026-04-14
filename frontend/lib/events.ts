@@ -4,6 +4,7 @@ export type AttendanceMode = 'mandatory' | 'signup-required';
 
 export type EventRecord = {
   eventID: number;
+  eventCode: string;
   name: string;
   location?: string;
   startDate: string;
@@ -12,6 +13,7 @@ export type EventRecord = {
   capacity?: number | null;
   hasUnlimitedCapacity?: boolean;
   attendanceMode?: string;
+  tripID: number;
 };
 
 export type EventPayload = {
@@ -23,6 +25,7 @@ export type EventPayload = {
   capacity: number | null;
   hasUnlimitedCapacity: boolean;
   attendanceMode: AttendanceMode;
+  tripID: number;
 };
 
 async function readJsonOrThrow<T>(response: Response): Promise<T> {
@@ -33,8 +36,9 @@ async function readJsonOrThrow<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function getEvents() {
-  const response = await fetch(`${API_BASE_URL}/api/events`);
+export async function getEvents(tripId?: string | number) {
+  const endpoint = tripId ? `${API_BASE_URL}/api/trips/${tripId}/events` : `${API_BASE_URL}/api/events`;
+  const response = await fetch(endpoint);
   return readJsonOrThrow<EventRecord[]>(response);
 }
 

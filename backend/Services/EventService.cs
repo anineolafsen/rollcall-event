@@ -1,5 +1,6 @@
 using MyApp.API.Data;
 using MyApp.API.Models;
+using System.Security.Cryptography;
 
 namespace MyApp.API.Services
 {
@@ -17,13 +18,27 @@ namespace MyApp.API.Services
       return _context.Events.ToList();
     }
 
+    public List<Event> GetEventsByTrip(int tripId)
+    {
+      return _context.Events
+        .Where(e => e.TripID == tripId)
+        .OrderBy(e => e.StartDate)
+        .ToList();
+    }
+
     public Event? GetEventById(int id)
     {
       return _context.Events.FirstOrDefault(e => e.EventID == id);
     }
 
+    public bool TripExists(int tripId)
+    {
+      return _context.Trips.Any(t => t.TripID == tripId);
+    }
+
     public Event CreateEvent(Event appEvent)
     {
+      appEvent.EventCode = GenerateUniqueEventCode(appEvent.TripID);
       _context.Events.Add(appEvent);
       _context.SaveChanges();
       return appEvent;
@@ -45,6 +60,10 @@ namespace MyApp.API.Services
       existingEvent.Capacity = updatedEvent.Capacity;
       existingEvent.HasUnlimitedCapacity = updatedEvent.HasUnlimitedCapacity;
       existingEvent.AttendanceMode = updatedEvent.AttendanceMode;
+      existingEvent.TripID = updatedEvent.TripID;
+      existingEvent.EventCode = string.IsNullOrWhiteSpace(updatedEvent.EventCode)
+        ? existingEvent.EventCode
+        : updatedEvent.EventCode;
 
       _context.SaveChanges();
       return existingEvent;
@@ -61,6 +80,27 @@ namespace MyApp.API.Services
       _context.Events.Remove(appEvent);
       _context.SaveChanges();
       return true;
+    }
+
+    private string GenerateUniqueEventCode(int tripId)
+    {
+      const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      var bytes = new byte[8];
+
+      while (true)
+      {
+        RandomNumberGenerator.Fill(bytes);
+
+        var code = new string(bytes
+          .Select(value => alphabet[value % alphabet.Length])
+          .ToArray());
+
+        var exists = _context.Events.Any(e => e.TripID == tripId && e.EventCode == code);
+        if (!exists)
+        {
+          return code;
+        }
+      }
     }
   }
 }

@@ -24,10 +24,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register your custom services
-builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TripService>();
 builder.Services.AddScoped<InvitationService>();
-builder.Services.AddScoped<ParticipantService>();
 builder.Services.AddScoped<EventService>();
 
 var app = builder.Build();

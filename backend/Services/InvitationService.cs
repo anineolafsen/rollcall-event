@@ -1,6 +1,5 @@
 using MyApp.API.Models;
 using MyApp.API.Data;
-using System.Runtime.CompilerServices;
 
 namespace MyApp.API.Services
 {
@@ -11,11 +10,6 @@ namespace MyApp.API.Services
     public InvitationService(AppDbContext context)
     {
       _context = context;
-    }
-
-    public List<Invitation> GetAllInvitations()
-    {
-      return _context.Invitations.ToList();
     }
 
     public Invitation AddInvitation(Invitation invitation)

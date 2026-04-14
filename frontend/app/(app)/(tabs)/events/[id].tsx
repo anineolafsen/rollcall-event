@@ -16,7 +16,7 @@ import { formatAttendanceMode, formatEventDate, formatEventTime } from '@/lib/ev
 import { deleteEvent as deleteEventRequest, getEventById, type EventRecord } from '@/lib/events';
 
 export default function EventDetailsScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, returnTo } = useLocalSearchParams<{ id?: string; returnTo?: string }>();
   const router = useRouter();
   const [event, setEvent] = useState<EventRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,6 +40,15 @@ export default function EventDetailsScreen() {
     }
   }, [id]);
 
+  const handleGoBack = () => {
+    if (returnTo) {
+      router.replace(returnTo);
+      return;
+    }
+
+    router.back();
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.screen}>
@@ -54,7 +63,7 @@ export default function EventDetailsScreen() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.content}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
           <View style={styles.centered}>
@@ -75,7 +84,7 @@ export default function EventDetailsScreen() {
     try {
       setIsDeleting(true);
       await deleteEventRequest(String(id));
-      router.replace('/events');
+      router.replace(`/trips/${event.tripID}`);
     } catch {
       Alert.alert('Error', 'Could not delete event.');
     } finally {
@@ -114,19 +123,12 @@ export default function EventDetailsScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView style={styles.content}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>{event.name}</Text>
         <View style={styles.titleDivider} />
-
-        {event.location && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Location</Text>
-            <Text style={styles.sectionValue}>{event.location}</Text>
-          </View>
-        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Date And Time</Text>
@@ -136,7 +138,6 @@ export default function EventDetailsScreen() {
               <Text style={styles.dateValue}>{formatEventDate(event.startDate)}</Text>
               <Text style={styles.timeValue}>{formatEventTime(event.startDate)}</Text>
             </View>
-            <Text style={styles.dateSeparatorText}>to</Text>
             <View style={styles.dateBlock}>
               <Text style={styles.dateLabel}>To</Text>
               <Text style={styles.dateValue}>{formatEventDate(event.endDate)}</Text>
@@ -144,6 +145,13 @@ export default function EventDetailsScreen() {
             </View>
           </View>
         </View>
+
+        {event.location && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Location</Text>
+            <Text style={styles.sectionValue}>{event.location}</Text>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Attendance</Text>
@@ -264,11 +272,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4a7ca8',
     fontWeight: '600',
-  },
-  dateSeparatorText: {
-    fontSize: 12,
-    color: '#7a9ab8',
-    marginBottom: 16,
   },
   description: {
     fontSize: 14,

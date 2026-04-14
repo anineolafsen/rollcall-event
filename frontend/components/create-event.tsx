@@ -45,7 +45,7 @@ const initialFormValues: FormValues = {
 type DateFieldName = 'dateFrom' | 'dateTo';
 
 export function CreateEventScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, tripId } = useLocalSearchParams<{ id?: string; tripId?: string }>();
   const router = useRouter();
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -53,6 +53,7 @@ export function CreateEventScreen() {
   const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingEvent, setIsLoadingEvent] = useState(false);
+  const [eventTripId, setEventTripId] = useState<number | null>(tripId ? Number(tripId) : null);
   const minimumStartValue = formatDateValue(new Date());
   const isEditing = Boolean(id);
 
@@ -96,6 +97,7 @@ export function CreateEventScreen() {
 
       try {
         const event = await getEventById(id);
+        setEventTripId(event.tripID);
         setFormValues({
           title: event.name ?? '',
           location: event.location ?? '',
@@ -228,6 +230,11 @@ export function CreateEventScreen() {
   };
 
   const handleSubmit = async () => {
+    if (!eventTripId || Number.isNaN(eventTripId)) {
+      Alert.alert('Error', 'Create events from a trip so the event is linked correctly.');
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
@@ -244,6 +251,7 @@ export function CreateEventScreen() {
         capacity: formValues.hasUnlimitedCapacity ? null : Number(formValues.capacity),
         hasUnlimitedCapacity: formValues.hasUnlimitedCapacity,
         attendanceMode: formValues.attendanceMode,
+        tripID: eventTripId,
       };
 
       if (isEditing) {
@@ -257,7 +265,7 @@ export function CreateEventScreen() {
       setFormErrors({});
       setActiveDateField(null);
       Alert.alert('Success', isEditing ? 'Event updated successfully!' : 'Event created successfully!');
-      router.replace(isEditing ? `/events/${id}` : '/events');
+      router.replace(`/trips/${eventTripId}`);
     } catch (error) {
       const errorMessage = error instanceof Error
         ? error.message
@@ -291,6 +299,9 @@ export function CreateEventScreen() {
           <View style={styles.titleDivider} />
 
           {isLoadingEvent ? <Text style={styles.helperText}>Loading event details...</Text> : null}
+          {eventTripId ? (
+            <Text style={styles.helperText}>This event will be connected to trip #{eventTripId}.</Text>
+          ) : null}
 
           <FormField
             label="Name of Event"

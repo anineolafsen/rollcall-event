@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, usePathname, useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -11,12 +11,24 @@ import {
   RefreshControl,
 } from 'react-native';
 
+import { EventCard } from '@/components/event-card';
 import { AppButton } from '@/components/ui/button';
-import { formatEventDate, formatEventTime, getUpcomingEvents, isEventWithinNext24Hours } from '@/lib/event-format';
+import { getUpcomingEvents } from '@/lib/event-format';
 import { getEvents, type EventRecord } from '@/lib/events';
 
-export function UpcomingEventsScreen() {
+type UpcomingEventsScreenProps = {
+  tripId?: string | number;
+  title?: string;
+  showBackButton?: boolean;
+};
+
+export function UpcomingEventsScreen({
+  tripId,
+  title = 'Upcoming Events',
+  showBackButton = false,
+}: UpcomingEventsScreenProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,15 +37,15 @@ export function UpcomingEventsScreen() {
   const fetchEvents = useCallback(async () => {
     try {
       setError(null);
-      const data = await getEvents();
+      const data = await getEvents(tripId);
       setEvents(getUpcomingEvents(data));
     } catch {
-      setError('Could not load events. Please try again.');
+      setError('Could not load events for this trip.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [tripId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -47,52 +59,43 @@ export function UpcomingEventsScreen() {
   };
 
   const renderEvent = ({ item }: { item: EventRecord }) => {
-    const isStartingSoon = isEventWithinNext24Hours(item);
-
     return (
-      <TouchableOpacity onPress={() => router.push(`/events/${item.eventID}`)}>
-        <View style={[styles.card, isStartingSoon && styles.cardSoon]}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.eventName}>{item.name}</Text>
-            {isStartingSoon ? (
-              <View style={styles.soonBadge}>
-                <Text style={styles.soonBadgeText}>Within 24h</Text>
-              </View>
-            ) : null}
-          </View>
-
-          <View style={[styles.cardDivider, isStartingSoon && styles.cardDividerSoon]} />
-
-          <View style={styles.metaBlock}>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Date:</Text>
-              <Text style={styles.metaValue}>{formatEventDate(item.startDate)}</Text>
-            </View>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Time:</Text>
-              <Text style={styles.metaValue}>{formatEventTime(item.startDate)}</Text>
-            </View>
-          </View>
-
-          {item.location ? <Text style={styles.location}>{item.location}</Text> : null}
-        </View>
-      </TouchableOpacity>
+      <EventCard
+        event={item}
+        onPress={() =>
+          router.push({
+            pathname: '/events/[id]',
+            params: {
+              id: String(item.eventID),
+              returnTo: pathname,
+            },
+          })
+        }
+      />
     );
   };
 
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.content}>
-        <Text style={styles.title}>Upcoming Events</Text>
+        {showBackButton ? (
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        <Text style={styles.title}>{title}</Text>
         <View style={styles.titleDivider} />
 
-        <AppButton
-          variant="create"
-          style={styles.createButtonTop}
-          textStyle={styles.createButtonText}
-          label="Create new event +"
-          onPress={() => router.push('/events/create')}
-        />
+        {tripId ? (
+          <AppButton
+            variant="create"
+            style={styles.createButtonTop}
+            textStyle={styles.createButtonText}
+            label="Create event +"
+            onPress={() => router.push(`/events/create?tripId=${tripId}`)}
+          />
+        ) : null}
 
         <View style={styles.timelineSection}>
           <View style={styles.timelineRail} />
@@ -147,6 +150,15 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 28,
   },
+  backButton: {
+    marginBottom: 24,
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 15,
+    color: '#4a7ca8',
+    fontWeight: '600',
+  },
   title: {
     fontSize: 40,
     lineHeight: 46,
@@ -165,7 +177,10 @@ const styles = StyleSheet.create({
   createButtonTop: {
     alignSelf: 'center',
     marginBottom: 24,
-    minWidth: 290,
+    minWidth: 280,
+  },
+  createButtonText: {
+    fontSize: 24,
   },
   timelineSection: {
     flex: 1,
@@ -185,86 +200,6 @@ const styles = StyleSheet.create({
     gap: 22,
     paddingTop: 2,
     paddingBottom: 48,
-  },
-  card: {
-    backgroundColor: '#c7e2f8',
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    borderWidth: 4,
-    borderColor: '#75baf0',
-  },
-  cardSoon: {
-    backgroundColor: '#fff2c7',
-    borderColor: '#f0b429',
-    shadowColor: '#f0b429',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    elevation: 3,
-  },
-  cardHeader: {
-    marginBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  eventName: {
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '900',
-    color: '#090909',
-    flex: 1,
-  },
-  soonBadge: {
-    backgroundColor: '#f0b429',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  soonBadgeText: {
-    fontSize: 12,
-    lineHeight: 14,
-    fontWeight: '800',
-    color: '#3f2a00',
-    textTransform: 'uppercase',
-  },
-  cardDivider: {
-    height: 4,
-    width: '72%',
-    backgroundColor: '#3b3b3b',
-    marginBottom: 18,
-  },
-  cardDividerSoon: {
-    backgroundColor: '#c78300',
-  },
-  metaBlock: {
-    gap: 10,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  metaLabel: {
-    fontSize: 18,
-    lineHeight: 24,
-    color: '#6e7c89',
-    marginRight: 6,
-  },
-  metaValue: {
-    fontSize: 18,
-    lineHeight: 24,
-    color: '#6e7c89',
-  },
-  location: {
-    marginTop: 14,
-    fontSize: 14,
-    color: '#31597c',
-    fontWeight: '600',
   },
   centered: {
     flex: 1,
@@ -293,5 +228,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7a9ab8',
   },
-  createButtonText: {},
 });

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MyApp.API.Services;
 using MyApp.API.Models;
-using System.Runtime.Versioning;
 
 namespace MyApp.API.Controllers
 {
@@ -21,12 +20,6 @@ namespace MyApp.API.Controllers
         public IActionResult PostInvitation([FromBody] Invitation invitation)
         {
             return Ok(_invitationService.AddInvitation(invitation));
-        }
-
-        [HttpGet]
-        public IActionResult GetInvitations()
-        {
-            return Ok(_invitationService.GetAllInvitations());
         }
     }
 }

@@ -1,5 +1,5 @@
-import { UpcomingEventsScreen } from '@/components/upcoming-events';
+import { Redirect } from 'expo-router';
 
 export default function EventsScreen() {
-  return <UpcomingEventsScreen />;
+  return <Redirect href="/trips" />;
 }
