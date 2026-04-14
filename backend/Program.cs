@@ -25,6 +25,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Register your custom services
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<TripService>();
+builder.Services.AddScoped<InvitationService>();
+builder.Services.AddScoped<ParticipantService>();
+builder.Services.AddScoped<EventService>();
 
 var app = builder.Build();
 

@@ -2,18 +2,26 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 
 type AppButtonProps = {
   label: string;
-  onPress: () => void;
+  onPress: () => void | Promise<void>;
+  disabled?: boolean;
   variant?: 'primary' | 'secondary';
 };
 
-export function AppButton({ label, onPress, variant = 'primary' }: AppButtonProps) {
+export function AppButton({ label, onPress, disabled = false, variant = 'primary' }: AppButtonProps) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [
+    <Pressable 
+      onPress={onPress} 
+      disabled={disabled}
+      style={({ pressed }) => [
+        
       styles.button,
       variant === 'secondary' && styles.secondaryButton,
-      pressed && styles.buttonPressed,
-    ]}>
-      <Text style={[styles.label,
+      
+        disabled ? styles.buttonDisabled : (pressed && styles.buttonPressed,
+    )
+      ]}
+    >
+      <Text style={[styles.label, disabled ? [styles.labelDisabled : undefined],
         variant === 'secondary' && styles.secondaryLabel,
       ]}
       >
@@ -34,10 +42,16 @@ const styles = StyleSheet.create({
   buttonPressed: {
     opacity: 0.85,
   },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
   label: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  labelDisabled: {
+    color: '#cccccc',
   },
   secondaryButton: {
     backgroundColor: '#e0e0e0',
