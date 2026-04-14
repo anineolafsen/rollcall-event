@@ -41,8 +41,7 @@ export function AppNavbar() {
       <Tabs.Screen
         name="events"
         options={{
-          title: 'Events',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
+          href: null,
         }}
       />
       <Tabs.Screen

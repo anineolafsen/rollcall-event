@@ -11,8 +11,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-
-import { ParticipationModal } from './ParticipationModal';
+import { AppButton } from '@/components/ui/button';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -137,18 +136,13 @@ export function ViewTripsScreen() {
             }
           />
         )}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.participationButton}
-            onPress={() => setModalVisible(true)}>
-            <Text style={styles.participationButtonText}>👤 My Invitations</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={() => router.push('/trips/create')}>
-            <Text style={styles.createButtonText}>+ Create Trip</Text>
-          </TouchableOpacity>
-        </View>
+        <AppButton
+          variant="create"
+          style={styles.createButton}
+          label="Create new trip +"
+          onPress={() => router.push('/trips/create')}
+        />
+        
       </View>
       <ParticipationModal
         visible={modalVisible}
@@ -286,15 +280,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   createButton: {
-    marginTop: 8,
-    backgroundColor: '#76b6ee',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    marginTop: 20,
+    alignSelf: 'center',
+    minWidth: 290,
   },
 });

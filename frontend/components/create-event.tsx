@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -7,14 +8,15 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
 import { AppButton } from '@/components/ui/button';
+import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date-field';
 import { FormField } from '@/components/ui/form-field';
 import { SelectionChip } from '@/components/ui/selection-chip';
-
-type AttendanceMode = 'mandatory' | 'signup-required';
+import { createEvent, getEventById, updateEvent, type AttendanceMode, type EventPayload } from '@/lib/events';
 
 type FormValues = {
   title: string;
@@ -40,16 +42,119 @@ const initialFormValues: FormValues = {
   attendanceMode: 'mandatory',
 };
 
+type DateFieldName = 'dateFrom' | 'dateTo';
+
 export function CreateEventScreen() {
+  const { id, tripId } = useLocalSearchParams<{ id?: string; tripId?: string }>();
+  const router = useRouter();
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingEvent, setIsLoadingEvent] = useState(false);
+  const [eventTripId, setEventTripId] = useState<number | null>(tripId ? Number(tripId) : null);
+  const minimumStartValue = formatDateValue(new Date());
+  const isEditing = Boolean(id);
 
   const capacityHint = formValues.hasUnlimitedCapacity
     ? 'No participant limit is set for this event.'
     : formValues.capacity
       ? `This event will allow up to ${formValues.capacity} participants.`
-      : 'Set a clear participant limit for planning and safety.';
+      : '';
+
+  const getDateErrors = (values: Pick<FormValues, 'dateFrom' | 'dateTo'>) => {
+    const nextErrors: Pick<FormErrors, 'dateFrom' | 'dateTo'> = {};
+    const now = new Date();
+
+    if (values.dateFrom) {
+      const startDate = parseDateValue(values.dateFrom);
+
+      if (startDate < now) {
+        nextErrors.dateFrom = 'Start date and time cannot be in the past.';
+      }
+    }
+
+    if (values.dateFrom && values.dateTo) {
+      const startDate = parseDateValue(values.dateFrom);
+      const endDate = parseDateValue(values.dateTo);
+
+      if (endDate < startDate) {
+        nextErrors.dateTo = 'End date and time cannot be earlier than the start date and time.';
+      }
+    }
+
+    return nextErrors;
+  };
+
+  useEffect(() => {
+    const fetchEvent = async () => {
+      if (!id) {
+        return;
+      }
+
+      setIsLoadingEvent(true);
+
+      try {
+        const event = await getEventById(id);
+        setEventTripId(event.tripID);
+        setFormValues({
+          title: event.name ?? '',
+          location: event.location ?? '',
+          dateFrom: event.startDate ?? '',
+          dateTo: event.endDate ?? '',
+          description: event.description ?? '',
+          capacity: event.capacity ? String(event.capacity) : '',
+          hasUnlimitedCapacity: Boolean(event.hasUnlimitedCapacity),
+          attendanceMode: event.attendanceMode === 'signup-required' ? 'signup-required' : 'mandatory',
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load event';
+        Alert.alert('Error', errorMessage);
+        router.back();
+      } finally {
+        setIsLoadingEvent(false);
+      }
+    };
+
+    fetchEvent();
+  }, [id, router]);
+
+  const updateDateField = (field: DateFieldName, value: string) => {
+    setFormValues((currentValues) => {
+      const nextValues = {
+        ...currentValues,
+        [field]: value,
+      };
+
+      if (
+        field === 'dateFrom' &&
+        nextValues.dateTo &&
+        parseDateValue(nextValues.dateTo) < parseDateValue(value)
+      ) {
+        nextValues.dateTo = '';
+      }
+
+      return nextValues;
+    });
+
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      dateFrom: undefined,
+      dateTo: undefined,
+      ...getDateErrors({
+        dateFrom: field === 'dateFrom' ? value : formValues.dateFrom,
+        dateTo:
+          field === 'dateTo'
+            ? value
+            : field === 'dateFrom' && formValues.dateTo && parseDateValue(formValues.dateTo) < parseDateValue(value)
+              ? ''
+              : formValues.dateTo,
+      }),
+    }));
+
+    setSuccessMessage('');
+  };
 
   const updateField = <K extends keyof FormValues>(field: K, value: FormValues[K]) => {
     setFormValues((currentValues) => ({
@@ -93,6 +198,8 @@ export function CreateEventScreen() {
       nextErrors.dateTo = 'Add an end date.';
     }
 
+    Object.assign(nextErrors, getDateErrors(formValues));
+
     if (!formValues.description.trim()) {
       nextErrors.description = 'Add a short description.';
     }
@@ -122,13 +229,57 @@ export function CreateEventScreen() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!eventTripId || Number.isNaN(eventTripId)) {
+      Alert.alert('Error', 'Create events from a trip so the event is linked correctly.');
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
 
-    setSuccessMessage('Event draft is ready. Connect this form to the backend create endpoint next.');
-    Alert.alert('Event created', 'The frontend form is complete and ready to connect to real data.');
+    setIsSubmitting(true);
+
+    try {
+      const payload: EventPayload = {
+        name: formValues.title,
+        location: formValues.location,
+        startDate: formValues.dateFrom,
+        endDate: formValues.dateTo,
+        description: formValues.description,
+        capacity: formValues.hasUnlimitedCapacity ? null : Number(formValues.capacity),
+        hasUnlimitedCapacity: formValues.hasUnlimitedCapacity,
+        attendanceMode: formValues.attendanceMode,
+        tripID: eventTripId,
+      };
+
+      if (isEditing) {
+        await updateEvent(id!, payload);
+      } else {
+        await createEvent(payload);
+      }
+
+      setSuccessMessage(isEditing ? 'Event updated successfully!' : 'Event created successfully!');
+      setFormValues(initialFormValues);
+      setFormErrors({});
+      setActiveDateField(null);
+      Alert.alert('Success', isEditing ? 'Event updated successfully!' : 'Event created successfully!');
+      router.replace(`/trips/${eventTripId}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : isEditing
+          ? 'Failed to update event'
+          : 'Failed to save event';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const toggleDatePicker = (field: DateFieldName) => {
+    setActiveDateField((currentField) => (currentField === field ? null : field));
   };
 
   return (
@@ -140,8 +291,17 @@ export function CreateEventScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          <Text style={styles.title}>Create New Event</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.title}>{isEditing ? 'Edit Event' : 'Create New Event'}</Text>
           <View style={styles.titleDivider} />
+
+          {isLoadingEvent ? <Text style={styles.helperText}>Loading event details...</Text> : null}
+          {eventTripId ? (
+            <Text style={styles.helperText}>This event will be connected to trip #{eventTripId}.</Text>
+          ) : null}
 
           <FormField
             label="Name of Event"
@@ -161,21 +321,27 @@ export function CreateEventScreen() {
 
           <View style={styles.row}>
             <View style={styles.rowField}>
-              <FormField
-                label="Date from"
-                placeholder="YYYY-MM-DD"
+              <DateField
+                label="Date and time from"
                 value={formValues.dateFrom}
-                onChangeText={(value) => updateField('dateFrom', value)}
+                minValue={minimumStartValue}
+                onToggle={() => toggleDatePicker('dateFrom')}
+                onChange={(value) => updateDateField('dateFrom', value)}
+                onClose={() => setActiveDateField(null)}
+                isOpen={activeDateField === 'dateFrom'}
                 error={formErrors.dateFrom}
               />
             </View>
 
             <View style={styles.rowField}>
-              <FormField
-                label="Date to"
-                placeholder="YYYY-MM-DD"
+              <DateField
+                label="Date and time to"
                 value={formValues.dateTo}
-                onChangeText={(value) => updateField('dateTo', value)}
+                minValue={formValues.dateFrom || minimumStartValue}
+                onToggle={() => toggleDatePicker('dateTo')}
+                onChange={(value) => updateDateField('dateTo', value)}
+                onClose={() => setActiveDateField(null)}
+                isOpen={activeDateField === 'dateTo'}
                 error={formErrors.dateTo}
               />
             </View>
@@ -229,7 +395,19 @@ export function CreateEventScreen() {
 
           {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
 
-          <AppButton label="Create event" onPress={handleSubmit} />
+          <AppButton
+            label={
+              isSubmitting
+                ? isEditing
+                  ? 'Saving event...'
+                  : 'Creating event...'
+                : isEditing
+                  ? 'Save changes'
+                  : 'Create event'
+            }
+            onPress={handleSubmit}
+            disabled={isSubmitting || isLoadingEvent}
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -245,7 +423,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   content: {
-    flex: 1,
     backgroundColor: '#eef5fb',
     paddingHorizontal: 22,
     paddingTop: 80,
@@ -266,6 +443,15 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     marginHorizontal: 28,
   },
+  backButton: {
+    marginBottom: 24,
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 15,
+    color: '#4a7ca8',
+    fontWeight: '600',
+  },
   row: {
     flexDirection: 'row',
     gap: 12,
@@ -276,48 +462,50 @@ const styles = StyleSheet.create({
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+    marginBottom: 8,
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#b8c1c9',
-    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#8db3d5',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#ffffff',
   },
   checkboxChecked: {
-    borderColor: '#0b0b0b',
+    backgroundColor: '#76b6ee',
+    borderColor: '#76b6ee',
   },
   checkboxInner: {
-    width: 12,
-    height: 12,
+    width: 10,
+    height: 10,
     borderRadius: 3,
-    backgroundColor: '#0b0b0b',
+    backgroundColor: '#ffffff',
   },
   checkboxLabel: {
-    fontSize: 15,
-    color: '#111111',
+    fontSize: 14,
+    color: '#1a3d5c',
+    fontWeight: '500',
   },
   helperText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#53616c',
-    marginTop: 4,
     marginBottom: 20,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#5a7a94',
   },
   sectionLabel: {
-    fontSize: 17,
-    fontWeight: '500',
-    color: '#111111',
     marginBottom: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a3d5c',
   },
   optionRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   successMessage: {
     marginBottom: 16,
