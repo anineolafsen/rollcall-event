@@ -4,7 +4,6 @@ export type AttendanceMode = 'mandatory' | 'signup-required';
 
 export type EventRecord = {
   eventID: number;
-  eventCode: string;
   name: string;
   location?: string;
   startDate: string;

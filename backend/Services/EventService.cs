@@ -38,7 +38,7 @@ namespace MyApp.API.Services
 
     public Event CreateEvent(Event appEvent)
     {
-      appEvent.EventCode = GenerateUniqueEventCode(appEvent.TripID);
+      appEvent.EventID = GenerateUniqueEventId();
       _context.Events.Add(appEvent);
       _context.SaveChanges();
       return appEvent;
@@ -61,9 +61,6 @@ namespace MyApp.API.Services
       existingEvent.HasUnlimitedCapacity = updatedEvent.HasUnlimitedCapacity;
       existingEvent.AttendanceMode = updatedEvent.AttendanceMode;
       existingEvent.TripID = updatedEvent.TripID;
-      existingEvent.EventCode = string.IsNullOrWhiteSpace(updatedEvent.EventCode)
-        ? existingEvent.EventCode
-        : updatedEvent.EventCode;
 
       _context.SaveChanges();
       return existingEvent;
@@ -82,23 +79,24 @@ namespace MyApp.API.Services
       return true;
     }
 
-    private string GenerateUniqueEventCode(int tripId)
+    private int GenerateUniqueEventId()
     {
-      const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      var bytes = new byte[8];
+      var bytes = new byte[4];
 
       while (true)
       {
         RandomNumberGenerator.Fill(bytes);
+        var id = BitConverter.ToInt32(bytes, 0) & int.MaxValue;
 
-        var code = new string(bytes
-          .Select(value => alphabet[value % alphabet.Length])
-          .ToArray());
+        if (id == 0)
+        {
+          continue;
+        }
 
-        var exists = _context.Events.Any(e => e.TripID == tripId && e.EventCode == code);
+        var exists = _context.Events.Any(e => e.EventID == id);
         if (!exists)
         {
-          return code;
+          return id;
         }
       }
     }

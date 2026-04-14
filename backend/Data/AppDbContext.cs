@@ -29,8 +29,8 @@ namespace MyApp.API.Data
         .OnDelete(DeleteBehavior.Cascade);
 
       modelBuilder.Entity<Event>()
-        .HasIndex(eventItem => new { eventItem.TripID, eventItem.EventCode })
-        .IsUnique();
+        .Property(eventItem => eventItem.EventID)
+        .ValueGeneratedNever();
     }
   }
 }

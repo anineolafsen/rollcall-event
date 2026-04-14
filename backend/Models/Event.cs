@@ -7,7 +7,6 @@ namespace MyApp.API.Models
   {
     [Key]
     public int EventID { get; set; }
-    public string EventCode { get; set; } = string.Empty;
     public required string Name { get; set; }
     public required string Location { get; set; }
     public required string StartDate { get; set; }
