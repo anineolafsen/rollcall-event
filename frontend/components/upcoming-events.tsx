@@ -160,9 +160,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
-    fontSize: 40,
-    lineHeight: 46,
-    fontWeight: '900',
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
     textAlign: 'center',
     color: '#090909',
   },
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     minWidth: 280,
   },
   createButtonText: {
-    fontSize: 24,
+    fontSize: 26,
   },
   timelineSection: {
     flex: 1,
