@@ -73,6 +73,28 @@ namespace MyApp.API.Controllers
       }
     }
 
+    [HttpPut("{id}")]
+    public IActionResult UpdateTrip(int id, [FromBody] Trip trip)
+    {
+      try
+      {
+        var updatedTrip = _tripService.UpdateTrip(id, trip);
+        if (updatedTrip == null)
+        {
+          return NotFound();
+        }
+        return Ok(updatedTrip);
+      }
+      catch (InvalidOperationException ex)
+      {
+        return BadRequest(new { error = ex.Message });
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = "An unexpected error occurred.", details = ex.Message });
+      }
+    }
+
     [HttpDelete("{id}")]
     public IActionResult DeleteTrip(int id)
     {

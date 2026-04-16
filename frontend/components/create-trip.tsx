@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 
 import { AppButton } from '@/components/ui/button';
@@ -69,12 +70,49 @@ const initialFormValues: FormValues = {
 };
 
 export function CreateTripScreen() {
-    const router = useRouter();
+  const { id: tripId } = useLocalSearchParams<{ id?: string }>();
+  const router = useRouter();
+  const isEditing = Boolean(tripId);
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingTrip, setIsLoadingTrip] = useState(false);
+
+  useEffect(() => {
+    const fetchTrip = async () => {
+      if (!tripId) return;
+      setIsLoadingTrip(true);
+      try {
+        const apiUrl = process.env.EXPO_PUBLIC_API_URL ? `${process.env.EXPO_PUBLIC_API_URL}/api` : 'http://localhost:5118/api';
+        const response = await fetch(`${apiUrl}/trips/${tripId}`);
+        if (!response.ok) throw new Error('Failed to load trip');
+        const data = await response.json();
+        const formatISOToDisplay = (isoDate: string): string => {
+          const date = new Date(isoDate);
+          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const year = date.getFullYear();
+          return `${day}.${month}.${year}`;
+        };
+        setFormValues({
+          title: data.name || '',
+          destination: data.destination || '',
+          dateFrom: data.startDate ? formatISOToDisplay(data.startDate) : '',
+          dateTo: data.endDate ? formatISOToDisplay(data.endDate) : '',
+          description: data.description || '',
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load trip';
+        Alert.alert('Error', errorMessage);
+        router.back();
+      } finally {
+        setIsLoadingTrip(false);
+      }
+    };
+    fetchTrip();
+  }, [tripId, router]);
 
   const updateField = <K extends keyof FormValues>(field: K, value: FormValues[K]) => {
     setFormValues((currentValues) => ({
@@ -143,7 +181,6 @@ export function CreateTripScreen() {
 
     setIsLoading(true);
     try {
-      // Convert dates to ISO format for backend
       const startDateISO = formatDateToISO(formValues.dateFrom);
       const endDateISO = formatDateToISO(formValues.dateTo);
 
@@ -155,40 +192,61 @@ export function CreateTripScreen() {
         ? `${process.env.EXPO_PUBLIC_API_URL}/api`
         : 'http://localhost:5118/api';
 
-      const response = await fetch(`${apiUrl}/trips`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formValues.title,
-          startDate: startDateISO,
-          endDate: endDateISO,
-          destination: formValues.destination,
-          description: formValues.description,
-        }),
-      });
+      const tripData = {
+        name: formValues.title,
+        startDate: startDateISO,
+        endDate: endDateISO,
+        destination: formValues.destination,
+        description: formValues.description,
+      };
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      if (isEditing && tripId) {
+        const response = await fetch(`${apiUrl}/trips/${tripId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(tripData),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        }
+
+        setSuccessMessage('Trip updated successfully!');
+        Alert.alert('Success', 'Trip updated successfully!');
+        router.replace(`/trips/${tripId}`);
+      } else {
+        // Create new trip
+        const response = await fetch(`${apiUrl}/trips`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(tripData),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log('Trip creation response:', result);
+        setSuccessMessage('Trip created successfully!');
+        const newTripId = result.tripID || result.tripId || result.id || 1;
+        console.log('Extracted tripId:', newTripId);
+        router.push({
+          pathname: '/invite',
+          params: {
+            tripId: newTripId,
+            tripName: formValues.title,
+          },
+        });
       }
-
-      const result = await response.json();
-      console.log('Trip creation response:', result);
-      setSuccessMessage('Trip created successfully!');
-      // Navigate to invitations page with trip details
-      const tripId = result.tripID || result.tripId || result.id || 1;
-      console.log('Extracted tripId:', tripId);
-      router.push({
-        pathname: '/invite',
-        params: {
-          tripId,
-          tripName: formValues.title,
-        },
-      });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create trip';
+      const errorMessage = error instanceof Error ? error.message : isEditing ? 'Failed to update trip' : 'Failed to create trip';
       Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
@@ -210,8 +268,9 @@ export function CreateTripScreen() {
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
           
-          <Text style={styles.title}>Create New Trip</Text>
+          <Text style={styles.title}>{isEditing ? 'Edit Trip' : 'Create New Trip'}</Text>
           <View style={styles.titleDivider} />
+          {isLoadingTrip ? <Text style={styles.helperText}>Loading trip details...</Text> : null}
 
           <FormField
             label="Trip Name"
@@ -262,7 +321,19 @@ export function CreateTripScreen() {
 
           {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
 
-          <AppButton label={isLoading ? 'Creating trip...' : 'Create trip'} onPress={handleSubmit} disabled={isLoading} />
+          <AppButton
+            label={
+              isLoading
+                ? isEditing
+                  ? 'Saving trip...'
+                  : 'Creating trip...'
+                : isEditing
+                  ? 'Save changes'
+                  : 'Create trip'
+            }
+            onPress={handleSubmit}
+            disabled={isLoading || isLoadingTrip}
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -319,5 +390,11 @@ const styles = StyleSheet.create({
     color: '#246b3f',
     fontSize: 14,
     lineHeight: 20,
+  },
+  helperText: {
+    marginBottom: 20,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#5a7a94',
   },
 });

@@ -54,7 +54,7 @@ export default function TripDetails() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.content}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.push("/trips")}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
           <View style={styles.centered}>
@@ -72,17 +72,30 @@ export default function TripDetails() {
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
         <Text style={styles.tripTitle}>{trip.name}</Text>
-        <TouchableOpacity
-          style={styles.inviteButton}
-          onPress={() =>
-            router.push({
-              pathname: '/trips/[id]/manage-invitations',
-              params: { tripId: trip.tripID, tripName: trip.name },
-            })
-          }
-        >
-          <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.inviteButton}
+            onPress={() =>
+              router.push({
+                pathname: '/trips/[id]/manage-invitations',
+                params: { tripId: trip.tripID, tripName: trip.name },
+              })
+            }
+          >
+            <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() =>
+              router.push({
+                pathname: '/trips/create',
+                params: { id: trip.tripID },
+              })
+            }
+          >
+            <Text style={styles.editButtonText}>✎ Edit</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <UpcomingEventsScreen tripId={trip.tripID} title={trip.name} showBackButton={false} />
     </SafeAreaView>
@@ -117,14 +130,29 @@ const styles = StyleSheet.create({
     color: '#090909',
     marginBottom: 12,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
   inviteButton: {
     backgroundColor: '#4a7ca8',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    alignSelf: 'flex-start',
   },
   inviteButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  editButton: {
+    backgroundColor: '#76b6ee',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  editButtonText: {
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 14,
