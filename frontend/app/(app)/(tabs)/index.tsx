@@ -1,5 +1,5 @@
-import { View } from 'react-native';
-import { Text, StyleSheet, ScrollView } from 'react-native';
+import { View , Text, StyleSheet, ScrollView } from 'react-native';
+
 
 export default function Home() {
   return (
