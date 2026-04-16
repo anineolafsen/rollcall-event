@@ -31,7 +31,6 @@ export function ViewTripsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
 
   const fetchTrips = async () => {
     try {
@@ -142,12 +141,7 @@ export function ViewTripsScreen() {
           label="Create new trip +"
           onPress={() => router.push('/trips/create')}
         />
-        
       </View>
-      <ParticipationModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-      />
     </SafeAreaView>
   );
 }

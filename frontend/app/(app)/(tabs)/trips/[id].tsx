@@ -65,29 +65,69 @@ export default function TripDetails() {
     );
   }
 
-  return <UpcomingEventsScreen tripId={trip.tripID} title={trip.name} showBackButton />;
+  return (
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>← Go back</Text>
+        </TouchableOpacity>
+        <Text style={styles.tripTitle}>{trip.name}</Text>
+        <TouchableOpacity
+          style={styles.inviteButton}
+          onPress={() =>
+            router.push({
+              pathname: '/trips/[id]/manage-invitations',
+              params: { tripId: trip.tripID, tripName: trip.name },
+            })
+          }
+        >
+          <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
+        </TouchableOpacity>
+      </View>
+      <UpcomingEventsScreen tripId={trip.tripID} title={trip.name} showBackButton={false} />
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#edf4fa',
+    backgroundColor: '#eef5fb',
   },
-  content: {
-    flex: 1,
-    backgroundColor: '#edf4fa',
+  header: {
+    backgroundColor: '#eef5fb',
     paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 28,
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d9e8f5',
   },
   backButton: {
-    marginBottom: 24,
+    marginBottom: 12,
     alignSelf: 'flex-start',
   },
   backButtonText: {
     fontSize: 15,
     color: '#4a7ca8',
     fontWeight: '600',
+  },
+  tripTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#090909',
+    marginBottom: 12,
+  },
+  inviteButton: {
+    backgroundColor: '#4a7ca8',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+  },
+  inviteButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 14,
   },
   centered: {
     flex: 1,

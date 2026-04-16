@@ -13,12 +13,14 @@ namespace MyApp.API.Data
     public DbSet<Trip> Trips { get; set; } = null!;
     public DbSet<Participant> Participants { get; set; } = null!;
     public DbSet<Invitation> Invitations { get; set; } = null!;
-
     public DbSet<Event> Events { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
       base.OnModelCreating(modelBuilder);
+
+      modelBuilder.Entity<Invitation>()
+      .HasKey(i => new { i.TripID, i.UserEmail });
 
       modelBuilder.Entity<Event>()
         .HasOne(eventItem => eventItem.Trip)

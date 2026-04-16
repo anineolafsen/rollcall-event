@@ -181,7 +181,7 @@ export function CreateTripScreen() {
       const tripId = result.tripID || result.tripId || result.id || 1;
       console.log('Extracted tripId:', tripId);
       router.push({
-        pathname: '/invitations',
+        pathname: '/invite',
         params: {
           tripId,
           tripName: formValues.title,
@@ -237,7 +237,6 @@ export function CreateTripScreen() {
                 value={formValues.dateFrom}
                 onChangeText={(value) => updateField('dateFrom', value)}
                 error={formErrors.dateFrom}
-                inputType="date"
               />
             </View>
 
@@ -248,7 +247,6 @@ export function CreateTripScreen() {
                 value={formValues.dateTo}
                 onChangeText={(value) => updateField('dateTo', value)}
                 error={formErrors.dateTo}
-                inputType="date"
               />
             </View>
           </View>

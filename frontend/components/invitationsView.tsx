@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
 
 import EmailInviteUploader, { type UploadState } from '@/components/invitationsFileUpload';
@@ -16,8 +17,18 @@ import EmailInviteUploader, { type UploadState } from '@/components/invitationsF
 export default function InvitationsView() {
   const router = useRouter();
   const searchParams = useLocalSearchParams();
-  const tripId = Number(searchParams.tripId) || 1;
-  const tripName = searchParams.tripName as string || 'Trip';
+  const tripId = searchParams.tripId ? Number(searchParams.tripId) : null;
+  const tripName = searchParams.tripName as string;
+
+  if (!tripId || !tripName) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>Invalid trip information</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
   const [uploadState, setUploadState] = useState<UploadState>('idle');
 
   const handleBack = () => {
@@ -144,5 +155,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#b0413e',
+    textAlign: 'center',
   },
 });
