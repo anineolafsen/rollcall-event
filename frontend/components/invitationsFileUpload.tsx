@@ -216,7 +216,7 @@ export default function EmailInviteUploader({
       setErrorMessage(message);
       setState("error");
     }
-  }, [validEntries, onSubmit, apiUrl, tripId]);
+  }, [validEntries, onSubmit, tripId, apiUrl]);
 
   const handleSubmit = useCallback(async () => {
     if (validEntries.length === 0) return;
@@ -228,7 +228,7 @@ export default function EmailInviteUploader({
         [
           { text: "Cancel", style: "cancel" },
           { text: "Continue", onPress: () => submitEmails() },
-        ],
+        ]
       );
     } else {
       submitEmails();

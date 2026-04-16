@@ -25,13 +25,11 @@ namespace MyApp.API.Services
 
     private bool TryParseDate(string dateStr, out DateTime date)
     {
-      // Try ISO format (YYYY-MM-DD or ISO 8601)
       if (DateTime.TryParse(dateStr, out date))
       {
         return true;
       }
       
-      // Try DD.MM.YYYY format
       if (DateTime.TryParseExact(dateStr, "dd.MM.yyyy", 
         System.Globalization.CultureInfo.InvariantCulture, 
         System.Globalization.DateTimeStyles.None, out date))

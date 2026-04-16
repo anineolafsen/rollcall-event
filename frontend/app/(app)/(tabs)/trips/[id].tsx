@@ -29,7 +29,7 @@ export default function TripDetails() {
         const data: Trip = await response.json();
         setTrip(data);
       } catch {
-        setError('Could not load trip.');
+        setError('Could not load trip details.');
       } finally {
         setLoading(false);
       }

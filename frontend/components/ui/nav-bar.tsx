@@ -6,6 +6,7 @@ import { PlatformPressable } from '@react-navigation/elements';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export function AppNavbar() {
+
   return (
     <Tabs
       screenOptions={{

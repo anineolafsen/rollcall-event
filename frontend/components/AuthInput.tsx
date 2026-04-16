@@ -1,7 +1,9 @@
 // components/AuthInput.tsx
 import { TextInput, StyleSheet, TextInputProps } from "react-native";
 
-export default function AuthInput(props: TextInputProps) {
+type AuthInputProps = TextInputProps;
+
+export default function AuthInput(props: AuthInputProps) {
   return (
     <TextInput
       style={styles.input}
