@@ -19,6 +19,7 @@ export default function InvitationsView() {
   const searchParams = useLocalSearchParams();
   const tripId = searchParams.tripId ? Number(searchParams.tripId) : null;
   const tripName = searchParams.tripName as string;
+  const [uploadState, setUploadState] = useState<UploadState>('idle');
 
   if (!tripId || !tripName) {
     return (
@@ -29,7 +30,6 @@ export default function InvitationsView() {
       </SafeAreaView>
     );
   }
-  const [uploadState, setUploadState] = useState<UploadState>('idle');
 
   const handleBack = () => {
     router.push('/trips');

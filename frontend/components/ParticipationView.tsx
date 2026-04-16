@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -41,11 +41,7 @@ export function ParticipationView() {
   const [error, setError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchInvitations();
-  }, [user?.primaryEmailAddress?.emailAddress]);
-
-  const fetchInvitations = async () => {
+  const fetchInvitations = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -88,7 +84,11 @@ export function ParticipationView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.primaryEmailAddress?.emailAddress]);
+
+  useEffect(() => {
+    fetchInvitations();
+  }, [fetchInvitations]);
 
   const handleAccept = async (tripId: number, email: string) => {
     if (!userId) {
