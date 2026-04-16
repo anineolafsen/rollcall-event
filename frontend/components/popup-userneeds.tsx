@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -7,31 +7,83 @@ import {
   Text,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 
 import { AppButton } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 
-export default function PopupUserNeeds() {
+type Props = {
+  tripId?: string;
+};
+
+export default function PopupUserNeeds({ tripId }: Props) {
+  const router = useRouter();
   const [allergies, setAllergies] = useState("");
   const [otherInfo, setOtherInfo] = useState("");
 
-const handleSave = async () => {
-  try {
-    await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/api/users/profile/needs`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ allergies, otherInfo }),
-    });
-  } catch (error) {
-    console.error("Feil ved lagring:", error);
-  }
-};
+  // TODO: bytt ut med ekte userId når session/token er implementert
+  const userId = 7;
 
-const handleSkip = () => {
-  // TODO: naviger videre / lukk visningen
-};
+  useEffect(() => {
+    if (!tripId) return;
+
+    const fetchExisting = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/users/${userId}/needs/${tripId}`
+        );
+        const data = await response.json();
+        setAllergies(data.allergies ?? "");
+        setOtherInfo(data.otherInfo ?? "");
+      } catch (error) {
+        console.error("Feil ved henting av eksisterende data:", error);
+      }
+    };
+
+    fetchExisting();
+  }, [tripId]);
+
+  const navigateToTrip = () => {
+    if (tripId) {
+      router.push(`/trips/${tripId}`);
+    } else {
+      router.back();
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await fetch(
+        `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/users/${userId}/needs/${tripId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ allergies, otherInfo }),
+        }
+      );
+    } catch (error) {
+      console.error("Feil ved lagring:", error);
+    }
+    // TODO: Naviger til events koblet til denne turen etter lagring.
+    navigateToTrip();
+  };
+
+  const handleSkip = async () => {
+    try {
+      await fetch(
+        `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/users/${userId}/needs/${tripId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ allergies: null, otherInfo: null }),
+        }
+      );
+    } catch (error) {
+      console.error("Feil ved lagring av tom UserNeeds:", error);
+    }
+    // TODO: Naviger til events koblet til denne turen etter skip (ikke navigateToTrip)
+    navigateToTrip();
+  };
 
   return (
     <KeyboardAvoidingView
@@ -64,9 +116,13 @@ const handleSkip = () => {
           />
 
           <Text style={styles.sectionLabel}>
-            This information helps us ensure your safety during trips (e.g.
-            allergies or accessibility needs). It is only visible to organizers
-            and can be edited or removed at any time.{" "}
+            This information helps us ensure your safety during the trip (e.g.
+            allergies or accessibility needs). It is only visible to organizers.
+            {"\n\n"}
+            The information will be deleted when the trip is finished.
+            {"\n\n"}
+            You can also view this information at any time from your profile
+            page.
           </Text>
 
           <View style={styles.buttonRow}>

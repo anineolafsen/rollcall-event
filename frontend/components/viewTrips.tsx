@@ -68,7 +68,7 @@ export function ViewTripsScreen() {
   };
 
   const renderTrip = ({ item }: { item: Trip }) => (
-    <TouchableOpacity onPress={() => router.push(`/trips/${item.tripID}`)}>
+    <TouchableOpacity onPress={() => router.push(`/popupUserNeeds?tripId=${item.tripID}`)}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.tripName}>{item.name}</Text>

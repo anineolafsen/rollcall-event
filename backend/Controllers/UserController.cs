@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MyApp.API.Services;
 using MyApp.API.Models;
-using System.Security.Claims;
 
 namespace MyApp.API.Controllers
 {
@@ -25,13 +24,24 @@ namespace MyApp.API.Controllers
     [HttpPost]
     public IActionResult CreateUser([FromBody] User user)
     {
-
       if (string.IsNullOrEmpty(user.Email))
       {
         return BadRequest("Email is required.");
       }
       return Ok(_userService.CreateUser(user));
     }
+
+    // PUT /api/users/{id}
+    // Updates Name and Phone for a user. Used by the profile page.
+    [HttpPut("{id}")]
+    public IActionResult UpdateUser(int id, [FromBody] UpdateUserProfileDto dto)
+    {
+      var user = _userService.UpdateUser(id, dto.Name, dto.Phone);
+      if (user == null) return NotFound();
+      return Ok(user);
+    }
+
+    public record UpdateUserProfileDto(string? Name, string? Phone);
 
     [HttpDelete("{id}")]
     public IActionResult DeleteUser(int id)
@@ -46,28 +56,32 @@ namespace MyApp.API.Controllers
       return NoContent();
     }
 
-    // GET /api/users/profile/needs - Henter allergier og otherInfo for innlogget bruker
-    [HttpGet("profile/needs")]
-    public IActionResult GetMyNeeds()
+    // GET /api/users/{id}/needs
+    // Returns all health info for the user, one entry per trip with trip name.
+    // Used by the profile page.
+    [HttpGet("{id}/needs")]
+    public IActionResult GetUserNeeds(int id)
     {
-      var clerkUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-      if (clerkUserId == null) return Unauthorized();
-
-      var user = _userService.GetUserNeeds(clerkUserId);
-      if (user == null) return NotFound();
-      return Ok(new { user.Allergies, user.OtherInfo });
+      var needs = _userService.GetAllUserNeeds(id);
+      return Ok(needs);
     }
 
-    // PUT /api/users/profile/needs - Oppdaterer allergier og otherInfo for innlogget bruker
-    [HttpPut("profile/needs")]
-    public IActionResult UpdateMyNeeds([FromBody] UpdateUserNeeds dto)
+    // GET /api/users/{id}/needs/{tripId}
+    // Returns health info for a specific trip. Used by the popup to pre-load existing data.
+    [HttpGet("{id}/needs/{tripId}")]
+    public IActionResult GetUserNeedsForTrip(int id, int tripId)
     {
-      var clerkUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-      if (clerkUserId == null) return Unauthorized();
+      var row = _userService.GetUserNeedsForTrip(id, tripId);
+      return Ok(row ?? new UserNeeds { UserId = id, TripId = tripId });
+    }
 
-      var user = _userService.UpdateUserNeeds(clerkUserId, dto);
-      if (user == null) return NotFound();
-      return Ok(new { user.Allergies, user.OtherInfo });
+    // PUT /api/users/{id}/needs/{tripId}
+    // Creates or updates health info for a specific trip. Used by the popup.
+    [HttpPut("{id}/needs/{tripId}")]
+    public IActionResult UpsertUserNeedsForTrip(int id, int tripId, [FromBody] UserNeeds dto)
+    {
+      var row = _userService.UpsertUserNeedsForTrip(id, tripId, dto);
+      return Ok(row);
     }
   }
 }

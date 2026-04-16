@@ -19,6 +19,8 @@ const MAPPING = {
   'suitcase.fill': 'luggage',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'calendar': 'calendar-today',
+  'person.fill': 'person',
 } as IconMapping;
 
 /**

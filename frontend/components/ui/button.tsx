@@ -17,11 +17,10 @@ export function AppButton({ label, onPress, disabled = false, variant = 'primary
       styles.button,
       variant === 'secondary' && styles.secondaryButton,
       
-        disabled ? styles.buttonDisabled : (pressed && styles.buttonPressed,
-    )
+        disabled ? styles.buttonDisabled : (pressed && styles.buttonPressed),
       ]}
     >
-      <Text style={[styles.label, disabled ? [styles.labelDisabled : undefined],
+      <Text style={[styles.label, disabled ? styles.labelDisabled : undefined,
         variant === 'secondary' && styles.secondaryLabel,
       ]}
       >

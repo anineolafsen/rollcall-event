@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MyApp.API.Models;
 using MyApp.API.Data;
 
@@ -24,6 +25,17 @@ namespace MyApp.API.Services
       return user;
     }
 
+    // Updates Name and Phone for a user. Used by the profile page.
+    public User? UpdateUser(int id, string? name, string? phone)
+    {
+      var user = _context.Users.FirstOrDefault(u => u.Id == id);
+      if (user == null) return null;
+      user.Name = name;
+      user.Phone = phone;
+      _context.SaveChanges();
+      return user;
+    }
+
     public void DeleteUser(int id)
     {
       var user = _context.Users.FirstOrDefault(u => u.Id == id);
@@ -34,22 +46,42 @@ namespace MyApp.API.Services
       }
     }
 
-     // Henter allergier og otherInfo for innlogget bruker
-    public User? GetUserNeeds(string clerkUserId)
+    // Returns all UserNeeds for a user, one entry per trip with trip name.
+    // Used by the profile page to display health info grouped by trip.
+    public List<UserNeedsResponse> GetAllUserNeeds(int userId)
     {
-      return _context.Users.FirstOrDefault(u => u.ClerkUserId == clerkUserId);
+      return _context.UserNeeds
+        .Where(n => n.UserId == userId)
+        .Include(n => n.Trip)
+        .Select(n => new UserNeedsResponse
+        {
+          TripId = n.TripId,
+          TripName = n.Trip!.Name,
+          Allergies = n.Allergies,
+          OtherInfo = n.OtherInfo
+        })
+        .ToList();
     }
 
-    // Oppdaterer allergier og otherInfo for innlogget bruker
-    public User? UpdateUserNeeds(string clerkUserId, UpdateUserNeeds dto)
+    // Returns UserNeeds for a specific (userId, tripId). Used by the popup to pre-load existing data.
+    public UserNeeds? GetUserNeedsForTrip(int userId, int tripId)
     {
-      var user = _context.Users.FirstOrDefault(u => u.ClerkUserId == clerkUserId);
-      if (user == null) return null;
+      return _context.UserNeeds.FirstOrDefault(n => n.UserId == userId && n.TripId == tripId);
+    }
 
-      user.Allergies = dto.Allergies;
-      user.OtherInfo = dto.OtherInfo;
+    // Creates or updates UserNeeds for a specific (userId, tripId). Used from the popup.
+    public UserNeeds UpsertUserNeedsForTrip(int userId, int tripId, UserNeeds dto)
+    {
+      var row = _context.UserNeeds.FirstOrDefault(n => n.UserId == userId && n.TripId == tripId);
+      if (row == null)
+      {
+        row = new UserNeeds { UserId = userId, TripId = tripId };
+        _context.UserNeeds.Add(row);
+      }
+      row.Allergies = dto.Allergies;
+      row.OtherInfo = dto.OtherInfo;
       _context.SaveChanges();
-      return user;
+      return row;
     }
   }
 }

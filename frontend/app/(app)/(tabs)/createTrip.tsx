@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity } from '
 import { Image } from 'expo-image';
 import { Fonts } from '@/constants/theme';
 import { useState } from 'react';
-import FormInput from '@/components/FormInput';
+import { FormField as FormInput } from '@/components/ui/form-field';
 
 export default function CreateTripScreen() {
   
