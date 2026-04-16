@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter } from 'expo-router';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -34,7 +34,6 @@ const initialFormValues: FormValues = {
 
 export function CreateTripScreen() {
     const router = useRouter();
-    const pathname = usePathname();
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});

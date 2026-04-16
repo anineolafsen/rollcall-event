@@ -73,7 +73,7 @@ async function readXlsxToRows(uri: string): Promise<string[][]> {
       });
       return rows;
     }
-  } catch (error) {
+  } catch {
     throw new Error(
       "Could not read the file. Make sure it is a valid Excel or CSV file."
     );
@@ -165,24 +165,7 @@ export default function EmailInviteUploader({
     }
   }, [maxEmails]);
 
-  const handleSubmit = useCallback(async () => {
-    if (validEntries.length === 0) return;
-
-    if (invalidEntries.length > 0) {
-      Alert.alert(
-        "Invalid emails detected",
-        `${invalidEntries.length} row(s) have invalid email addresses and will be skipped. Continue with ${validEntries.length} valid email(s)?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Continue", onPress: () => submitEmails() },
-        ]
-      );
-    } else {
-      submitEmails();
-    }
-  }, [validEntries, invalidEntries]);
-
-  const submitEmails = async () => {
+  const submitEmails = useCallback(async () => {
     try {
       setState("submitting");
       const emails = validEntries.map((e) => e.email);
@@ -221,7 +204,24 @@ export default function EmailInviteUploader({
       setErrorMessage(message);
       setState("error");
     }
-  };
+  }, [validEntries, onSubmit, tripId, apiUrl]);
+
+  const handleSubmit = useCallback(async () => {
+    if (validEntries.length === 0) return;
+
+    if (invalidEntries.length > 0) {
+      Alert.alert(
+        "Invalid emails detected",
+        `${invalidEntries.length} row(s) have invalid email addresses and will be skipped. Continue with ${validEntries.length} valid email(s)?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Continue", onPress: () => submitEmails() },
+        ]
+      );
+    } else {
+      submitEmails();
+    }
+  }, [validEntries, invalidEntries, submitEmails]);
 
   const handleReset = () => {
     setState("idle");
