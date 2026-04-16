@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 import {
   View,
@@ -25,7 +25,6 @@ interface Trip {
 
 export function ViewTripsScreen() {
   const router = useRouter();
-  const pathname = usePathname();
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +40,7 @@ export function ViewTripsScreen() {
       }
       const data: Trip[] = await response.json();
       setTrips(data);
-    } catch (err) {
+    } catch {
       setError('Could not load trips. Please try again.');
     } finally {
       setLoading(false);

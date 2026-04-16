@@ -91,7 +91,7 @@ export default function SignInPage() {
       <Link href="/sign-up" asChild>
         <TouchableOpacity>
           <ThemedText style={styles.link}>
-            Don't have an account? Sign up
+            Don&apos;t have an account? Sign up
           </ThemedText>
         </TouchableOpacity>
       </Link>
