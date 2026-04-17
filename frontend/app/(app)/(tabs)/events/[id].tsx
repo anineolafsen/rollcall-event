@@ -42,7 +42,7 @@ export default function EventDetailsScreen() {
 
   const handleGoBack = () => {
     if (returnTo) {
-      router.replace(returnTo);
+      router.replace(returnTo as any);
       return;
     }
 

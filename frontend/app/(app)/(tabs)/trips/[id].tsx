@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
 
@@ -9,6 +9,26 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5
 interface Trip {
   tripID: number;
   name: string;
+  startDate: string;
+  endDate: string;
+  location?: string;
+  description?: string;
+}
+
+interface Invitation {
+  tripID: number;
+  userEmail: string;
+}
+
+interface Participant {
+  participantID: number;
+  tripID: number;
+  userID: string;
+}
+
+interface ParticipantStatus {
+  email: string;
+  status: 'accepted' | 'invited';
 }
 
 export default function TripDetails() {
@@ -17,9 +37,11 @@ export default function TripDetails() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<ParticipantStatus[]>([]);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
-    const fetchTrip = async () => {
+    const fetchTripData = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/trips/${id}`);
         if (!response.ok) {
@@ -28,6 +50,9 @@ export default function TripDetails() {
 
         const data: Trip = await response.json();
         setTrip(data);
+
+        // Fetch invitations and participants
+        await fetchParticipantStatus(data.tripID);
       } catch {
         setError('Could not load trip details.');
       } finally {
@@ -36,9 +61,60 @@ export default function TripDetails() {
     };
 
     if (id) {
-      fetchTrip();
+      fetchTripData();
     }
   }, [id]);
+
+  const fetchParticipantStatus = async (tripId: number) => {
+    setLoadingStats(true);
+    try {
+      // Fetch participants (accepted)
+      const participantsResponse = await fetch(`${API_BASE_URL}/api/participants/trip/${tripId}`);
+      const participantsData: Participant[] = participantsResponse.ok ? await participantsResponse.json() : [];
+
+      // Fetch invitations (invited)
+      const invitationsResponse = await fetch(`${API_BASE_URL}/api/invitations?tripId=${tripId}`);
+      const invitationsData: Invitation[] = invitationsResponse.ok ? await invitationsResponse.json() : [];
+
+      // Combine and deduplicate
+      const statusMap = new Map<string, ParticipantStatus>();
+
+      // Add accepted participants
+      participantsData.forEach((p) => {
+        if (p.userID && !statusMap.has(p.userID)) {
+          statusMap.set(p.userID, {
+            email: p.userID, // Using userID as a unique identifier
+            status: 'accepted',
+          });
+        }
+      });
+
+      // Add invited
+      invitationsData.forEach((inv) => {
+        if (!statusMap.has(inv.userEmail)) {
+          statusMap.set(inv.userEmail, {
+            email: inv.userEmail,
+            status: 'invited',
+          });
+        }
+      });
+
+      setParticipants(Array.from(statusMap.values()));
+    } catch (err) {
+      console.error('Failed to fetch participant status:', err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const formatDate = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return dateString;
+    }
+  };
 
   if (loading) {
     return (
@@ -53,13 +129,11 @@ export default function TripDetails() {
   if (error || !trip) {
     return (
       <SafeAreaView style={styles.screen}>
-        <View style={styles.content}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.push("/trips")}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
-          <View style={styles.centered}>
-            <Text style={styles.errorText}>{error || 'Trip not found'}</Text>
-          </View>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.push("/trips")}>
+          <Text style={styles.backButtonText}>← Go back</Text>
+        </TouchableOpacity>
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>{error || 'Trip not found'}</Text>
         </View>
       </SafeAreaView>
     );
@@ -78,7 +152,7 @@ export default function TripDetails() {
             onPress={() =>
               router.push({
                 pathname: '/trips/[id]/manage-invitations',
-                params: { tripId: trip.tripID, tripName: trip.name },
+                params: { id: trip.tripID, tripName: trip.name },
               })
             }
           >
@@ -97,7 +171,61 @@ export default function TripDetails() {
           </TouchableOpacity>
         </View>
       </View>
-      <UpcomingEventsScreen tripId={trip.tripID} title={trip.name} showBackButton={false} />
+
+      {/* Trip Info Section */}
+      <View style={styles.tripInfoSection}>
+        {trip.startDate && trip.endDate && (
+          <Text style={styles.tripInfoText}>
+            📅 {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
+          </Text>
+        )}
+        {trip.location && (
+          <Text style={styles.tripInfoText}>
+            📍 {trip.location}
+          </Text>
+        )}
+        {trip.description && (
+          <Text style={styles.tripInfoText}>
+            {trip.description}
+          </Text>
+        )}
+      </View>
+
+      {/* Two Column Layout: Events (left) and Participant Status (right) */}
+      <View style={styles.contentContainer}>
+        <View style={styles.leftColumn}>
+          <UpcomingEventsScreen tripId={trip.tripID} title={trip.name} showBackButton={false} />
+        </View>
+
+        <View style={styles.rightColumn}>
+          <Text style={styles.participantTitle}>Participant Status</Text>
+          {loadingStats ? (
+            <ActivityIndicator size="small" color="#76b6ee" />
+          ) : (
+            <ScrollView style={styles.participantList}>
+              {participants.length === 0 ? (
+                <Text style={styles.noParticipants}>No participants or invitations yet</Text>
+              ) : (
+                participants.map((p, index) => (
+                  <View key={index} style={styles.participantRow}>
+                    <View
+                      style={[
+                        styles.statusCircle,
+                        p.status === 'accepted'
+                          ? styles.statusCircleAccepted
+                          : styles.statusCircleInvited,
+                      ]}
+                    />
+                    <Text style={styles.participantEmail} numberOfLines={1}>
+                      {p.email}
+                    </Text>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          )}
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -156,6 +284,76 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 14,
+  },
+  tripInfoSection: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d9e8f5',
+  },
+  tripInfoText: {
+    fontSize: 16,
+    color: '#000000',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  contentContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+  },
+  leftColumn: {
+    flex: 1,
+    borderRightWidth: 1,
+    borderRightColor: '#d9e8f5',
+  },
+  rightColumn: {
+    width: 500,
+    backgroundColor: '#f9fafb',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderLeftWidth: 1,
+    borderLeftColor: '#d9e8f5',
+  },
+  participantTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#090909',
+    marginBottom: 12,
+  },
+  participantList: {
+    flex: 1,
+  },
+  noParticipants: {
+    fontSize: 13,
+    color: '#9ca3af',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  participantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  statusCircle: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  statusCircleAccepted: {
+    backgroundColor: '#10b981',
+  },
+  statusCircleInvited: {
+    backgroundColor: '#f97316',
+  },
+  participantEmail: {
+    fontSize: 12,
+    color: '#6b7280',
+    flex: 1,
   },
   centered: {
     flex: 1,
