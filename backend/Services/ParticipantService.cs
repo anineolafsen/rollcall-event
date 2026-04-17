@@ -17,8 +17,28 @@ namespace MyApp.API.Services
       return _context.Participants.ToList();
     }
 
+    public List<Participant> GetByTrip(int tripId)
+    {
+      return _context.Participants
+        .Where(p => p.TripID == tripId)
+        .ToList();
+    }
+
+    public Participant? GetByTripAndUser(int tripId, string userId)
+    {
+      return _context.Participants
+        .FirstOrDefault(p => p.TripID == tripId && p.UserID == userId);
+    }
+
     public Participant AddParticipant(Participant participant)
     {
+      // Check if already participant
+      var existing = GetByTripAndUser(participant.TripID, participant.UserID);
+      if (existing != null)
+      {
+        return existing;
+      }
+
       _context.Participants.Add(participant);
       _context.SaveChanges();
       return participant;

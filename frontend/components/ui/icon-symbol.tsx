@@ -20,6 +20,7 @@ const MAPPING = {
   'suitcase.fill': 'luggage',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'envelope.fill': 'mail',
 } as IconMapping;
 
 /**

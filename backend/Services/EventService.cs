@@ -1,5 +1,6 @@
 using MyApp.API.Data;
 using MyApp.API.Models;
+using System.Security.Cryptography;
 
 namespace MyApp.API.Services
 {
@@ -17,13 +18,27 @@ namespace MyApp.API.Services
       return _context.Events.ToList();
     }
 
+    public List<Event> GetEventsByTrip(int tripId)
+    {
+      return _context.Events
+        .Where(e => e.TripID == tripId)
+        .OrderBy(e => e.StartDate)
+        .ToList();
+    }
+
     public Event? GetEventById(int id)
     {
       return _context.Events.FirstOrDefault(e => e.EventID == id);
     }
 
+    public bool TripExists(int tripId)
+    {
+      return _context.Trips.Any(t => t.TripID == tripId);
+    }
+
     public Event CreateEvent(Event appEvent)
     {
+      appEvent.EventID = GenerateUniqueEventId();
       _context.Events.Add(appEvent);
       _context.SaveChanges();
       return appEvent;
@@ -45,6 +60,7 @@ namespace MyApp.API.Services
       existingEvent.Capacity = updatedEvent.Capacity;
       existingEvent.HasUnlimitedCapacity = updatedEvent.HasUnlimitedCapacity;
       existingEvent.AttendanceMode = updatedEvent.AttendanceMode;
+      existingEvent.TripID = updatedEvent.TripID;
 
       _context.SaveChanges();
       return existingEvent;
@@ -61,6 +77,28 @@ namespace MyApp.API.Services
       _context.Events.Remove(appEvent);
       _context.SaveChanges();
       return true;
+    }
+
+    private int GenerateUniqueEventId()
+    {
+      var bytes = new byte[4];
+
+      while (true)
+      {
+        RandomNumberGenerator.Fill(bytes);
+        var id = BitConverter.ToInt32(bytes, 0) & int.MaxValue;
+
+        if (id == 0)
+        {
+          continue;
+        }
+
+        var exists = _context.Events.Any(e => e.EventID == id);
+        if (!exists)
+        {
+          return id;
+        }
+      }
     }
   }
 }

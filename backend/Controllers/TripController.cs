@@ -9,10 +9,12 @@ namespace MyApp.API.Controllers
   public class TripController : ControllerBase
   {
     private readonly TripService _tripService;
+    private readonly EventService _eventService;
 
-    public TripController(TripService tripService)
+    public TripController(TripService tripService, EventService eventService)
     {
       _tripService = tripService;
+      _eventService = eventService;
     }
 
 
@@ -42,10 +44,55 @@ namespace MyApp.API.Controllers
       return Ok(trip);
     }
 
+    [HttpGet("{id}/events")]
+    public IActionResult GetTripEvents(int id)
+    {
+      var trip = _tripService.GetTripById(id);
+      if (trip == null)
+      {
+        return NotFound();
+      }
+
+      return Ok(_eventService.GetEventsByTrip(id));
+    }
+
     [HttpPost]
     public IActionResult CreateTrip([FromBody] Trip trip)
     {
-      return Ok(_tripService.CreateTrip(trip));
+      try
+      {
+        return Ok(_tripService.CreateTrip(trip));
+      }
+      catch (InvalidOperationException ex)
+      {
+        return BadRequest(new { error = ex.Message });
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = "An unexpected error occurred.", details = ex.Message });
+      }
+    }
+
+    [HttpPut("{id}")]
+    public IActionResult UpdateTrip(int id, [FromBody] Trip trip)
+    {
+      try
+      {
+        var updatedTrip = _tripService.UpdateTrip(id, trip);
+        if (updatedTrip == null)
+        {
+          return NotFound();
+        }
+        return Ok(updatedTrip);
+      }
+      catch (InvalidOperationException ex)
+      {
+        return BadRequest(new { error = ex.Message });
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = "An unexpected error occurred.", details = ex.Message });
+      }
     }
 
     [HttpDelete("{id}")]

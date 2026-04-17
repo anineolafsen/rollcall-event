@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -7,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -14,10 +16,7 @@ import { AppButton } from '@/components/ui/button';
 import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date-field';
 import { FormField } from '@/components/ui/form-field';
 import { SelectionChip } from '@/components/ui/selection-chip';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
-
-type AttendanceMode = 'mandatory' | 'signup-required';
+import { createEvent, getEventById, updateEvent, type AttendanceMode, type EventPayload } from '@/lib/events';
 
 type FormValues = {
   title: string;
@@ -46,12 +45,17 @@ const initialFormValues: FormValues = {
 type DateFieldName = 'dateFrom' | 'dateTo';
 
 export function CreateEventScreen() {
+  const { id, tripId } = useLocalSearchParams<{ id?: string; tripId?: string }>();
+  const router = useRouter();
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingEvent, setIsLoadingEvent] = useState(false);
+  const [eventTripId, setEventTripId] = useState<number | null>(tripId ? Number(tripId) : null);
   const minimumStartValue = formatDateValue(new Date());
+  const isEditing = Boolean(id);
 
   const capacityHint = formValues.hasUnlimitedCapacity
     ? 'No participant limit is set for this event.'
@@ -82,6 +86,39 @@ export function CreateEventScreen() {
 
     return nextErrors;
   };
+
+  useEffect(() => {
+    const fetchEvent = async () => {
+      if (!id) {
+        return;
+      }
+
+      setIsLoadingEvent(true);
+
+      try {
+        const event = await getEventById(id);
+        setEventTripId(event.tripID);
+        setFormValues({
+          title: event.name ?? '',
+          location: event.location ?? '',
+          dateFrom: event.startDate ?? '',
+          dateTo: event.endDate ?? '',
+          description: event.description ?? '',
+          capacity: event.capacity ? String(event.capacity) : '',
+          hasUnlimitedCapacity: Boolean(event.hasUnlimitedCapacity),
+          attendanceMode: event.attendanceMode === 'signup-required' ? 'signup-required' : 'mandatory',
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load event';
+        Alert.alert('Error', errorMessage);
+        router.back();
+      } finally {
+        setIsLoadingEvent(false);
+      }
+    };
+
+    fetchEvent();
+  }, [id, router]);
 
   const updateDateField = (field: DateFieldName, value: string) => {
     setFormValues((currentValues) => {
@@ -193,6 +230,11 @@ export function CreateEventScreen() {
   };
 
   const handleSubmit = async () => {
+    if (!eventTripId || Number.isNaN(eventTripId)) {
+      Alert.alert('Error', 'Create events from a trip so the event is linked correctly.');
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
@@ -200,35 +242,36 @@ export function CreateEventScreen() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formValues.title,
-          location: formValues.location,
-          startDate: formValues.dateFrom,
-          endDate: formValues.dateTo,
-          description: formValues.description,
-          capacity: formValues.hasUnlimitedCapacity ? null : Number(formValues.capacity),
-          hasUnlimitedCapacity: formValues.hasUnlimitedCapacity,
-          attendanceMode: formValues.attendanceMode,
-        }),
-      });
+      const payload: EventPayload = {
+        name: formValues.title,
+        location: formValues.location,
+        startDate: formValues.dateFrom,
+        endDate: formValues.dateTo,
+        description: formValues.description,
+        capacity: formValues.hasUnlimitedCapacity ? null : Number(formValues.capacity),
+        hasUnlimitedCapacity: formValues.hasUnlimitedCapacity,
+        attendanceMode: formValues.attendanceMode,
+        tripID: eventTripId,
+      };
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (isEditing) {
+        await updateEvent(id!, payload);
+      } else {
+        await createEvent(payload);
       }
 
-      await response.json();
-      setSuccessMessage('Event created successfully!');
+      setSuccessMessage(isEditing ? 'Event updated successfully!' : 'Event created successfully!');
       setFormValues(initialFormValues);
       setFormErrors({});
       setActiveDateField(null);
-      Alert.alert('Success', 'Event created successfully!');
+      Alert.alert('Success', isEditing ? 'Event updated successfully!' : 'Event created successfully!');
+      router.replace(`/trips/${eventTripId}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save event';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : isEditing
+          ? 'Failed to update event'
+          : 'Failed to save event';
       Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -248,8 +291,17 @@ export function CreateEventScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          <Text style={styles.title}>Create New Event</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.title}>{isEditing ? 'Edit Event' : 'Create New Event'}</Text>
           <View style={styles.titleDivider} />
+
+          {isLoadingEvent ? <Text style={styles.helperText}>Loading event details...</Text> : null}
+          {eventTripId ? (
+            <Text style={styles.helperText}>This event will be connected to trip #{eventTripId}.</Text>
+          ) : null}
 
           <FormField
             label="Name of Event"
@@ -344,9 +396,17 @@ export function CreateEventScreen() {
           {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
 
           <AppButton
-            label={isSubmitting ? 'Creating event...' : 'Create event'}
+            label={
+              isSubmitting
+                ? isEditing
+                  ? 'Saving event...'
+                  : 'Creating event...'
+                : isEditing
+                  ? 'Save changes'
+                  : 'Create event'
+            }
             onPress={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isLoadingEvent}
           />
         </View>
       </ScrollView>
@@ -382,6 +442,15 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 28,
     marginHorizontal: 28,
+  },
+  backButton: {
+    marginBottom: 24,
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 15,
+    color: '#4a7ca8',
+    fontWeight: '600',
   },
   row: {
     flexDirection: 'row',

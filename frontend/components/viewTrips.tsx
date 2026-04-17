@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { AppButton } from '@/components/ui/button';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -134,12 +135,12 @@ export function ViewTripsScreen() {
             }
           />
         )}
-        <TouchableOpacity
+        <AppButton
+          variant="create"
           style={styles.createButton}
-          onPress={() => router.push('/trips/create')}>
-          <Text style={styles.createButtonText}>+ Create Trip</Text>
-        </TouchableOpacity>
-        
+          label="Create new trip +"
+          onPress={() => router.push('/trips/create')}
+        />
       </View>
     </SafeAreaView>
   );
@@ -258,16 +259,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7a9ab8',
   },
-  createButton: {
-    marginTop: 20,
-    backgroundColor: '#76b6ee',
+  buttonContainer: {
+    gap: 12,
+  },
+  participationButton: {
+    backgroundColor: '#d9e8f5',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  createButtonText: {
-    color: '#fff',
+  participationButtonText: {
+    color: '#4a7ca8',
     fontSize: 15,
     fontWeight: '700',
+  },
+  createButton: {
+    marginTop: 20,
+    alignSelf: 'center',
+    minWidth: 290,
   },
 });

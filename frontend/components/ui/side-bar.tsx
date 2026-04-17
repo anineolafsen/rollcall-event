@@ -8,13 +8,13 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type NavItem = {
   name: string;
-  href: '/(tabs)/events' | '/(tabs)/trips';
-  icon: 'calendar' | 'suitcase.fill';
+  href: '/(tabs)/trips' | '/(tabs)/my-invitations';
+  icon: 'suitcase.fill' | 'envelope.fill';
 };
 
 const navItems: NavItem[] = [
-  { name: 'Events', href: '/(tabs)/events', icon: 'calendar' },
   { name: 'Trips', href: '/(tabs)/trips', icon: 'suitcase.fill' },
+  { name: 'Invitations', href: '/(tabs)/my-invitations', icon: 'envelope.fill' },
 ];
 
 export function AppSidebar() {
