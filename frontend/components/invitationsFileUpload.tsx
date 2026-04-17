@@ -334,7 +334,7 @@ export default function EmailInviteUploader({
       )}
 
       {/* Upload button*/}
-      {(state === "idle" || state === "error") && (
+      {(state === "idle" || state === "error" || state === "ready") && (
         <>
           <TouchableOpacity
             style={styles.uploadButton}
