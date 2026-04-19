@@ -6,8 +6,8 @@ namespace MyApp.API.Models
   public class Trip
   {
     [Key]
-    public int TripID { get; set; }
-    // public string OwnerID { get; set; } = string.Empty;
+    public int Id { get; set; }
+    public int OrganizerID { get; set; } // UserID of trip organizer
     public required string Name { get; set; }
     public required string StartDate { get; set; }
     public required string EndDate { get; set; }

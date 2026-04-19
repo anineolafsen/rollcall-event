@@ -24,7 +24,7 @@ namespace MyApp.API.Services
         .ToList();
     }
 
-    public Participant? GetByTripAndUser(int tripId, string userId)
+    public Participant? GetByTripAndUser(int tripId, int userId)
     {
       return _context.Participants
         .FirstOrDefault(p => p.TripID == tripId && p.UserID == userId);

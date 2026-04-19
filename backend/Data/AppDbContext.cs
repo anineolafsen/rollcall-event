@@ -19,8 +19,15 @@ namespace MyApp.API.Data
     {
       base.OnModelCreating(modelBuilder);
 
+      // Create Unique Index for Invitation records
       modelBuilder.Entity<Invitation>()
-      .HasKey(i => new { i.TripID, i.UserEmail });
+      .HasIndex(i => new { i.TripID, i.Email })
+      .IsUnique();
+
+      // Create Unique Index for Participant records
+      modelBuilder.Entity<Participant>()
+      .HasIndex(p => new { p.TripID, p.UserID })
+      .IsUnique();
 
       modelBuilder.Entity<Event>()
         .HasOne(eventItem => eventItem.Trip)
