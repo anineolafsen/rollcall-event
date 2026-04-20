@@ -95,6 +95,7 @@ export default function SignUpPage() {
             },
             body: JSON.stringify({
               email: email.trim(),
+              clerkId: signUp.createdUserId,
             }),
           });
         } catch (e) {

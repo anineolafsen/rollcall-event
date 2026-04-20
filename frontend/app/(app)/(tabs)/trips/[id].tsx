@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
+import { useAuth } from "@clerk/expo";
 
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
 
@@ -17,11 +18,17 @@ export default function TripDetails() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const {getToken} = useAuth();
 
   useEffect(() => {
     const fetchTrip = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/trips/${id}`);
+        const token = await getToken();
+        const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) {
           throw new Error(`Server responded with ${response.status}`);
         }

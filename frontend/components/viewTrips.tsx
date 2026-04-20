@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useAuth } from "@clerk/expo";
 
 import {
   View,
@@ -26,6 +27,7 @@ interface Trip {
 
 export function ViewTripsScreen() {
   const router = useRouter();
+  const {getToken} = useAuth();
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,12 @@ export function ViewTripsScreen() {
   const fetchTrips = async () => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/api/trips`);
+      const token = await getToken();
+      const response = await fetch(`${API_BASE_URL}/api/trips/my`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}`);
       }
