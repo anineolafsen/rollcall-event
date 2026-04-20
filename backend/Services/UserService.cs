@@ -12,6 +12,18 @@ namespace MyApp.API.Services
       _context = context;
     }
 
+    // Find user by ClerkId
+    public User? GetByClerkId(string clerkId)
+    {
+      return _context.Users.FirstOrDefault(u => u.ClerkId == clerkId);
+    }
+
+    // Find user by email
+    public User? GetByEmail(string email)
+    {
+      return _context.Users.FirstOrDefault(u => u.Email == email);
+    }
+
     public List<User> GetAllUsers()
     {
       return _context.Users.ToList();

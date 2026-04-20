@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using MyApp.API.Services;
 using MyApp.API.Models;
 using Microsoft.AspNetCore.Authorization;
+using MyApp.API.Extensions;
+
 namespace MyApp.API.Controllers
 {
   [ApiController]
@@ -10,14 +12,14 @@ namespace MyApp.API.Controllers
   {
     private readonly TripService _tripService;
     private readonly EventService _eventService;
+    private readonly UserService _userService;
 
-    public TripController(TripService tripService, EventService eventService)
+    public TripController(TripService tripService, EventService eventService, UserService userService)
     {
       _tripService = tripService;
       _eventService = eventService;
+      _userService = userService;
     }
-
-
 
     [HttpGet]
     public IActionResult GetTrips()
@@ -25,12 +27,18 @@ namespace MyApp.API.Controllers
       return Ok(_tripService.GetAllTrips());
     }
 
-    // GET api/trips/my will now only return trips for the current cclerk user that is being used
+    // GET api/trips/my returns only trips for the authenticated user
     [HttpGet("my")]
     [Authorize]
     public IActionResult GetMyTrips()
     {
-      return Ok();
+      var clerkId = User.GetClerkId();
+      if (clerkId == null) return Unauthorized();
+
+      var user = _userService.GetByClerkId(clerkId);
+      if (user == null) return Unauthorized("User not found.");
+
+      return Ok(_tripService.GetTripsByUser(user.Id));
     }
 
     [HttpGet("{id}")]
@@ -57,10 +65,19 @@ namespace MyApp.API.Controllers
     }
 
     [HttpPost]
+    [Authorize]
     public IActionResult CreateTrip([FromBody] Trip trip)
     {
       try
       {
+        var clerkId = User.GetClerkId();
+        if (clerkId == null) return Unauthorized();
+
+        var user = _userService.GetByClerkId(clerkId);
+        if (user == null) return Unauthorized("User not found.");
+
+        trip.OrganizerID = user.Id;
+
         return Ok(_tripService.CreateTrip(trip));
       }
       catch (InvalidOperationException ex)

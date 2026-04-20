@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using MyApp.API.Services;
 using MyApp.API.Models;
+using Microsoft.AspNetCore.Authorization;
+using MyApp.API.Extensions;
 
 namespace MyApp.API.Controllers
 {
@@ -10,10 +12,12 @@ namespace MyApp.API.Controllers
     public class InvitationController : ControllerBase
     {
         private readonly InvitationService _invitationService;
+        private readonly UserService _userService;
 
-        public InvitationController(InvitationService invitationService)
+        public InvitationController(InvitationService invitationService, UserService userService)
         {
             _invitationService = invitationService;
+            _userService = userService;
         }
 
         [HttpGet]
@@ -38,6 +42,24 @@ namespace MyApp.API.Controllers
         public IActionResult PostInvitation([FromBody] Invitation invitation)
         {
             return Ok(_invitationService.AddInvitation(invitation));
+        }
+
+        [HttpPost("accept")]
+        [Authorize]
+        public IActionResult AcceptInvitation([FromQuery] int invitationId)
+        {
+            var clerkId = User.GetClerkId();
+            if (clerkId == null) return Unauthorized();
+
+            var user = _userService.GetByClerkId(clerkId);
+            if (user == null) return Unauthorized("User not found.");
+
+            var success = _invitationService.AcceptInvitation(invitationId, user.Id);
+            if (!success)
+            {
+                return NotFound("Invitation not found");
+            }
+            return Ok();
         }
 
         [HttpDelete]

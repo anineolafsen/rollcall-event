@@ -32,6 +32,17 @@ namespace MyApp.API.Controllers
       return Ok(_userService.CreateUser(user));
     }
 
+    [HttpGet("clerk/{clerkId}")]
+    public IActionResult GetByClerkId(string clerkId)
+    {
+      var user = _userService.GetByClerkId(clerkId);
+      if (user == null)
+      {
+        return NotFound();
+      }
+      return Ok(user);
+    }
+
     [HttpDelete("{id}")]
     public IActionResult DeleteUser(int id)
     {
