@@ -36,12 +36,22 @@ namespace MyApp.API.Controllers
     [HttpPost]
     public IActionResult CreateEvent([FromBody] Event appEvent)
     {
+      if (!_eventService.TripExists(appEvent.TripID))
+      {
+        return BadRequest("Trip not found.");
+      }
+
       return Ok(_eventService.CreateEvent(appEvent));
     }
 
     [HttpPut("{id}")]
     public IActionResult UpdateEvent(int id, [FromBody] Event appEvent)
     {
+      if (!_eventService.TripExists(appEvent.TripID))
+      {
+        return BadRequest("Trip not found.");
+      }
+
       var updatedEvent = _eventService.UpdateEvent(id, appEvent);
       if (updatedEvent == null)
       {

@@ -5,10 +5,7 @@ namespace MyApp.API.Models
 {
     public class Invitation
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int InvitationId { get; set; }
-        
+        [Required]
         public int TripID { get; set; }
         
         [StringLength(255)]

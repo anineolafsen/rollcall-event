@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MyApp.API.Models
 {
@@ -14,5 +15,8 @@ namespace MyApp.API.Models
     public int? Capacity { get; set; }
     public bool HasUnlimitedCapacity { get; set; }
     public required string AttendanceMode { get; set; }
+    public int TripID { get; set; }
+    [JsonIgnore]
+    public Trip? Trip { get; set; }
   }
 }

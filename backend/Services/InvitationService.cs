@@ -1,6 +1,5 @@
 using MyApp.API.Models;
 using MyApp.API.Data;
-using System.Runtime.CompilerServices;
 
 namespace MyApp.API.Services
 {
@@ -13,16 +12,49 @@ namespace MyApp.API.Services
       _context = context;
     }
 
-    public List<Invitation> GetAllInvitations()
-    {
-      return _context.Invitations.ToList();
-    }
-
     public Invitation AddInvitation(Invitation invitation)
     {
+      // Check for duplicates
+      var existing = _context.Invitations
+        .FirstOrDefault(i => i.TripID == invitation.TripID && i.UserEmail == invitation.UserEmail);
+      
+      if (existing != null)
+      {
+        return existing; // Return existing if duplicate
+      }
+
       _context.Invitations.Add(invitation);
       _context.SaveChanges();
       return invitation;
+    }
+
+    public List<Invitation> GetByEmail(string email)
+    {
+      return _context.Invitations
+        .Where(i => i.UserEmail == email)
+        .ToList();
+    }
+
+    public List<Invitation> GetByTripId(int tripId)
+    {
+      return _context.Invitations
+        .Where(i => i.TripID == tripId)
+        .ToList();
+    }
+
+    public bool RemoveInvitation(int tripId, string email)
+    {
+      var invitation = _context.Invitations
+        .FirstOrDefault(i => i.TripID == tripId && i.UserEmail == email);
+      
+      if (invitation == null)
+      {
+        return false;
+      }
+
+      _context.Invitations.Remove(invitation);
+      _context.SaveChanges();
+      return true;
     }
   }
 }

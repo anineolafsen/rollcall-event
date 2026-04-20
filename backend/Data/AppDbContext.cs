@@ -20,6 +20,19 @@ namespace MyApp.API.Data
     {
       base.OnModelCreating(modelBuilder);
 
+      modelBuilder.Entity<Invitation>()
+      .HasKey(i => new { i.TripID, i.UserEmail });
+
+      modelBuilder.Entity<Event>()
+        .HasOne(eventItem => eventItem.Trip)
+        .WithMany(trip => trip.Events)
+        .HasForeignKey(eventItem => eventItem.TripID)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      modelBuilder.Entity<Event>()
+        .Property(eventItem => eventItem.EventID)
+        .ValueGeneratedNever();
+
       // Composite primary key for UserNeeds
       modelBuilder.Entity<UserNeeds>()
         .HasKey(n => new { n.UserId, n.TripId });

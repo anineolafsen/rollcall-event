@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -32,8 +32,8 @@ export type UploadState =
 export type EmailInviteUploaderProps = {
   tripId: number;
   apiUrl?: string;
-  /* Optional callback for custom submission logic */
   onSubmit?: (validEmails: string[]) => Promise<void>;
+  onStateChange?: (state: UploadState) => void;
   maxEmails?: number;
 };
 
@@ -46,7 +46,7 @@ function validateEmail(value: unknown): boolean {
 
 async function readXlsxToRows(uri: string): Promise<string[][]> {
   try {
-    // For web platform, fetch the file as a blob
+    // File reading for web
     if (Platform.OS === "web") {
       const response = await fetch(uri);
       const blob = await response.blob();
@@ -59,7 +59,7 @@ async function readXlsxToRows(uri: string): Promise<string[][]> {
       });
       return rows;
     } else {
-      // For native platforms, use FileSystem API
+      // FileSystem API for native
       const FileSystem = await import("expo-file-system");
       const fileContent = await FileSystem.readAsStringAsync(uri, {
         encoding: "base64",
@@ -75,15 +75,18 @@ async function readXlsxToRows(uri: string): Promise<string[][]> {
     }
   } catch {
     throw new Error(
-      "Could not read the file. Make sure it is a valid Excel or CSV file."
+      "Could not read the file. Make sure it is a valid Excel or CSV file.",
     );
   }
 }
 
 export default function EmailInviteUploader({
   tripId,
-  apiUrl = process.env.EXPO_PUBLIC_API_URL ? `${process.env.EXPO_PUBLIC_API_URL}/api` : 'http://localhost:5118/api',
+  apiUrl = process.env.EXPO_PUBLIC_API_URL
+    ? `${process.env.EXPO_PUBLIC_API_URL}/api`
+    : "http://localhost:5118/api",
   onSubmit,
+  onStateChange,
   maxEmails = 500,
 }: EmailInviteUploaderProps) {
   const [state, setState] = useState<UploadState>("idle");
@@ -93,6 +96,10 @@ export default function EmailInviteUploader({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [manualEmail, setManualEmail] = useState<string>("");
 
+  useEffect(() => {
+    onStateChange?.(state);
+  }, [state, onStateChange]);
+
   const validEntries = entries.filter((e) => e.valid);
   const invalidEntries = entries.filter((e) => !e.valid);
 
@@ -100,7 +107,6 @@ export default function EmailInviteUploader({
     try {
       setState("picking");
       setErrorMessage(null);
-      setEntries([]);
       setFileName(null);
 
       const result = await DocumentPicker.getDocumentAsync({
@@ -127,7 +133,7 @@ export default function EmailInviteUploader({
         rows = await readXlsxToRows(asset.uri);
       } catch {
         throw new Error(
-          "Could not read the file. Make sure it is a valid .xlsx or .xls spreadsheet."
+          "Could not read the file. Make sure it is a valid .xlsx or .xls spreadsheet.",
         );
       }
 
@@ -139,13 +145,13 @@ export default function EmailInviteUploader({
 
       if (rawEmails.length === 0) {
         throw new Error(
-          "The first column appears to be empty. Make sure your email addresses are in column A."
+          "The first column appears to be empty. Make sure your email addresses are in column A.",
         );
       }
 
       if (rawEmails.length > maxEmails) {
         throw new Error(
-          `This file contains ${rawEmails.length} entries, which exceeds the ${maxEmails}-email limit. Please split the list and upload in batches.`
+          `This file contains ${rawEmails.length} entries, which exceeds the ${maxEmails}-email limit. Please split the list and upload in batches.`,
         );
       }
 
@@ -155,7 +161,14 @@ export default function EmailInviteUploader({
         row,
       }));
 
-      setEntries(parsed);
+      setEntries((prev) => {
+        const existingEmails = new Set(prev.map((e) => e.email.toLowerCase()));
+        const newEntries = parsed.filter(
+          (p) => !existingEmails.has(p.email.toLowerCase()),
+        );
+        const merged = [...prev, ...newEntries];
+        return merged.map((e, idx) => ({ ...e, row: idx + 1 }));
+      });
       setState("ready");
     } catch (err: unknown) {
       const message =
@@ -171,10 +184,8 @@ export default function EmailInviteUploader({
       const emails = validEntries.map((e) => e.email);
 
       if (onSubmit) {
-        // Use custom callback if provided
         await onSubmit(emails);
       } else {
-        // Make API calls to add invitations
         const invitations = emails.map((email) => ({
           tripID: tripId,
           userEmail: email,
@@ -189,8 +200,9 @@ export default function EmailInviteUploader({
 
           if (!response.ok) {
             const errorText = await response.text();
+            console.error(`API Error: ${response.status} - ${errorText}`);
             throw new Error(
-              `Failed to add invitation for ${invitation.userEmail}: ${errorText}`
+              `Failed to add invitation for ${invitation.userEmail}. Server returned: ${response.status}`,
             );
           }
         }
@@ -240,12 +252,20 @@ export default function EmailInviteUploader({
     }
 
     if (!validateEmail(trimmedEmail)) {
-      Alert.alert("Invalid email", `"${trimmedEmail}" is not a valid email address.`);
+      Alert.alert(
+        "Invalid email",
+        `"${trimmedEmail}" is not a valid email address.`,
+      );
       return;
     }
 
-    if (entries.some((e) => e.email === trimmedEmail)) {
-      Alert.alert("Duplicate email", `"${trimmedEmail}" is already in the list.`);
+    if (
+      entries.some((e) => e.email.toLowerCase() === trimmedEmail.toLowerCase())
+    ) {
+      Alert.alert(
+        "Duplicate email",
+        `"${trimmedEmail}" is already in the list.`,
+      );
       return;
     }
 
@@ -258,10 +278,21 @@ export default function EmailInviteUploader({
     const updatedEntries = [...entries, newEntry];
     setEntries(updatedEntries);
     setManualEmail("");
-    
-    // Transition to ready state when entries are added
+
     if (state === "idle") {
       setState("ready");
+    }
+  };
+
+  const handleRemoveEntry = (index: number) => {
+    const updatedEntries = entries
+      .filter((_, i) => i !== index)
+      .map((e, idx) => ({ ...e, row: idx + 1 }));
+    setEntries(updatedEntries);
+
+    if (updatedEntries.length === 0) {
+      setState("idle");
+      setFileName(null);
     }
   };
 
@@ -271,7 +302,8 @@ export default function EmailInviteUploader({
     <View style={styles.container}>
       <Text style={styles.title}>Invite by email</Text>
       <Text style={styles.subtitle}>
-        Upload an Excel file with email addresses in the first column (column A).
+        Upload an Excel file with email addresses in the first column (column
+        A).
       </Text>
 
       {/* Manual Email Input */}
@@ -302,9 +334,12 @@ export default function EmailInviteUploader({
       )}
 
       {/* Upload button*/}
-      {(state === "idle" || state === "error") && (
+      {(state === "idle" || state === "error" || state === "ready") && (
         <>
-          <TouchableOpacity style={styles.uploadButton} onPress={handlePickFile}>
+          <TouchableOpacity
+            style={styles.uploadButton}
+            onPress={handlePickFile}
+          >
             <Text style={styles.uploadButtonText}>Select spreadsheet</Text>
           </TouchableOpacity>
           {state === "error" && errorMessage && (
@@ -326,10 +361,10 @@ export default function EmailInviteUploader({
             {state === "picking"
               ? "Opening file picker…"
               : state === "parsing"
-              ? "Reading spreadsheet…"
-              : state === "validating"
-              ? "Validating emails…"
-              : "Sending invitations…"}
+                ? "Reading spreadsheet…"
+                : state === "validating"
+                  ? "Validating emails…"
+                  : "Sending invitations…"}
           </Text>
         </View>
       )}
@@ -358,13 +393,10 @@ export default function EmailInviteUploader({
 
           {/* Email list */}
           <ScrollView style={styles.listScroll} nestedScrollEnabled>
-            {entries.map((item) => (
+            {entries.map((item, index) => (
               <View
                 key={`${item.row}-${item.email}`}
-                style={[
-                  styles.listItem,
-                  !item.valid && styles.listItemInvalid,
-                ]}
+                style={[styles.listItem, !item.valid && styles.listItemInvalid]}
               >
                 <Text
                   style={[
@@ -379,6 +411,13 @@ export default function EmailInviteUploader({
                 {!item.valid && (
                   <Text style={styles.listItemBadge}>invalid</Text>
                 )}
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => handleRemoveEntry(index)}
+                  disabled={isSubmitting}
+                >
+                  <Text style={styles.removeButtonText}>✕</Text>
+                </TouchableOpacity>
               </View>
             ))}
           </ScrollView>
@@ -429,7 +468,10 @@ export default function EmailInviteUploader({
                 Invited addresses:
               </Text>
               <ScrollView
-                style={[styles.listScroll, { maxHeight: 120, marginBottom: 12 }]}
+                style={[
+                  styles.listScroll,
+                  { maxHeight: 120, marginBottom: 12 },
+                ]}
                 nestedScrollEnabled
               >
                 {submittedEmails.map((email, idx) => (
@@ -613,6 +655,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 4,
     paddingVertical: 1,
+  },
+  removeButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  removeButtonText: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    fontWeight: "600",
   },
   actionRow: {
     flexDirection: "row",

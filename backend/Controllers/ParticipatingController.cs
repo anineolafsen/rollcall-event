@@ -17,6 +17,13 @@ namespace MyApp.API.Controllers
             _participantService = participantService;
         }
 
+        [HttpGet("trip/{tripId}")]
+        public IActionResult GetParticipantsByTrip(int tripId)
+        {
+            var participants = _participantService.GetByTrip(tripId);
+            return Ok(participants);
+        }
+
         [HttpPost]
         public IActionResult PostParticipant([FromBody] Participant participant)
         {

@@ -1,24 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  SafeAreaView,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+import { UpcomingEventsScreen } from '@/components/upcoming-events';
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
 interface Trip {
   tripID: number;
   name: string;
-  startDate: string;
-  endDate: string;
-  destination?: string;
-  description?: string;
 }
 
 export default function TripDetails() {
@@ -35,6 +25,7 @@ export default function TripDetails() {
         if (!response.ok) {
           throw new Error(`Server responded with ${response.status}`);
         }
+
         const data: Trip = await response.json();
         setTrip(data);
       } catch {
@@ -48,15 +39,6 @@ export default function TripDetails() {
       fetchTrip();
     }
   }, [id]);
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
 
   if (loading) {
     return (
@@ -72,7 +54,7 @@ export default function TripDetails() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.content}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.push("/trips")}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
           <View style={styles.centered}>
@@ -85,43 +67,37 @@ export default function TripDetails() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView style={styles.content}>
+      <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
-
-        <Text style={styles.title}>{trip.name}</Text>
-        <View style={styles.titleDivider} />
-
-        {trip.destination && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Destination</Text>
-            <Text style={styles.sectionValue}>{trip.destination}</Text>
-          </View>
-        )}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Trip Duration</Text>
-          <View style={styles.dateContainer}>
-            <View style={styles.dateBlock}>
-              <Text style={styles.dateLabel}>From</Text>
-              <Text style={styles.dateValue}>{formatDate(trip.startDate)}</Text>
-            </View>
-            <Text style={styles.dateSeparatorText}>to</Text>
-            <View style={styles.dateBlock}>
-              <Text style={styles.dateLabel}>To</Text>
-              <Text style={styles.dateValue}>{formatDate(trip.endDate)}</Text>
-            </View>
-          </View>
+        <Text style={styles.tripTitle}>{trip.name}</Text>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.inviteButton}
+            onPress={() =>
+              router.push({
+                pathname: '/trips/[id]/manage-invitations',
+                params: { tripId: trip.tripID, tripName: trip.name },
+              })
+            }
+          >
+            <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() =>
+              router.push({
+                pathname: '/trips/create',
+                params: { id: trip.tripID },
+              })
+            }
+          >
+            <Text style={styles.editButtonText}>✎ Edit</Text>
+          </TouchableOpacity>
         </View>
-
-        {trip.description && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Description</Text>
-            <Text style={styles.description}>{trip.description}</Text>
-          </View>
-        )}
-      </ScrollView>
+      </View>
+      <UpcomingEventsScreen tripId={trip.tripID} title={trip.name} showBackButton={false} />
     </SafeAreaView>
   );
 }
@@ -129,17 +105,18 @@ export default function TripDetails() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f4f1ec',
-  },
-  content: {
-    flex: 1,
     backgroundColor: '#eef5fb',
-    paddingHorizontal: 22,
-    paddingTop: 80,
-    paddingBottom: 80,
+  },
+  header: {
+    backgroundColor: '#eef5fb',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d9e8f5',
   },
   backButton: {
-    marginBottom: 24,
+    marginBottom: 12,
     alignSelf: 'flex-start',
   },
   backButtonText: {
@@ -147,76 +124,38 @@ const styles = StyleSheet.create({
     color: '#4a7ca8',
     fontWeight: '600',
   },
-  title: {
-    fontSize: 32,
-    lineHeight: 40,
+  tripTitle: {
+    fontSize: 22,
     fontWeight: '700',
     color: '#090909',
+    marginBottom: 12,
   },
-  titleDivider: {
-    height: 3,
-    backgroundColor: '#76b6ee',
-    borderRadius: 999,
-    marginTop: 14,
-    marginBottom: 32,
-  },
-  section: {
-    marginBottom: 24,
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#d9e8f5',
-  },
-  sectionLabel: {
-    fontSize: 11,
-    color: '#7a9ab8',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  sectionValue: {
-    fontSize: 16,
-    color: '#090909',
-    fontWeight: '500',
-  },
-  dateContainer: {
+  buttonRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 12,
+    alignItems: 'center',
   },
-  dateBlock: {
-    flex: 1,
+  inviteButton: {
+    backgroundColor: '#4a7ca8',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  dateLabel: {
-    fontSize: 11,
-    color: '#7a9ab8',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
+  inviteButtonText: {
+    color: '#ffffff',
     fontWeight: '600',
-  },
-  dateValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a3d5c',
-  },
-  dateSeparatorText: {
-    fontSize: 12,
-    color: '#7a9ab8',
-    marginBottom: 16,
-  },
-  description: {
     fontSize: 14,
-    color: '#5a7a94',
-    lineHeight: 21,
   },
-  tripId: {
+  editButton: {
+    backgroundColor: '#76b6ee',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  editButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
     fontSize: 14,
-    color: '#4a7ca8',
-    fontWeight: '500',
-    fontFamily: 'monospace',
   },
   centered: {
     flex: 1,

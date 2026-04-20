@@ -219,6 +219,12 @@ export default function ProfileScreen() {
                           </Text>
                         ) : null}
 
+                        {!item.allergies && !item.otherInfo ? (
+                          <Text style={styles.noNeedsText}>
+                            No allergies or other needs has been added
+                          </Text>
+                        ) : null}
+
                         <Text style={styles.deleteNote}>
                           This information will be deleted when the trip is
                           finished.
@@ -312,6 +318,12 @@ const styles = StyleSheet.create({
     color: "#777777",
     marginTop: 8,
     fontStyle: "italic",
+  },
+  noNeedsText: {
+    fontSize: 14,
+    color: "#777777",
+    fontStyle: "italic",
+    marginBottom: 4,
   },
   editButtonRow: {
     flexDirection: "row",

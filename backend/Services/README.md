@@ -3,7 +3,7 @@
 Business logic layer. Services handle data operations and implement domain-specific logic.
 
 ## Current Services
-- **UserService** - Manages user operations (GetAllUsers, CreateUser)
+- Services should back active API routes or core domain logic.
 
 ## Responsibility
 
@@ -15,25 +15,18 @@ Services:
 
 Example:
 ```csharp
-public class UserService
+public class EventService
 {
     private readonly AppDbContext _context;
     
-    public UserService(AppDbContext context)
+    public EventService(AppDbContext context)
     {
         _context = context;
     }
     
-    public List<User> GetAllUsers()
+    public List<Event> GetAllEvents()
     {
-        return _context.Users.ToList();
-    }
-    
-    public User CreateUser(User user)
-    {
-        _context.Users.Add(user);
-        _context.SaveChanges();
-        return user;
+        return _context.Events.ToList();
     }
 }
 ```

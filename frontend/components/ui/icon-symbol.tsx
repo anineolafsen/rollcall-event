@@ -21,6 +21,7 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'calendar': 'calendar-today',
   'person.fill': 'person',
+  'envelope.fill': 'mail',
 } as IconMapping;
 
 /**

@@ -38,3 +38,6 @@ jobs:
 
       - name: Build Expo
         run: expo export
+
+      - name: Run lint
+        run: npm run lint
