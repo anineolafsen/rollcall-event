@@ -17,7 +17,7 @@ import { AppButton } from '@/components/ui/button';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 interface Trip {
-  tripID: number;
+  id: number;
   name: string;
   startDate: string;
   endDate: string;
@@ -75,7 +75,7 @@ export function ViewTripsScreen() {
   };
 
   const renderTrip = ({ item }: { item: Trip }) => (
-    <TouchableOpacity onPress={() => router.push(`/trips/${item.tripID}`)}>
+    <TouchableOpacity onPress={() => router.push(`/trips/${item.id}`)}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.tripName}>{item.name}</Text>
@@ -129,7 +129,7 @@ export function ViewTripsScreen() {
         ) : (
           <FlatList
             data={trips}
-            keyExtractor={(item) => item.tripID.toString()}
+            keyExtractor={(item) => item.id.toString()}
             renderItem={renderTrip}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}

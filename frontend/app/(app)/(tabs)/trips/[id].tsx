@@ -8,7 +8,7 @@ import { UpcomingEventsScreen } from '@/components/upcoming-events';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
 interface Trip {
-  tripID: number;
+  id: number;
   name: string;
 }
 
@@ -85,7 +85,7 @@ export default function TripDetails() {
             onPress={() =>
               router.push({
                 pathname: '/trips/[id]/manage-invitations',
-                params: { tripId: trip.tripID, tripName: trip.name },
+                params: { tripId: trip.id, tripName: trip.name },
               })
             }
           >
@@ -96,7 +96,7 @@ export default function TripDetails() {
             onPress={() =>
               router.push({
                 pathname: '/trips/create',
-                params: { id: trip.tripID },
+                params: { id: trip.id },
               })
             }
           >
@@ -104,7 +104,7 @@ export default function TripDetails() {
           </TouchableOpacity>
         </View>
       </View>
-      <UpcomingEventsScreen tripId={trip.tripID} title={trip.name} showBackButton={false} />
+      <UpcomingEventsScreen tripId={trip.id} title={trip.name} showBackButton={false} />
     </SafeAreaView>
   );
 }

@@ -12,8 +12,9 @@ namespace MyApp.API.Models
         [Required]
         public int UserID { get; set; }
 
+        public bool IsOrganizer { get; set; } = false;
+
         public string? Allergies { get; set; }
         public string? OtherInfo { get; set; }
-        public int? InvitationID { get; set; }
     }
 }

@@ -14,7 +14,5 @@ namespace MyApp.API.Models
         [StringLength(255)]
         [Required]
         public string Email { get; set; } = string.Empty;
-
-        public bool IsAccepted {get; set;} = false;
     }
 }

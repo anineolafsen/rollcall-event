@@ -7,7 +7,7 @@ namespace MyApp.API.Models
   {
     [Key]
     public int Id { get; set; }
-    public int OrganizerID { get; set; } // UserID of trip organizer
+    public int OrganizerID { get; set; } // UserID of trip creator
     public required string Name { get; set; }
     public required string StartDate { get; set; }
     public required string EndDate { get; set; }
