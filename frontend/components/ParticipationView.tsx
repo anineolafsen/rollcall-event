@@ -14,9 +14,9 @@ import { useAuth, useUser } from '@clerk/expo';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 interface Invitation {
-  invitationId: number;
+  id: number;
   tripID: number;
-  userEmail: string;
+  email: string;
 }
 
 interface Trip {
@@ -34,12 +34,12 @@ interface InvitationWithTrip {
 }
 
 export function ParticipationView() {
-  const { userId } = useAuth();
+  const { getToken } = useAuth();
   const { user } = useUser();
   const [invitations, setInvitations] = useState<InvitationWithTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const [actionInProgress, setActionInProgress] = useState<number | null>(null);
 
   const fetchInvitations = useCallback(async () => {
     try {
@@ -90,45 +90,34 @@ export function ParticipationView() {
     fetchInvitations();
   }, [fetchInvitations]);
 
-  const handleAccept = async (tripId: number, email: string) => {
-    if (!userId) {
-      Alert.alert('Error', 'User ID not found');
-      return;
-    }
-
-    const actionKey = `${tripId}-${email}`;
+  const handleAccept = async (invitationId: number) => {
     try {
-      setActionInProgress(actionKey);
-
-      // Add participant
-      const participantResponse = await fetch(`${API_BASE_URL}/api/participants`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tripID: tripId,
-          userID: userId,
-        }),
-      });
-
-      if (!participantResponse.ok) {
-        throw new Error('Failed to accept invitation');
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Error', 'User authentication not found');
+        return;
       }
 
-      // Remove invitation
-      const deleteResponse = await fetch(
-        `${API_BASE_URL}/api/invitations?tripId=${tripId}&email=${encodeURIComponent(email)}`,
-        { method: 'DELETE' }
+      setActionInProgress(invitationId);
+
+      // Accept an invitation as one single backend transaction using the auth token
+      const acceptResponse = await fetch(
+        `${API_BASE_URL}/api/invitations/accept?invitationId=${invitationId}`,
+        { 
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
       );
 
-      if (!deleteResponse.ok) {
-        throw new Error('Failed to remove invitation');
+      if (!acceptResponse.ok) {
+        throw new Error('Failed to accept invitation on server');
       }
 
-      // Update UI
+      // Update UI by removing the accepted invitation
       setInvitations((prev) =>
-        prev.filter((item) => !(item.invitation.tripID === tripId && item.invitation.userEmail === email))
+        prev.filter((item) => item.invitation.id !== invitationId)
       );
 
       Alert.alert('Success', 'You have accepted the invitation!');
@@ -140,10 +129,9 @@ export function ParticipationView() {
     }
   };
 
-  const handleIgnore = async (tripId: number, email: string) => {
-    const actionKey = `${tripId}-${email}`;
+  const handleIgnore = async (invitationId: number, tripId: number, email: string) => {
     try {
-      setActionInProgress(actionKey);
+      setActionInProgress(invitationId);
 
       const response = await fetch(
         `${API_BASE_URL}/api/invitations?tripId=${tripId}&email=${encodeURIComponent(email)}`,
@@ -156,7 +144,7 @@ export function ParticipationView() {
 
       // Update UI
       setInvitations((prev) =>
-        prev.filter((item) => !(item.invitation.tripID === tripId && item.invitation.userEmail === email))
+        prev.filter((item) => item.invitation.id !== invitationId)
       );
 
       Alert.alert('Success', 'Invitation ignored.');
@@ -217,22 +205,22 @@ export function ParticipationView() {
 
         <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.button, styles.acceptButton, actionInProgress === `${trip.tripID}-${invitation.userEmail}` && styles.buttonDisabled]}
-            onPress={() => handleAccept(trip.tripID, invitation.userEmail)}
-            disabled={actionInProgress === `${trip.tripID}-${invitation.userEmail}`}
+            style={[styles.button, styles.acceptButton, actionInProgress === invitation.id && styles.buttonDisabled]}
+            onPress={() => handleAccept(invitation.id)}
+            disabled={actionInProgress !== null}
           >
-            {actionInProgress === `${trip.tripID}-${invitation.userEmail}` ? (
+            {actionInProgress === invitation.id ? (
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
               <Text style={styles.acceptButtonText}>Accept</Text>
             )}
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, styles.ignoreButton, actionInProgress === `${trip.tripID}-${invitation.userEmail}` && styles.buttonDisabled]}
-            onPress={() => handleIgnore(trip.tripID, invitation.userEmail)}
-            disabled={actionInProgress === `${trip.tripID}-${invitation.userEmail}`}
+            style={[styles.button, styles.ignoreButton, actionInProgress === invitation.id && styles.buttonDisabled]}
+            onPress={() => handleIgnore(invitation.id, invitation.tripID, invitation.email)}
+            disabled={actionInProgress !== null}
           >
-            {actionInProgress === `${trip.tripID}-${invitation.userEmail}` ? (
+            {actionInProgress === invitation.id ? (
               <ActivityIndicator size="small" color="#4a7ca8" />
             ) : (
               <Text style={styles.ignoreButtonText}>Ignore</Text>
@@ -268,7 +256,7 @@ export function ParticipationView() {
       ) : (
         <FlatList
           data={invitations}
-          keyExtractor={(item) => `${item.invitation.tripID}-${item.invitation.userEmail}`}
+          keyExtractor={(item) => item.invitation.id.toString()}
           renderItem={renderInvitation}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

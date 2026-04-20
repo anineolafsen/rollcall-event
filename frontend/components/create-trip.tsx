@@ -13,6 +13,7 @@ import {
 
 import { AppButton } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
+import { useAuth } from "@clerk/expo";
 
 type FormValues = {
   title: string;
@@ -72,6 +73,7 @@ export function CreateTripScreen() {
   const { id: tripId } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const isEditing = Boolean(tripId);
+  const { getToken } = useAuth();
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -217,11 +219,14 @@ export function CreateTripScreen() {
         Alert.alert('Success', 'Trip updated successfully!');
         router.replace(`/trips/${tripId}`);
       } else {
+        const token = await getToken();
+        
         // Create new trip
         const response = await fetch(`${apiUrl}/trips`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(tripData),
         });
