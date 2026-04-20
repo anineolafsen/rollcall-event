@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
+import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { AppButton } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 
@@ -21,8 +22,7 @@ export default function PopupUserNeeds({ tripId }: Props) {
   const [allergies, setAllergies] = useState("");
   const [otherInfo, setOtherInfo] = useState("");
 
-  // TODO: bytt ut med ekte userId når session/token er implementert
-  const userId = 7;
+  const userId = useCurrentUserId();
 
   useEffect(() => {
     if (!tripId) return;
@@ -64,7 +64,6 @@ export default function PopupUserNeeds({ tripId }: Props) {
     } catch (error) {
       console.error("Feil ved lagring:", error);
     }
-    // TODO: Naviger til events koblet til denne turen etter lagring.
     navigateToTrip();
   };
 
@@ -81,7 +80,6 @@ export default function PopupUserNeeds({ tripId }: Props) {
     } catch (error) {
       console.error("Feil ved lagring av tom UserNeeds:", error);
     }
-    // TODO: Naviger til events koblet til denne turen etter skip (ikke navigateToTrip)
     navigateToTrip();
   };
 

@@ -25,12 +25,13 @@ namespace MyApp.API.Services
       return user;
     }
 
-    // Updates Name and Phone for a user. Used by the profile page.
-    public User? UpdateUser(int id, string? name, string? phone)
+    // Updates FirstName, LastName and Phone for a user. Used by the profile page.
+    public User? UpdateUser(int id, string? firstName, string? lastName, string? phone)
     {
       var user = _context.Users.FirstOrDefault(u => u.Id == id);
       if (user == null) return null;
-      user.Name = name;
+      user.FirstName = firstName;
+      user.LastName = lastName;
       user.Phone = phone;
       _context.SaveChanges();
       return user;

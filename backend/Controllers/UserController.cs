@@ -32,16 +32,16 @@ namespace MyApp.API.Controllers
     }
 
     // PUT /api/users/{id}
-    // Updates Name and Phone for a user. Used by the profile page.
+    // Updates FirstName, LastName and Phone for a user. Used by the profile page.
     [HttpPut("{id}")]
     public IActionResult UpdateUser(int id, [FromBody] UpdateUserProfileDto dto)
     {
-      var user = _userService.UpdateUser(id, dto.Name, dto.Phone);
+      var user = _userService.UpdateUser(id, dto.FirstName, dto.LastName, dto.Phone);
       if (user == null) return NotFound();
       return Ok(user);
     }
 
-    public record UpdateUserProfileDto(string? Name, string? Phone);
+    public record UpdateUserProfileDto(string? FirstName, string? LastName, string? Phone);
 
     [HttpDelete("{id}")]
     public IActionResult DeleteUser(int id)

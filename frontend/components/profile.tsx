@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
+import { useCurrentUserId } from "@/hooks/use-current-user-id";
 import { AppButton } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 
@@ -21,7 +22,8 @@ type TripNeeds = {
 };
 
 export default function ProfileScreen() {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [tripNeeds, setTripNeeds] = useState<TripNeeds[]>([]);
@@ -31,8 +33,7 @@ export default function ProfileScreen() {
 
   const router = useRouter();
 
-  //TODO: bytt ut med ekte userId når session/token er implementert
-  const userId = 7;
+  const userId = useCurrentUserId();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,7 +45,8 @@ export default function ProfileScreen() {
         const users = await userRes.json();
         const currentUser = users.find((u: { id: number }) => u.id === userId);
         if (currentUser) {
-          setName(currentUser.name ?? "");
+          setFirstName(currentUser.firstName ?? "");
+          setLastName(currentUser.lastName ?? "");
           setPhoneNumber(currentUser.phone ?? "");
         }
         const needs = await needsRes.json();
@@ -68,7 +70,7 @@ export default function ProfileScreen() {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, phone: phoneNumber }),
+          body: JSON.stringify({ firstName, lastName, phone: phoneNumber }),
         }
       );
     } catch (error) {
@@ -128,10 +130,18 @@ export default function ProfileScreen() {
           <View style={styles.titleDivider} />
 
           <FormField
-            label="Name"
-            placeholder="Add name"
-            value={name}
-            onChangeText={setName}
+            label="First name"
+            placeholder="Add first name"
+            value={firstName}
+            onChangeText={setFirstName}
+            editable={isEditingProfile}
+          />
+
+          <FormField
+            label="Last name"
+            placeholder="Add last name"
+            value={lastName}
+            onChangeText={setLastName}
             editable={isEditingProfile}
           />
 
