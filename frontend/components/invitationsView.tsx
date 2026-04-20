@@ -17,7 +17,7 @@ import EmailInviteUploader, { type UploadState } from '@/components/invitationsF
 export default function InvitationsView() {
   const router = useRouter();
   const searchParams = useLocalSearchParams();
-  const tripId = searchParams.tripId ? Number(searchParams.tripId) : null;
+  const tripId = searchParams.id ? Number(searchParams.id) : null;
   const tripName = searchParams.tripName as string;
   const [uploadState, setUploadState] = useState<UploadState>('idle');
 
