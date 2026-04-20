@@ -8,13 +8,13 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type NavItem = {
   name: string;
-  href: '/(app)/(tabs)/events' | '/(app)/(tabs)/my-invitations' | '/(app)/(tabs)/profile';
-  icon: 'calendar' | 'envelope.fill' | 'person.fill';
+  href: '/(app)/(tabs)/trips' | '/(app)/(tabs)/my-invitations' | '/(app)/(tabs)/profile';
+  icon: 'suitcase.fill' | 'envelope.fill' | 'person.fill';
 };
 
 const navItems: NavItem[] = [
-  { name: 'Events', href: '/(app)/(tabs)/events', icon: 'calendar' },
-  { name: 'My Invitations', href: '/(app)/(tabs)/my-invitations', icon: 'envelope.fill' },
+  { name: 'Trips', href: '/(app)/(tabs)/trips', icon: 'suitcase.fill' },
+  { name: 'Invitations', href: '/(app)/(tabs)/my-invitations', icon: 'envelope.fill' },
   { name: 'Profile', href: '/(app)/(tabs)/profile', icon: 'person.fill' },
 ];
 
