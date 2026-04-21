@@ -1,8 +1,4 @@
-using System.Collections.Specialized;
 using System.ComponentModel.DataAnnotations;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 
 namespace MyApp.API.Models
 {
@@ -10,7 +6,8 @@ namespace MyApp.API.Models
   {
     [Key]
     public int Id { get; set; }
-    public string? Name { get; set; }
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
 
     [Required]
     public string? Email { get; set; }

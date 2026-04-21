@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/expo';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -36,6 +37,7 @@ interface InvitationWithTrip {
 export function ParticipationView() {
   const { userId } = useAuth();
   const { user } = useUser();
+  const router = useRouter();
   const [invitations, setInvitations] = useState<InvitationWithTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -131,7 +133,7 @@ export function ParticipationView() {
         prev.filter((item) => !(item.invitation.tripID === tripId && item.invitation.userEmail === email))
       );
 
-      Alert.alert('Success', 'You have accepted the invitation!');
+      router.push({ pathname: '/popupUserNeeds', params: { tripId: String(tripId) } });
     } catch (err) {
       Alert.alert('Error', 'Failed to accept invitation. Please try again.');
       console.error(err);

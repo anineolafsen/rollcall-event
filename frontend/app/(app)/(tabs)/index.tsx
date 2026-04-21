@@ -56,6 +56,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#555',
     marginBottom: 8,
-    lineHeight: 20,
+  },
+  reactLogo: {
+    height: 178,
+    width: 290,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
   },
 });
