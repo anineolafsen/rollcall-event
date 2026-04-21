@@ -21,9 +21,9 @@ namespace MyApp.API.Services
 
     public List<Trip> GetTripsByUser(int userId)
     {
-      // Returns trips where the user is either the Organizer OR a Participant
+      // Return trips where user object has an organizer OR participant relationship
       return _context.Trips
-        .Where(t => t.OrganizerID == userId || _context.Participants.Any(p => p.TripID == t.Id && p.UserID == userId))
+        .Where(t => t.OrganizerID == userId || t.Participants.Any(p => p.UserID == userId))
         .ToList();
     }
 

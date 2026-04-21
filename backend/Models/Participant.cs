@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MyApp.API.Models
 {
@@ -6,11 +7,17 @@ namespace MyApp.API.Models
     {
         public int Id {get; set; } // surrogate Primary Key 
 
-        // unique index (TripID, UserID)
         [Required]
         public int TripID { get; set; }
+        
+        [JsonIgnore]
+        public Trip? Trip { get; set; }
+
         [Required]
         public int UserID { get; set; }
+        
+        [JsonIgnore]
+        public User? User { get; set; }
 
         public bool IsOrganizer { get; set; } = false;
 
