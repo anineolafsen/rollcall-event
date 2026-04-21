@@ -1,0 +1,558 @@
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  ActivityIndicator,
+  FlatList,
+  Alert,
+} from 'react-native';
+import { useUser } from '@clerk/expo';
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
+
+interface Trip {
+  tripID: number;
+  name: string;
+}
+
+interface ChatParticipant {
+  email: string;
+  type: 'participant' | 'invitation';
+}
+
+export default function CreateChatScreen() {
+  const { user } = useUser();
+  const router = useRouter();
+
+  const [title, setTitle] = useState('');
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [selectedTripId, setSelectedTripId] = useState<number | null>(null);
+  const [participants, setParticipants] = useState<ChatParticipant[]>([]);
+  const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showTripDropdown, setShowTripDropdown] = useState(false);
+
+  // Fetch all trips
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(`${API_BASE_URL}/api/trips`);
+        const data: Trip[] = response.ok ? await response.json() : [];
+        setTrips(data);
+      } catch (err) {
+        console.error('Failed to fetch trips:', err);
+        setError('Failed to load trips');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTrips();
+  }, []);
+
+  // Fetch participants when trip is selected
+  useEffect(() => {
+    const fetchParticipants = async () => {
+      if (!selectedTripId) {
+        setParticipants([]);
+        setSelectedParticipants(new Set());
+        return;
+      }
+
+      try {
+        setLoadingParticipants(true);
+
+        // Fetch accepted participants
+        const participantsResponse = await fetch(
+          `${API_BASE_URL}/api/participants/trip/${selectedTripId}`
+        );
+        const participantsData = participantsResponse.ok
+          ? await participantsResponse.json()
+          : [];
+
+        // Fetch pending invitations
+        const invitationsResponse = await fetch(
+          `${API_BASE_URL}/api/invitations?tripId=${selectedTripId}`
+        );
+        const invitationsData = invitationsResponse.ok
+          ? await invitationsResponse.json()
+          : [];
+
+        // Combine participants and invitations
+        const participantMap = new Map<string, ChatParticipant>();
+
+        // Add participants (accepted)
+        participantsData.forEach((p: any) => {
+          if (p.userID && !participantMap.has(p.userID)) {
+            participantMap.set(p.userID, {
+              email: p.userID,
+              type: 'participant',
+            });
+          }
+        });
+
+        // Add invitations (pending)
+        invitationsData.forEach((inv: any) => {
+          if (!participantMap.has(inv.userEmail)) {
+            participantMap.set(inv.userEmail, {
+              email: inv.userEmail,
+              type: 'invitation',
+            });
+          }
+        });
+
+        setParticipants(Array.from(participantMap.values()));
+      } catch (err) {
+        console.error('Failed to fetch participants:', err);
+        setError('Failed to load participants');
+      } finally {
+        setLoadingParticipants(false);
+      }
+    };
+
+    fetchParticipants();
+  }, [selectedTripId]);
+
+  const toggleParticipant = useCallback((email: string) => {
+    setSelectedParticipants((prev) => {
+      const updated = new Set(prev);
+      if (updated.has(email)) {
+        updated.delete(email);
+      } else {
+        updated.add(email);
+      }
+      return updated;
+    });
+  }, []);
+
+  const handleCreateChat = async () => {
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please enter a chat title');
+      return;
+    }
+
+    if (!selectedTripId) {
+      Alert.alert('Error', 'Please select a trip');
+      return;
+    }
+
+    if (selectedParticipants.size === 0) {
+      Alert.alert('Error', 'Please select at least one participant');
+      return;
+    }
+
+    if (!user?.primaryEmailAddress?.emailAddress) {
+      Alert.alert('Error', 'User email not found');
+      return;
+    }
+
+    try {
+      setCreating(true);
+
+      // Create chat
+      const chatResponse = await fetch(`${API_BASE_URL}/api/chats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tripID: selectedTripId,
+          creatorID: user.primaryEmailAddress.emailAddress,
+          title: title.trim(),
+          createdAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!chatResponse.ok) {
+        throw new Error('Failed to create chat');
+      }
+
+      const chat = await chatResponse.json();
+
+      // Add participants to chat
+      for (const email of selectedParticipants) {
+        try {
+          await fetch(`${API_BASE_URL}/api/chat-participants`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chatID: chat.chatID,
+              userEmail: email,
+            }),
+          });
+        } catch (err) {
+          console.error(`Failed to add participant ${email}:`, err);
+        }
+      }
+
+      Alert.alert('Success', 'Chat created successfully');
+      router.back();
+    } catch (err) {
+      console.error('Failed to create chat:', err);
+      Alert.alert('Error', 'Failed to create chat');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#76b6ee" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const selectedTrip = trips.find((t) => t.tripID === selectedTripId);
+
+  return (
+    <SafeAreaView style={styles.screen}>
+      <ScrollView style={styles.container}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.title}>Create Chat</Text>
+
+        {/* Chat Title Input */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Chat Title</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter chat title"
+            value={title}
+            onChangeText={setTitle}
+            editable={!creating}
+          />
+        </View>
+
+        {/* Trip Selection */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Select Trip</Text>
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={() => setShowTripDropdown(!showTripDropdown)}
+            disabled={creating}
+          >
+            <Text
+              style={[
+                styles.dropdownButtonText,
+                !selectedTrip && styles.dropdownPlaceholder,
+              ]}
+            >
+              {selectedTrip ? selectedTrip.name : 'Choose a trip...'}
+            </Text>
+            <Text style={styles.dropdownArrow}>{showTripDropdown ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+
+          {showTripDropdown && (
+            <View style={styles.dropdownMenu}>
+              {trips.length === 0 ? (
+                <Text style={styles.dropdownEmpty}>No trips available</Text>
+              ) : (
+                trips.map((trip) => (
+                  <TouchableOpacity
+                    key={trip.tripID}
+                    style={[
+                      styles.dropdownItem,
+                      selectedTripId === trip.tripID && styles.dropdownItemSelected,
+                    ]}
+                    onPress={() => {
+                      setSelectedTripId(trip.tripID);
+                      setShowTripDropdown(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownItemText,
+                        selectedTripId === trip.tripID && styles.dropdownItemTextSelected,
+                      ]}
+                    >
+                      {trip.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* Participants Selection */}
+        {selectedTripId && (
+          <View style={styles.section}>
+            <Text style={styles.label}>
+              Select Participants ({selectedParticipants.size})
+            </Text>
+
+            {loadingParticipants ? (
+              <ActivityIndicator size="small" color="#76b6ee" />
+            ) : error ? (
+              <Text style={styles.errorText}>{error}</Text>
+            ) : participants.length === 0 ? (
+              <Text style={styles.emptyText}>No participants available for this trip</Text>
+            ) : (
+              <FlatList
+                scrollEnabled={false}
+                data={participants}
+                keyExtractor={(item) => item.email}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.participantItem}
+                    onPress={() => toggleParticipant(item.email)}
+                    disabled={creating}
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        selectedParticipants.has(item.email) && styles.checkboxChecked,
+                      ]}
+                    >
+                      {selectedParticipants.has(item.email) && (
+                        <Text style={styles.checkboxMark}>✓</Text>
+                      )}
+                    </View>
+                    <View style={styles.participantInfo}>
+                      <Text style={styles.participantEmail}>{item.email}</Text>
+                      <Text style={styles.participantType}>
+                        {item.type === 'participant' ? '✓ Accepted' : '◐ Invited'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        )}
+
+        {/* Action Buttons */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.button, styles.cancelButton]}
+            onPress={() => router.back()}
+            disabled={creating}
+          >
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.button,
+              styles.createButton,
+              (creating ||
+                !selectedTripId ||
+                selectedParticipants.size === 0) &&
+                styles.createButtonDisabled,
+            ]}
+            onPress={handleCreateChat}
+            disabled={
+              creating || !selectedTripId || selectedParticipants.size === 0
+            }
+          >
+            {creating ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={styles.buttonText}>Create Chat</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#eef5fb',
+  },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButton: {
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 15,
+    color: '#4a7ca8',
+    fontWeight: '600',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#090909',
+    marginBottom: 20,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#000000',
+  },
+  dropdownButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dropdownButtonText: {
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: '500',
+  },
+  dropdownPlaceholder: {
+    color: '#c2d8e8',
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    color: '#7a9bb5',
+  },
+  dropdownMenu: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+    borderRadius: 8,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d9e8f5',
+  },
+  dropdownItemSelected: {
+    backgroundColor: '#f0f7ff',
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: '#000000',
+  },
+  dropdownItemTextSelected: {
+    color: '#4a7ca8',
+    fontWeight: '600',
+  },
+  dropdownEmpty: {
+    fontSize: 14,
+    color: '#7a9bb5',
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
+  participantItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#4a7ca8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  checkboxChecked: {
+    backgroundColor: '#4a7ca8',
+    borderColor: '#4a7ca8',
+  },
+  checkboxMark: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  participantInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  participantEmail: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  participantType: {
+    fontSize: 12,
+    color: '#4a7ca8',
+    marginTop: 4,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#7a9bb5',
+    textAlign: 'center',
+    paddingVertical: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#d32f2f',
+    marginBottom: 12,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginVertical: 24,
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#d9e8f5',
+  },
+  createButton: {
+    backgroundColor: '#4a7ca8',
+  },
+  createButtonDisabled: {
+    backgroundColor: '#c2d8e8',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+});

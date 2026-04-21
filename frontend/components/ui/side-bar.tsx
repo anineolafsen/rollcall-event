@@ -8,13 +8,14 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type NavItem = {
   name: string;
-  href: '/(app)/(tabs)/trips' | '/(app)/(tabs)/my-invitations';
-  icon: 'suitcase.fill' | 'envelope.fill';
+  href: string;
+  icon: 'suitcase.fill' | 'envelope.fill' | 'message.circle.fill';
 };
 
 const navItems: NavItem[] = [
   { name: 'Trips', href: '/(app)/(tabs)/trips', icon: 'suitcase.fill' },
   { name: 'Invitations', href: '/(app)/(tabs)/my-invitations', icon: 'envelope.fill' },
+  { name: 'Chats', href: '/(app)/(tabs)/chats' as any, icon: 'message.circle.fill' },
 ];
 
 export function AppSidebar() {
@@ -43,7 +44,7 @@ export function AppSidebar() {
               style={[styles.navItem, active && styles.navItemActive]}
               {...({ onMouseEnter: () => setHoveredItem(item.href), onMouseLeave: () => setHoveredItem(null) } as any)}>
               <Pressable
-                onPress={() => router.push(item.href)}
+                onPress={() => router.push(item.href as any)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                 <IconSymbol
                   size={24}

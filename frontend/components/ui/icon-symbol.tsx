@@ -21,6 +21,7 @@ const MAPPING = {
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   'envelope.fill': 'mail',
+  'message.circle.fill': 'message',
 } as IconMapping;
 
 /**

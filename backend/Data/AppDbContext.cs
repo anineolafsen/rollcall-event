@@ -14,6 +14,9 @@ namespace MyApp.API.Data
     public DbSet<Participant> Participants { get; set; } = null!;
     public DbSet<Invitation> Invitations { get; set; } = null!;
     public DbSet<Event> Events { get; set; } = null!;
+    public DbSet<Chat> Chats { get; set; } = null!;
+    public DbSet<ChatParticipant> ChatParticipants { get; set; } = null!;
+    public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +24,9 @@ namespace MyApp.API.Data
 
       modelBuilder.Entity<Invitation>()
       .HasKey(i => new { i.TripID, i.UserEmail });
+
+      modelBuilder.Entity<ChatParticipant>()
+        .HasKey(cp => new { cp.ChatID, cp.UserEmail });
 
       modelBuilder.Entity<Event>()
         .HasOne(eventItem => eventItem.Trip)

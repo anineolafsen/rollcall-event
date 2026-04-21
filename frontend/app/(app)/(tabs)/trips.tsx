@@ -1,4 +1,4 @@
-import { ViewTripsScreen } from '@/components/viewTrips';
+import { ViewTripsScreen } from '@/components/view-trips';
 
 export default function TripsScreen() {
   return <ViewTripsScreen />;

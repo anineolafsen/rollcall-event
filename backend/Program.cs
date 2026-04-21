@@ -29,6 +29,9 @@ builder.Services.AddScoped<TripService>();
 builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<ParticipantService>();
 builder.Services.AddScoped<EventService>();
+builder.Services.AddScoped<ChatService>();
+builder.Services.AddScoped<ChatMessageService>();
+builder.Services.AddScoped<ChatParticipantService>();
 
 var app = builder.Build();
 
