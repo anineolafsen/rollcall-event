@@ -187,8 +187,8 @@ export default function EmailInviteUploader({
         await onSubmit(emails);
       } else {
         const invitations = emails.map((email) => ({
-          tripID: tripId,
-          userEmail: email,
+          tripId: tripId,
+          email: email,
         }));
 
         for (const invitation of invitations) {
@@ -202,7 +202,7 @@ export default function EmailInviteUploader({
             const errorText = await response.text();
             console.error(`API Error: ${response.status} - ${errorText}`);
             throw new Error(
-              `Failed to add invitation for ${invitation.userEmail}. Server returned: ${response.status}`,
+              `Failed to add invitation for ${invitation.email}. Server returned: ${response.status}`,
             );
           }
         }

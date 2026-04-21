@@ -20,7 +20,7 @@ interface Invitation {
 }
 
 interface Trip {
-  tripID: number;
+  id: number;
   name: string;
   startDate: string;
   endDate: string;
@@ -46,16 +46,22 @@ export function ParticipationView() {
       setLoading(true);
       setError(null);
 
-      const userEmail = user?.primaryEmailAddress?.emailAddress;
-      if (!userEmail) {
-        setError('Unable to load user email');
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication token not found');
         return;
       }
 
-      // Fetch invitations for this user's email
+      // Securely fetch invitations for the logged-in user through the auth token
       const invitationsResponse = await fetch(
-        `${API_BASE_URL}/api/invitations?email=${encodeURIComponent(userEmail)}`
+        `${API_BASE_URL}/api/invitations/my`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
       );
+
       if (!invitationsResponse.ok) {
         throw new Error(`Failed to fetch invitations: ${invitationsResponse.status}`);
       }
@@ -65,7 +71,11 @@ export function ParticipationView() {
       const invitationsWithTrips = await Promise.all(
         invitationsData.map(async (invitation) => {
           try {
-            const tripResponse = await fetch(`${API_BASE_URL}/api/trips/${invitation.tripID}`);
+            const tripResponse = await fetch(`${API_BASE_URL}/api/trips/${invitation.tripID}`, {
+               headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
             if (tripResponse.ok) {
               const tripData: Trip = await tripResponse.json();
               return { invitation, trip: tripData };
@@ -84,7 +94,7 @@ export function ParticipationView() {
     } finally {
       setLoading(false);
     }
-  }, [user?.primaryEmailAddress?.emailAddress]);
+  }, [getToken]);
 
   useEffect(() => {
     fetchInvitations();
@@ -100,7 +110,7 @@ export function ParticipationView() {
 
       setActionInProgress(invitationId);
 
-      // Accept an invitation as one single backend transaction using the auth token
+      // Accept an invitation in a joint backend transaction using the auth token
       const acceptResponse = await fetch(
         `${API_BASE_URL}/api/invitations/accept?invitationId=${invitationId}`,
         { 

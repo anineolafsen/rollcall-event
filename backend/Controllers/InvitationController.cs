@@ -38,6 +38,22 @@ namespace MyApp.API.Controllers
             return BadRequest("Either email or tripId query parameter is required");
         }
 
+        // Securely get invitations for the logged-in user
+        [HttpGet("my")]
+        [Authorize]
+        public IActionResult GetMyInvitations()
+        {
+            var clerkId = User.GetClerkId();
+            if (clerkId == null) return Unauthorized();
+
+            var user = _userService.GetByClerkId(clerkId);
+            if (user == null) return Unauthorized("User not found.");
+
+            // Use email from internal User record to find invitations
+            var invitations = _invitationService.GetByEmail(user.Email);
+            return Ok(invitations);
+        }
+
         [HttpPost]
         public IActionResult PostInvitation([FromBody] Invitation invitation)
         {
