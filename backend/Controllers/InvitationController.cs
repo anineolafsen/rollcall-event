@@ -38,7 +38,7 @@ namespace MyApp.API.Controllers
             return BadRequest("Either email or tripId query parameter is required");
         }
 
-        // Securely get invitations for the logged-in user
+        // Securely get invitations for the logged-in user with auto-onboarding
         [HttpGet("my")]
         [Authorize]
         public IActionResult GetMyInvitations()
@@ -46,10 +46,12 @@ namespace MyApp.API.Controllers
             var clerkId = User.GetClerkId();
             if (clerkId == null) return Unauthorized();
 
-            var user = _userService.GetByClerkId(clerkId);
-            if (user == null) return Unauthorized("User not found.");
+            var email = User.GetEmail();
+            if (string.IsNullOrEmpty(email)) return BadRequest("Email claim missing from token. Ensure Clerk JWT Template includes the email claim.");
 
-            // Use email from internal User record to find invitations
+            // Get or create user record automatically
+            var user = _userService.GetOrCreateUser(clerkId, email);
+
             var invitations = _invitationService.GetByEmail(user.Email);
             return Ok(invitations);
         }
@@ -67,8 +69,11 @@ namespace MyApp.API.Controllers
             var clerkId = User.GetClerkId();
             if (clerkId == null) return Unauthorized();
 
-            var user = _userService.GetByClerkId(clerkId);
-            if (user == null) return Unauthorized("User not found.");
+            var email = User.GetEmail();
+            if (string.IsNullOrEmpty(email)) return BadRequest("Email claim missing from token.");
+
+            // Ensure user is onboarded
+            var user = _userService.GetOrCreateUser(clerkId, email);
 
             var success = _invitationService.AcceptInvitation(invitationId, user.Id);
             if (!success)

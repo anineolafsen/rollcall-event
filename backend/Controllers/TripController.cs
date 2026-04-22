@@ -27,7 +27,7 @@ namespace MyApp.API.Controllers
       return Ok(_tripService.GetAllTrips());
     }
 
-    // GET api/trips/my returns only trips for the authenticated user
+    // GET api/trips/my returns only trips for the authenticated user (with auto-onboarding included)
     [HttpGet("my")]
     [Authorize]
     public IActionResult GetMyTrips()
@@ -35,8 +35,11 @@ namespace MyApp.API.Controllers
       var clerkId = User.GetClerkId();
       if (clerkId == null) return Unauthorized();
 
-      var user = _userService.GetByClerkId(clerkId);
-      if (user == null) return Unauthorized("User not found.");
+      var email = User.GetEmail();
+      if (string.IsNullOrEmpty(email)) return BadRequest("Email claim missing from token.");
+
+      // Ensure user is onboarded
+      var user = _userService.GetOrCreateUser(clerkId, email);
 
       return Ok(_tripService.GetTripsByUser(user.Id));
     }
@@ -73,10 +76,13 @@ namespace MyApp.API.Controllers
         var clerkId = User.GetClerkId();
         if (clerkId == null) return Unauthorized();
 
-        var user = _userService.GetByClerkId(clerkId);
-        if (user == null) return Unauthorized("User not found.");
+        var email = User.GetEmail();
+        if (string.IsNullOrEmpty(email)) return BadRequest("Email claim missing from token.");
 
-        trip.OrganizerID = user.Id;
+        // Ensure user is onboarded before creating a trip
+        var user = _userService.GetOrCreateUser(clerkId, email);
+
+        trip.OrganizerId = user.Id;
 
         return Ok(_tripService.CreateTrip(trip));
       }
