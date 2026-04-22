@@ -9,34 +9,53 @@ namespace MyApp.API.Data
     {
     }
 
-    public DbSet<User> Users { get; set; } = null!;
-    public DbSet<Trip> Trips { get; set; } = null!;
-    public DbSet<Participant> Participants { get; set; } = null!;
-    public DbSet<Invitation> Invitations { get; set; } = null!;
-    public DbSet<Event> Events { get; set; } = null!;
+    public DbSet<User> Users { get; set; }
+    public DbSet<Trip> Trips { get; set; }
+    public DbSet<Participant> Participants { get; set; }
+    public DbSet<Invitation> Invitations { get; set; }
+    public DbSet<Event> Events { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
       base.OnModelCreating(modelBuilder);
 
-      // Create Unique Index for Invitation records
       modelBuilder.Entity<Invitation>()
-      .HasIndex(i => new { i.TripID, i.Email })
-      .IsUnique();
+        .HasIndex(i => new { i.TripId, i.Email })
+        .IsUnique();
 
-      // Create Unique Index for Participant records
       modelBuilder.Entity<Participant>()
-      .HasIndex(p => new { p.TripID, p.UserID })
-      .IsUnique();
+        .HasIndex(p => new { p.TripId, p.UserId })
+        .IsUnique();
+
+      // Configure many-to-one between Participant and Trip
+      modelBuilder.Entity<Participant>()
+        .HasOne(p => p.Trip)
+        .WithMany(t => t.Participants)
+        .HasForeignKey(p => p.TripId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      // Configure many-to-one between Participant and User
+      modelBuilder.Entity<Participant>()
+        .HasOne(p => p.User)
+        .WithMany()
+        .HasForeignKey(p => p.UserId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      // Configure many-to-one between Trip and User (Organizer)
+      modelBuilder.Entity<Trip>()
+        .HasOne(t => t.Organizer)
+        .WithMany()
+        .HasForeignKey(t => t.OrganizerId)
+        .OnDelete(DeleteBehavior.Cascade);
 
       modelBuilder.Entity<Event>()
         .HasOne(eventItem => eventItem.Trip)
         .WithMany(trip => trip.Events)
-        .HasForeignKey(eventItem => eventItem.TripID)
+        .HasForeignKey(eventItem => eventItem.TripId)
         .OnDelete(DeleteBehavior.Cascade);
 
       modelBuilder.Entity<Event>()
-        .Property(eventItem => eventItem.EventID)
+        .Property(eventItem => eventItem.Id)
         .ValueGeneratedNever();
     }
   }
