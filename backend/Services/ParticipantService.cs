@@ -20,20 +20,20 @@ namespace MyApp.API.Services
     public List<Participant> GetByTrip(int tripId)
     {
       return _context.Participants
-        .Where(p => p.TripID == tripId)
+        .Where(p => p.TripId == tripId)
         .ToList();
     }
 
     public Participant? GetByTripAndUser(int tripId, int userId)
     {
       return _context.Participants
-        .FirstOrDefault(p => p.TripID == tripId && p.UserID == userId);
+        .FirstOrDefault(p => p.TripId == tripId && p.UserId == userId);
     }
 
     public Participant AddParticipant(Participant participant)
     {
       // Check if already participant
-      var existing = GetByTripAndUser(participant.TripID, participant.UserID);
+      var existing = GetByTripAndUser(participant.TripId, participant.UserId);
       if (existing != null)
       {
         return existing;

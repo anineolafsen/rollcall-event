@@ -21,24 +21,24 @@ namespace MyApp.API.Services
     public List<Event> GetEventsByTrip(int tripId)
     {
       return _context.Events
-        .Where(e => e.TripID == tripId)
+        .Where(e => e.TripId == tripId)
         .OrderBy(e => e.StartDate)
         .ToList();
     }
 
     public Event? GetEventById(int id)
     {
-      return _context.Events.FirstOrDefault(e => e.EventID == id);
+      return _context.Events.FirstOrDefault(e => e.Id == id);
     }
 
     public bool TripExists(int tripId)
     {
-      return _context.Trips.Any(t => t.TripID == tripId);
+      return _context.Trips.Any(t => t.Id == tripId);
     }
 
     public Event CreateEvent(Event appEvent)
     {
-      appEvent.EventID = GenerateUniqueEventId();
+      appEvent.Id = GenerateUniqueEventId();
       _context.Events.Add(appEvent);
       _context.SaveChanges();
       return appEvent;
@@ -46,7 +46,7 @@ namespace MyApp.API.Services
 
     public Event? UpdateEvent(int id, Event updatedEvent)
     {
-      var existingEvent = _context.Events.FirstOrDefault(e => e.EventID == id);
+      var existingEvent = _context.Events.FirstOrDefault(e => e.Id == id);
       if (existingEvent == null)
       {
         return null;
@@ -60,7 +60,7 @@ namespace MyApp.API.Services
       existingEvent.Capacity = updatedEvent.Capacity;
       existingEvent.HasUnlimitedCapacity = updatedEvent.HasUnlimitedCapacity;
       existingEvent.AttendanceMode = updatedEvent.AttendanceMode;
-      existingEvent.TripID = updatedEvent.TripID;
+      existingEvent.TripId = updatedEvent.TripId;
 
       _context.SaveChanges();
       return existingEvent;
@@ -68,7 +68,7 @@ namespace MyApp.API.Services
 
     public bool DeleteEvent(int id)
     {
-      var appEvent = _context.Events.FirstOrDefault(e => e.EventID == id);
+      var appEvent = _context.Events.FirstOrDefault(e => e.Id == id);
       if (appEvent == null)
       {
         return false;
@@ -93,7 +93,7 @@ namespace MyApp.API.Services
           continue;
         }
 
-        var exists = _context.Events.Any(e => e.EventID == id);
+        var exists = _context.Events.Any(e => e.Id == id);
         if (!exists)
         {
           return id;

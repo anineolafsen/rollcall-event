@@ -23,7 +23,7 @@ namespace MyApp.API.Services
     {
       // Return trips where user object has an organizer OR participant relationship
       return _context.Trips
-        .Where(t => t.OrganizerID == userId || t.Participants.Any(p => p.UserID == userId))
+        .Where(t => t.OrganizerId == userId || t.Participants.Any(p => p.UserId == userId))
         .ToList();
     }
 

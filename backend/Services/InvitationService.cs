@@ -16,7 +16,7 @@ namespace MyApp.API.Services
     {
       // Check for duplicates
       var existing = _context.Invitations
-        .FirstOrDefault(i => i.TripID == invitation.TripID && i.Email == invitation.Email);
+        .FirstOrDefault(i => i.TripId == invitation.TripId && i.Email == invitation.Email);
       
       if (existing != null)
       {
@@ -38,7 +38,7 @@ namespace MyApp.API.Services
     public List<Invitation> GetByTripId(int tripId)
     {
       return _context.Invitations
-        .Where(i => i.TripID == tripId)
+        .Where(i => i.TripId == tripId)
         .ToList();
     }
 
@@ -54,8 +54,8 @@ namespace MyApp.API.Services
         // Transform invitation into Participant record
         var participant = new Participant
         {
-          TripID = invitation.TripID,
-          UserID = userId
+          TripId = invitation.TripId,
+          UserId = userId
         };
         _context.Participants.Add(participant);
 
@@ -76,7 +76,7 @@ namespace MyApp.API.Services
     public bool RemoveInvitation(int tripId, string email)
     {
       var invitation = _context.Invitations
-        .FirstOrDefault(i => i.TripID == tripId && i.Email == email);
+        .FirstOrDefault(i => i.TripId == tripId && i.Email == email);
       
       if (invitation == null)
       {

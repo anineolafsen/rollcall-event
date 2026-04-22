@@ -5,11 +5,12 @@ namespace MyApp.API.Models
 {
     public class Invitation
     {
+        [Key]
         public int Id {get; set;} // surrogate Primary Key
 
-        // Unique index (TripID, Email)
+        // Unique index (TripId, Email)
         [Required]
-        public int TripID { get; set; }
+        public int TripId { get; set; }
         
         [StringLength(255)]
         [Required]

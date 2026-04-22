@@ -15,7 +15,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 interface Invitation {
   id: number;
-  tripID: number;
+  tripId: number;
   email: string;
 }
 
@@ -46,7 +46,7 @@ export function ParticipationView() {
       setLoading(true);
       setError(null);
 
-      const token = await getToken();
+      const token = await getToken({ template: "RollCallAuth" });
       if (!token) {
         setError('Authentication token not found');
         return;
@@ -71,7 +71,7 @@ export function ParticipationView() {
       const invitationsWithTrips = await Promise.all(
         invitationsData.map(async (invitation) => {
           try {
-            const tripResponse = await fetch(`${API_BASE_URL}/api/trips/${invitation.tripID}`, {
+            const tripResponse = await fetch(`${API_BASE_URL}/api/trips/${invitation.tripId}`, {
                headers: {
                 'Authorization': `Bearer ${token}`
               }
@@ -94,7 +94,7 @@ export function ParticipationView() {
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, []); // exclude getToken to prevent infinite refreshes (auth is already stable from useAuth)
 
   useEffect(() => {
     fetchInvitations();
@@ -102,7 +102,7 @@ export function ParticipationView() {
 
   const handleAccept = async (invitationId: number) => {
     try {
-      const token = await getToken();
+      const token = await getToken({ template: "RollCallAuth" });
       if (!token) {
         Alert.alert('Error', 'User authentication not found');
         return;
@@ -110,7 +110,7 @@ export function ParticipationView() {
 
       setActionInProgress(invitationId);
 
-      // Accept an invitation in a joint backend transaction using the auth token
+      // Accept the invitation in a joint backend transaction using the auth token
       const acceptResponse = await fetch(
         `${API_BASE_URL}/api/invitations/accept?invitationId=${invitationId}`,
         { 
@@ -227,7 +227,7 @@ export function ParticipationView() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.button, styles.ignoreButton, actionInProgress === invitation.id && styles.buttonDisabled]}
-            onPress={() => handleIgnore(invitation.id, invitation.tripID, invitation.email)}
+            onPress={() => handleIgnore(invitation.id, invitation.tripId, invitation.email)}
             disabled={actionInProgress !== null}
           >
             {actionInProgress === invitation.id ? (

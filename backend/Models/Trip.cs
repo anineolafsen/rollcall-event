@@ -7,7 +7,7 @@ namespace MyApp.API.Models
   {
     [Key]
     public int Id { get; set; }
-    public int OrganizerID { get; set; } // UserID of trip creator
+    public int OrganizerId { get; set; } // UserID of trip creator
     
     [JsonIgnore]
     public User? Organizer { get; set; }

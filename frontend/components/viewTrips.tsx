@@ -37,7 +37,7 @@ export function ViewTripsScreen() {
   const fetchTrips = async () => {
     try {
       setError(null);
-      const token = await getToken();
+      const token = await getToken({ template: "RollCallAuth" });
       const response = await fetch(`${API_BASE_URL}/api/trips/my`, {
         headers: {
           Authorization: `Bearer ${token}`,

@@ -5,16 +5,18 @@ namespace MyApp.API.Models
 {
     public class Participant
     {
+        [Key]
         public int Id {get; set; } // surrogate Primary Key 
 
+        // unique index (TripId, UserId) - configured in AppDbContext
         [Required]
-        public int TripID { get; set; }
+        public int TripId { get; set; }
         
         [JsonIgnore]
         public Trip? Trip { get; set; }
 
         [Required]
-        public int UserID { get; set; }
+        public int UserId { get; set; }
         
         [JsonIgnore]
         public User? User { get; set; }

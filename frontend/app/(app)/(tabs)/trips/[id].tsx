@@ -23,7 +23,7 @@ export default function TripDetails() {
   useEffect(() => {
     const fetchTrip = async () => {
       try {
-        const token = await getToken();
+        const token = await getToken({ template: "RollCallAuth" });
         const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,

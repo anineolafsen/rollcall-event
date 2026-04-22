@@ -36,7 +36,7 @@ namespace MyApp.API.Controllers
     [HttpPost]
     public IActionResult CreateEvent([FromBody] Event appEvent)
     {
-      if (!_eventService.TripExists(appEvent.TripID))
+      if (!_eventService.TripExists(appEvent.TripId))
       {
         return BadRequest("Trip not found.");
       }
@@ -47,7 +47,7 @@ namespace MyApp.API.Controllers
     [HttpPut("{id}")]
     public IActionResult UpdateEvent(int id, [FromBody] Event appEvent)
     {
-      if (!_eventService.TripExists(appEvent.TripID))
+      if (!_eventService.TripExists(appEvent.TripId))
       {
         return BadRequest("Trip not found.");
       }
