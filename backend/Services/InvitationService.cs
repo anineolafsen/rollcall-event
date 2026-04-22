@@ -42,6 +42,11 @@ namespace MyApp.API.Services
         .ToList();
     }
 
+    public bool UserHasPendingInvitation(int tripId, string email)
+    {
+        return _context.Invitations.Any(i => i.TripId == tripId && i.Email == email);
+    }
+
     public bool AcceptInvitation(int invitationId, int userId)
     {
       // Use a transaction to ensure safe movement of data from Invitations to Participants

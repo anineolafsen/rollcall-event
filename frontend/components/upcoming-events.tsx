@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { useAuth } from "@clerk/expo";
 
 import { EventCard } from '@/components/event-card';
 import { AppButton } from '@/components/ui/button';
@@ -20,15 +21,19 @@ type UpcomingEventsScreenProps = {
   tripId?: string | number;
   title?: string;
   showBackButton?: boolean;
+  isOrganizer?: boolean;
 };
 
 export function UpcomingEventsScreen({
   tripId,
   title = 'Upcoming Events',
   showBackButton = false,
+  isOrganizer = false,
 }: UpcomingEventsScreenProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { getToken } = useAuth();
+
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,7 +42,8 @@ export function UpcomingEventsScreen({
   const fetchEvents = useCallback(async () => {
     try {
       setError(null);
-      const data = await getEvents(tripId);
+      const token = await getToken({ template: "RollCallAuth" });
+      const data = await getEvents(tripId, token);
       setEvents(getUpcomingEvents(data));
     } catch {
       setError('Could not load events for this trip.');
@@ -45,7 +51,8 @@ export function UpcomingEventsScreen({
       setLoading(false);
       setRefreshing(false);
     }
-  }, [tripId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId]); // getToken is stable
 
   useFocusEffect(
     useCallback(() => {
@@ -66,7 +73,7 @@ export function UpcomingEventsScreen({
           router.push({
             pathname: '/events/[id]',
             params: {
-              id: String(item.eventID),
+              id: String(item.id),
               returnTo: pathname,
             },
           })
@@ -87,7 +94,8 @@ export function UpcomingEventsScreen({
         <Text style={styles.title}>{title}</Text>
         <View style={styles.titleDivider} />
 
-        {tripId ? (
+        {/* SECURITY: Only show Create button if user is an organizer */}
+        {tripId && isOrganizer ? (
           <AppButton
             variant="create"
             style={styles.createButtonTop}
@@ -118,7 +126,7 @@ export function UpcomingEventsScreen({
             ) : (
               <FlatList
                 data={events}
-                keyExtractor={(item) => item.eventID.toString()}
+                keyExtractor={(item) => item.id.toString()}
                 renderItem={renderEvent}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}

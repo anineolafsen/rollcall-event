@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from "@clerk/expo";
 
@@ -34,7 +34,7 @@ export function ViewTripsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTrips = async () => {
+  const fetchTrips = useCallback(async () => {
     try {
       setError(null);
       const token = await getToken({ template: "RollCallAuth" });
@@ -54,11 +54,12 @@ export function ViewTripsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // getToken is stable
 
   useEffect(() => {
     fetchTrips();
-  }, []);
+  }, [fetchTrips]);
 
   const onRefresh = () => {
     setRefreshing(true);

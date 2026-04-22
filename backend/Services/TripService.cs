@@ -21,10 +21,21 @@ namespace MyApp.API.Services
 
     public List<Trip> GetTripsByUser(int userId)
     {
-      // Return trips where user object has a participant relationship
       return _context.Trips
         .Where(t => t.Participants.Any(p => p.UserId == userId))
         .ToList();
+    }
+
+    public bool UserHasAccessToTrip(int tripId, int userId)
+    {
+      // Check if the user is a participant of that specific trip
+      return _context.Participants.Any(p => p.TripId == tripId && p.UserId == userId);
+    }
+
+    public bool UserIsOrganizer(int tripId, int userId)
+    {
+      // Check if the user is marked as an organizer in the participants table
+      return _context.Participants.Any(p => p.TripId == tripId && p.UserId == userId && p.IsOrganizer);
     }
 
     public Trip? GetTripById(int id)

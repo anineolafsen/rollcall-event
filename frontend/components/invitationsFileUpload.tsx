@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { read, utils } from "xlsx";
+import { useAuth } from "@clerk/expo";
 
 export type EmailEntry = {
   email: string;
@@ -89,6 +90,7 @@ export default function EmailInviteUploader({
   onStateChange,
   maxEmails = 500,
 }: EmailInviteUploaderProps) {
+  const { getToken } = useAuth();
   const [state, setState] = useState<UploadState>("idle");
   const [fileName, setFileName] = useState<string | null>(null);
   const [entries, setEntries] = useState<EmailEntry[]>([]);
@@ -186,6 +188,7 @@ export default function EmailInviteUploader({
       if (onSubmit) {
         await onSubmit(emails);
       } else {
+        const token = await getToken({ template: "RollCallAuth" });
         const invitations = emails.map((email) => ({
           tripId: tripId,
           email: email,
@@ -194,7 +197,10 @@ export default function EmailInviteUploader({
         for (const invitation of invitations) {
           const response = await fetch(`${apiUrl}/invitations`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify(invitation),
           });
 
@@ -216,7 +222,7 @@ export default function EmailInviteUploader({
       setErrorMessage(message);
       setState("error");
     }
-  }, [validEntries, onSubmit, tripId, apiUrl]);
+  }, [validEntries, onSubmit, tripId, apiUrl, getToken]);
 
   const handleSubmit = useCallback(async () => {
     if (validEntries.length === 0) return;
@@ -624,7 +630,7 @@ const styles = StyleSheet.create({
   },
   listItem: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderBottomWidth: 0.5,

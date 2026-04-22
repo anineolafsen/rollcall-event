@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using MyApp.API.Services;
 using MyApp.API.Models;
+using Microsoft.AspNetCore.Authorization;
+using MyApp.API.Extensions;
 
 namespace MyApp.API.Controllers
 {
   [ApiController]
   [Route("api/users")]
+  [Authorize] // Enforce authentication for user actions
   public class UserController : ControllerBase
   {
     private readonly UserService _userService;
@@ -18,23 +21,22 @@ namespace MyApp.API.Controllers
     [HttpGet]
     public IActionResult GetUsers()
     {
+      // SECURITY: limit who can see the full user list
+      // For now, only require authentication
       return Ok(_userService.GetAllUsers());
-    }
-
-    [HttpPost]
-    public IActionResult CreateUser([FromBody] User user)
-    {
-
-      if (string.IsNullOrEmpty(user.Email))
-      {
-        return BadRequest("Email is required.");
-      }
-      return Ok(_userService.CreateUser(user));
     }
 
     [HttpGet("clerk/{clerkId}")]
     public IActionResult GetByClerkId(string clerkId)
     {
+      var authenticatedClerkId = User.GetClerkId();
+      
+      // SECURITY: A user should only be able to fetch their own internal record
+      if (authenticatedClerkId != clerkId)
+      {
+          return Forbid();
+      }
+
       var user = _userService.GetByClerkId(clerkId);
       if (user == null)
       {
@@ -46,10 +48,15 @@ namespace MyApp.API.Controllers
     [HttpDelete("{id}")]
     public IActionResult DeleteUser(int id)
     {
-      var user = _userService.GetAllUsers().FirstOrDefault(u => u.Id == id);
-      if (user == null)
+      var authenticatedClerkId = User.GetClerkId();
+      var userToDelete = _userService.GetAllUsers().FirstOrDefault(u => u.Id == id);
+      
+      if (userToDelete == null) return NotFound();
+
+      // SECURITY: A user can only delete their own account
+      if (userToDelete.ClerkId != authenticatedClerkId)
       {
-        return NotFound();
+          return Forbid();
       }
 
       _userService.DeleteUser(id);
