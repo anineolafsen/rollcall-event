@@ -21,9 +21,9 @@ namespace MyApp.API.Services
 
     public List<Trip> GetTripsByUser(int userId)
     {
-      // Return trips where user object has an organizer OR participant relationship
+      // Return trips where user object has a participant relationship
       return _context.Trips
-        .Where(t => t.OrganizerId == userId || t.Participants.Any(p => p.UserId == userId))
+        .Where(t => t.Participants.Any(p => p.UserId == userId))
         .ToList();
     }
 
@@ -49,7 +49,7 @@ namespace MyApp.API.Services
       return false;
     }
 
-    public Trip CreateTrip(Trip trip)
+    public Trip CreateTrip(Trip trip, int creatorUserId)
     {
       // Validate dates
       if (!TryParseDate(trip.StartDate, out var startDate))
@@ -67,9 +67,31 @@ namespace MyApp.API.Services
         throw new InvalidOperationException("End date must be after start date.");
       }
 
-      _context.Trips.Add(trip);
-      _context.SaveChanges();
-      return trip;
+      using var transaction = _context.Database.BeginTransaction();
+      try
+      {
+        // 1. Save the Trip
+        _context.Trips.Add(trip);
+        _context.SaveChanges(); // Generates the Trip.Id
+
+        // 2. Automatically add the creator as the first Participant (Organizer)
+        var participant = new Participant
+        {
+          TripId = trip.Id,
+          UserId = creatorUserId,
+          IsOrganizer = true
+        };
+        _context.Participants.Add(participant);
+        _context.SaveChanges();
+
+        transaction.Commit();
+        return trip;
+      }
+      catch
+      {
+        transaction.Rollback();
+        throw;
+      }
     }
 
     public Trip? UpdateTrip(int id, Trip updatedTrip)

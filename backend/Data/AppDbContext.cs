@@ -41,13 +41,6 @@ namespace MyApp.API.Data
         .HasForeignKey(p => p.UserId)
         .OnDelete(DeleteBehavior.Cascade);
 
-      // Configure many-to-one between Trip and User (Organizer)
-      modelBuilder.Entity<Trip>()
-        .HasOne(t => t.Organizer)
-        .WithMany()
-        .HasForeignKey(t => t.OrganizerId)
-        .OnDelete(DeleteBehavior.Cascade);
-
       modelBuilder.Entity<Event>()
         .HasOne(eventItem => eventItem.Trip)
         .WithMany(trip => trip.Events)

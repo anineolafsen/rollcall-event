@@ -27,7 +27,7 @@ namespace MyApp.API.Controllers
       return Ok(_tripService.GetAllTrips());
     }
 
-    // GET api/trips/my returns only trips for the authenticated user (with auto-onboarding included)
+    // GET api/trips/my returns only trips for the authenticated user with auto-onboarding
     [HttpGet("my")]
     [Authorize]
     public IActionResult GetMyTrips()
@@ -82,9 +82,8 @@ namespace MyApp.API.Controllers
         // Ensure user is onboarded before creating a trip
         var user = _userService.GetOrCreateUser(clerkId, email);
 
-        trip.OrganizerId = user.Id;
-
-        return Ok(_tripService.CreateTrip(trip));
+        // Pass the user.Id to the service so it can create the Organizer record in Participants
+        return Ok(_tripService.CreateTrip(trip, user.Id));
       }
       catch (InvalidOperationException ex)
       {

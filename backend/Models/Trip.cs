@@ -7,10 +7,6 @@ namespace MyApp.API.Models
   {
     [Key]
     public int Id { get; set; }
-    public int OrganizerId { get; set; } // UserID of trip creator
-    
-    [JsonIgnore]
-    public User? Organizer { get; set; }
 
     public required string Name { get; set; }
     public required string StartDate { get; set; }
