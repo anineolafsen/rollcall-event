@@ -255,9 +255,11 @@ function MessageBubble({
 function HeaderBar({
   chatTitle,
   onMenuPress,
+  onEditPress,
 }: {
   chatTitle: string;
   onMenuPress: () => void;
+  onEditPress: () => void;
 }) {
   return (
     <View style={styles.header}>
@@ -275,8 +277,13 @@ function HeaderBar({
         </Text>
       </View>
 
-      {/* Optional spacer to keep title centered */}
-      <View style={{ width: 32 }} />
+      <TouchableOpacity
+        onPress={onEditPress}
+        style={styles.editButton}
+        hitSlop={8}
+      >
+        <MaterialCommunityIcons name="pencil" size={20} color={C.sky} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -706,6 +713,7 @@ export default function ChatScreen() {
           <HeaderBar
             chatTitle={chatData.title}
             onMenuPress={() => setPanelOpen(true)}
+            onEditPress={() => router.push(`/(app)/(tabs)/chats/${chatID}/edit` as any)}
           />
 
           <ScrollView
@@ -841,6 +849,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 19,
     backgroundColor: C.background,
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  editButton: {
+    width: 32,
+    height: 32,
+    justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,
   },
