@@ -5,7 +5,7 @@ on:
     paths:
       - "frontend/**"
     branches:
-      - 1-initial-setup-of-development-environment
+      - dev
 
 jobs:
   build:

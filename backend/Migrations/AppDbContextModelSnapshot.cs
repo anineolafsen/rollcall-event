@@ -142,10 +142,7 @@ namespace MyApp.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("FirstName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("LastName")
+                    b.Property<string>("Name")
                         .HasColumnType("text");
 
                     b.Property<string>("Phone")
@@ -154,27 +151,6 @@ namespace MyApp.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("MyApp.API.Models.UserNeeds", b =>
-                {
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TripId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Allergies")
-                        .HasColumnType("text");
-
-                    b.Property<string>("OtherInfo")
-                        .HasColumnType("text");
-
-                    b.HasKey("UserId", "TripId");
-
-                    b.HasIndex("TripId");
-
-                    b.ToTable("UserNeeds");
                 });
 
             modelBuilder.Entity("MyApp.API.Models.Event", b =>
@@ -186,25 +162,6 @@ namespace MyApp.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Trip");
-                });
-
-            modelBuilder.Entity("MyApp.API.Models.UserNeeds", b =>
-                {
-                    b.HasOne("MyApp.API.Models.Trip", "Trip")
-                        .WithMany()
-                        .HasForeignKey("TripId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MyApp.API.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Trip");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MyApp.API.Models.Trip", b =>
