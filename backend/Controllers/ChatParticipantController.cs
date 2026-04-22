@@ -31,7 +31,7 @@ namespace MyApp.API.Controllers
     }
 
     [HttpPost]
-    public IActionResult AddParticipant([FromBody] AddParticipantRequest request)
+    public IActionResult AddParticipant([FromBody] ChatParticipant request)
     {
       if (string.IsNullOrWhiteSpace(request.UserEmail))
       {
@@ -66,7 +66,7 @@ namespace MyApp.API.Controllers
     }
   }
 
-  public class AddParticipantRequest
+  public class ChatParticipant
   {
     public int ChatID { get; set; }
     public string UserEmail { get; set; } = string.Empty;
