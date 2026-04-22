@@ -9,11 +9,13 @@ namespace MyApp.API.Models
   public class User
   {
     [Key]
-    public int Id { get; set; }
-    public string? Name { get; set; }
-
+    public int Id { get; set; } // internal primary key
     [Required]
-    public string? Email { get; set; }
+    public string ClerkId { get; set; } = string.Empty; // external auth ID
+    [Required]
+    public string Email { get; set; } = string.Empty;
+
+    public string? Name { get; set; }
     public string? Phone { get; set; }
   }
 }

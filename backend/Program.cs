@@ -1,6 +1,8 @@
 using MyApp.API.Services;
 using MyApp.API.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +20,21 @@ builder.Services.AddCors(options =>
                .AllowAnyHeader();
     });
 });
+
+// Authentication Services
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        // Pull the Clerk Frontend API URL from the configuration
+        options.Authority = builder.Configuration["Authentication:Clerk:Authority"];
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateAudience = false,
+            ValidateIssuer = true,
+        };
+    });
+
+   builder.Services.AddAuthorization(); // Required for [Authorize] attributes to work
 
 // Add DbContext with PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -42,6 +59,10 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();
+
+// Authentication & Authorization middleware
+app.UseAuthentication(); // Check if token is valid
+app.UseAuthorization(); // Check if user has permission
 
 app.MapControllers();
 

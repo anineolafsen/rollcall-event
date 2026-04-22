@@ -1,14 +1,16 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
+import { useAuth } from "@clerk/expo";
 
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
 interface Trip {
-  tripID: number;
+  id: number;
   name: string;
+  isOrganizer: boolean;
 }
 
 export default function TripDetails() {
@@ -17,11 +19,17 @@ export default function TripDetails() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const {getToken} = useAuth();
 
   useEffect(() => {
     const fetchTrip = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/trips/${id}`);
+        const token = await getToken({ template: "RollCallAuth" });
+        const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) {
           throw new Error(`Server responded with ${response.status}`);
         }
@@ -38,7 +46,8 @@ export default function TripDetails() {
     if (id) {
       fetchTrip();
     }
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]); // getToken is stable
 
   if (loading) {
     return (
@@ -53,7 +62,7 @@ export default function TripDetails() {
   if (error || !trip) {
     return (
       <SafeAreaView style={styles.screen}>
-        <View style={styles.content}>
+        <View style={styles.screen}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.push("/trips")}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
@@ -72,32 +81,41 @@ export default function TripDetails() {
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
         <Text style={styles.tripTitle}>{trip.name}</Text>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={styles.inviteButton}
-            onPress={() =>
-              router.push({
-                pathname: '/trips/[id]/manage-invitations',
-                params: { tripId: trip.tripID, tripName: trip.name },
-              })
-            }
-          >
-            <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() =>
-              router.push({
-                pathname: '/trips/create',
-                params: { id: trip.tripID },
-              })
-            }
-          >
-            <Text style={styles.editButtonText}>✎ Edit</Text>
-          </TouchableOpacity>
-        </View>
+        
+        {/* Only show management buttons if the user is an Organizer */}
+        {trip.isOrganizer && (
+            <View style={styles.buttonRow}>
+            <TouchableOpacity
+                style={styles.inviteButton}
+                onPress={() =>
+                router.push({
+                    pathname: '/trips/[id]/manage-invitations',
+                    params: { id: String(trip.id), tripId: trip.id, tripName: trip.name },
+                })
+                }
+            >
+                <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.editButton}
+                onPress={() =>
+                router.push({
+                    pathname: '/trips/create',
+                    params: { id: trip.id },
+                })
+                }
+            >
+                <Text style={styles.editButtonText}>✎ Edit</Text>
+            </TouchableOpacity>
+            </View>
+        )}
       </View>
-      <UpcomingEventsScreen tripId={trip.tripID} title={trip.name} showBackButton={false} />
+      <UpcomingEventsScreen 
+        tripId={trip.id} 
+        title={trip.name} 
+        showBackButton={false} 
+        isOrganizer={trip.isOrganizer} 
+      />
     </SafeAreaView>
   );
 }

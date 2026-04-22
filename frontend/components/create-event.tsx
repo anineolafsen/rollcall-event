@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Alert,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAuth } from "@clerk/expo";
 
 import { AppButton } from '@/components/ui/button';
 import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date-field';
@@ -47,6 +48,8 @@ type DateFieldName = 'dateFrom' | 'dateTo';
 export function CreateEventScreen() {
   const { id, tripId } = useLocalSearchParams<{ id?: string; tripId?: string }>();
   const router = useRouter();
+  const { getToken } = useAuth();
+
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
@@ -87,38 +90,37 @@ export function CreateEventScreen() {
     return nextErrors;
   };
 
+  const fetchEvent = useCallback(async () => {
+    if (!id) return;
+
+    setIsLoadingEvent(true);
+    try {
+      const token = await getToken({ template: "RollCallAuth" });
+      const event = await getEventById(id, token);
+      setEventTripId(event.tripId);
+      setFormValues({
+        title: event.name ?? '',
+        location: event.location ?? '',
+        dateFrom: event.startDate ?? '',
+        dateTo: event.endDate ?? '',
+        description: event.description ?? '',
+        capacity: event.capacity ? String(event.capacity) : '',
+        hasUnlimitedCapacity: Boolean(event.hasUnlimitedCapacity),
+        attendanceMode: event.attendanceMode === 'signup-required' ? 'signup-required' : 'mandatory',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load event';
+      Alert.alert('Error', errorMessage);
+      router.back();
+    } finally {
+      setIsLoadingEvent(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   useEffect(() => {
-    const fetchEvent = async () => {
-      if (!id) {
-        return;
-      }
-
-      setIsLoadingEvent(true);
-
-      try {
-        const event = await getEventById(id);
-        setEventTripId(event.tripID);
-        setFormValues({
-          title: event.name ?? '',
-          location: event.location ?? '',
-          dateFrom: event.startDate ?? '',
-          dateTo: event.endDate ?? '',
-          description: event.description ?? '',
-          capacity: event.capacity ? String(event.capacity) : '',
-          hasUnlimitedCapacity: Boolean(event.hasUnlimitedCapacity),
-          attendanceMode: event.attendanceMode === 'signup-required' ? 'signup-required' : 'mandatory',
-        });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to load event';
-        Alert.alert('Error', errorMessage);
-        router.back();
-      } finally {
-        setIsLoadingEvent(false);
-      }
-    };
-
     fetchEvent();
-  }, [id, router]);
+  }, [fetchEvent]);
 
   const updateDateField = (field: DateFieldName, value: string) => {
     setFormValues((currentValues) => {
@@ -242,6 +244,8 @@ export function CreateEventScreen() {
     setIsSubmitting(true);
 
     try {
+      const token = await getToken({ template: "RollCallAuth" });
+
       const payload: EventPayload = {
         name: formValues.title,
         location: formValues.location,
@@ -251,13 +255,13 @@ export function CreateEventScreen() {
         capacity: formValues.hasUnlimitedCapacity ? null : Number(formValues.capacity),
         hasUnlimitedCapacity: formValues.hasUnlimitedCapacity,
         attendanceMode: formValues.attendanceMode,
-        tripID: eventTripId,
+        tripId: eventTripId,
       };
 
       if (isEditing) {
-        await updateEvent(id!, payload);
+        await updateEvent(id!, payload, token);
       } else {
-        await createEvent(payload);
+        await createEvent(payload, token);
       }
 
       setSuccessMessage(isEditing ? 'Event updated successfully!' : 'Event created successfully!');

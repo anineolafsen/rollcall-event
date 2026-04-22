@@ -12,6 +12,42 @@ namespace MyApp.API.Services
       _context = context;
     }
 
+    // Find user by ClerkId (the external auth provider ID)
+    public User? GetByClerkId(string clerkId)
+    {
+      return _context.Users.FirstOrDefault(u => u.ClerkId == clerkId);
+    }
+
+    public User GetOrCreateUser(string clerkId, string email)
+    {
+      var user = GetByClerkId(clerkId);
+
+      if (user == null)
+      {
+        user = new User
+        {
+          ClerkId = clerkId,
+          Email = email
+        };
+        _context.Users.Add(user);
+        _context.SaveChanges();
+      }
+      else if (user.Email != email)
+      {
+        // Keep the email in sync if the user changed it in Clerk
+        user.Email = email;
+        _context.SaveChanges();
+      }
+
+      return user;
+    }
+
+    // Find user by Email (used for invitations)
+    public User? GetByEmail(string email)
+    {
+      return _context.Users.FirstOrDefault(u => u.Email == email);
+    }
+
     public List<User> GetAllUsers()
     {
       return _context.Users.ToList();

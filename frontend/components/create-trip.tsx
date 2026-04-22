@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAuth } from '@clerk/expo';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -72,6 +73,7 @@ export function CreateTripScreen() {
   const { id: tripId } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const isEditing = Boolean(tripId);
+  const { getToken } = useAuth();
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -217,11 +219,14 @@ export function CreateTripScreen() {
         Alert.alert('Success', 'Trip updated successfully!');
         router.replace(`/trips/${tripId}`);
       } else {
+        const token = await getToken({ template: "RollCallAuth" });
+        
         // Create new trip
         const response = await fetch(`${apiUrl}/trips`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(tripData),
         });
@@ -234,7 +239,7 @@ export function CreateTripScreen() {
         const result = await response.json();
         console.log('Trip creation response:', result);
         setSuccessMessage('Trip created successfully!');
-        const newTripId = result.tripID || result.tripId || result.id || 1;
+        const newTripId = result.id || result.tripID || result.tripId || 1;
         console.log('Extracted tripId:', newTripId);
         router.push({
           pathname: '/invite',
