@@ -4,7 +4,7 @@ type AppButtonProps = {
   label: string;
   onPress: () => void | Promise<void>;
   disabled?: boolean;
-  variant?: 'default' | 'create' | 'edit' | 'delete' | 'secondary';
+  variant?: 'default' | 'create' | 'edit' | 'delete';
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
 };
@@ -26,7 +26,6 @@ export function AppButton({
         variant === 'create' ? styles.createButton : undefined,
         variant === 'edit' ? styles.editButton : undefined,
         variant === 'delete' ? styles.deleteButton : undefined,
-        variant === 'secondary' ? styles.secondaryButton : undefined,
         disabled ? styles.buttonDisabled : (pressed ? styles.buttonPressed : undefined),
         style,
       ]}>
@@ -36,7 +35,6 @@ export function AppButton({
           variant === 'create' ? styles.createLabel : undefined,
           variant === 'edit' ? styles.actionLabel : undefined,
           variant === 'delete' ? styles.actionLabel : undefined,
-          variant === 'secondary' ? styles.secondaryLabel : undefined,
           disabled ? styles.labelDisabled : undefined,
           textStyle,
         ]}>
@@ -96,11 +94,5 @@ const styles = StyleSheet.create({
   },
   labelDisabled: {
     color: '#cccccc',
-  },
-  secondaryButton: {
-    backgroundColor: '#e0e0e0',
-  },
-  secondaryLabel: {
-    color: '#333333',
   },
 });
