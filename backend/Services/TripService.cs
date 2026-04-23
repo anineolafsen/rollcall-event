@@ -1,6 +1,7 @@
 using MyApp.API.Models;
 using MyApp.API.Data;
 using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 
 namespace MyApp.API.Services
 {
@@ -18,9 +19,28 @@ namespace MyApp.API.Services
       return _context.Trips.ToList();
     }
 
+    public List<Trip> GetTripsByUser(int userId)
+    {
+      return _context.Trips
+        .Where(t => t.Participants.Any(p => p.UserId == userId))
+        .ToList();
+    }
+
+    public bool UserHasAccessToTrip(int tripId, int userId)
+    {
+      // Check if the user is a participant of that specific trip
+      return _context.Participants.Any(p => p.TripId == tripId && p.UserId == userId);
+    }
+
+    public bool UserIsOrganizer(int tripId, int userId)
+    {
+      // Check if the user is marked as an organizer in the participants table
+      return _context.Participants.Any(p => p.TripId == tripId && p.UserId == userId && p.IsOrganizer);
+    }
+
     public Trip? GetTripById(int id)
     {
-      return _context.Trips.FirstOrDefault(t => t.TripID == id);
+      return _context.Trips.FirstOrDefault(t => t.Id == id);
     }
 
     private bool TryParseDate(string dateStr, out DateTime date)
@@ -40,7 +60,7 @@ namespace MyApp.API.Services
       return false;
     }
 
-    public Trip CreateTrip(Trip trip)
+    public Trip CreateTrip(Trip trip, int creatorUserId)
     {
       // Validate dates
       if (!TryParseDate(trip.StartDate, out var startDate))
@@ -58,15 +78,36 @@ namespace MyApp.API.Services
         throw new InvalidOperationException("End date must be after start date.");
       }
 
-      trip.TripID = GenerateUniqueTripId();
-      _context.Trips.Add(trip);
-      _context.SaveChanges();
-      return trip;
+      using var transaction = _context.Database.BeginTransaction();
+      try
+      {
+        // 1. Save the Trip
+        _context.Trips.Add(trip);
+        _context.SaveChanges(); // Generates the Trip.Id
+
+        // 2. Automatically add the creator as the first Participant (Organizer)
+        var participant = new Participant
+        {
+          TripId = trip.Id,
+          UserId = creatorUserId,
+          IsOrganizer = true
+        };
+        _context.Participants.Add(participant);
+        _context.SaveChanges();
+
+        transaction.Commit();
+        return trip;
+      }
+      catch
+      {
+        transaction.Rollback();
+        throw;
+      }
     }
 
     public Trip? UpdateTrip(int id, Trip updatedTrip)
     {
-      var trip = _context.Trips.FirstOrDefault(t => t.TripID == id);
+      var trip = _context.Trips.FirstOrDefault(t => t.Id == id);
       if (trip == null)
       {
         return null;
@@ -88,7 +129,7 @@ namespace MyApp.API.Services
         throw new InvalidOperationException("End date must be after start date.");
       }
 
-      // Update trip properties (but not TripID)
+      // Update trip properties
       trip.Name = updatedTrip.Name;
       trip.StartDate = updatedTrip.StartDate;
       trip.EndDate = updatedTrip.EndDate;
@@ -102,7 +143,7 @@ namespace MyApp.API.Services
 
     public bool DeleteTrip(int id)
     {
-      var trip = _context.Trips.FirstOrDefault(t => t.TripID == id);
+      var trip = _context.Trips.FirstOrDefault(t => t.Id == id);
       if (trip == null)
       {
         return false;
@@ -110,28 +151,6 @@ namespace MyApp.API.Services
       _context.Trips.Remove(trip);
       _context.SaveChanges();
       return true;
-      }
-
-    private int GenerateUniqueTripId()
-    {
-      var bytes = new byte[4];
-
-      while (true)
-      {
-        RandomNumberGenerator.Fill(bytes);
-        var id = BitConverter.ToInt32(bytes, 0) & int.MaxValue;
-
-        if (id == 0)
-        {
-          continue;
-        }
-
-        var exists = _context.Trips.Any(t => t.TripID == id);
-        if (!exists)
-        {
-          return id;
-        }
-      }
     }
   }
 }

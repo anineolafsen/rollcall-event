@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
+import { useAuth } from "@clerk/expo";
 
 import {
   View,
@@ -16,7 +17,7 @@ import { AppButton } from '@/components/ui/button';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 interface Trip {
-  tripID: number;
+  id: number;
   name: string;
   startDate: string;
   endDate: string;
@@ -26,16 +27,22 @@ interface Trip {
 
 export function ViewTripsScreen() {
   const router = useRouter();
+  const {getToken} = useAuth();
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTrips = async () => {
+  const fetchTrips = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/api/trips`);
+      const token = await getToken({ template: "RollCallAuth" });
+      const response = await fetch(`${API_BASE_URL}/api/trips/my`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}`);
       }
@@ -47,11 +54,12 @@ export function ViewTripsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // getToken is stable
 
   useEffect(() => {
     fetchTrips();
-  }, []);
+  }, [fetchTrips]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -68,7 +76,7 @@ export function ViewTripsScreen() {
   };
 
   const renderTrip = ({ item }: { item: Trip }) => (
-    <TouchableOpacity onPress={() => router.push(`/trips/${item.tripID}`)}>
+    <TouchableOpacity onPress={() => router.push(`/trips/${item.id}`)}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.tripName}>{item.name}</Text>
@@ -122,7 +130,7 @@ export function ViewTripsScreen() {
         ) : (
           <FlatList
             data={trips}
-            keyExtractor={(item) => item.tripID.toString()}
+            keyExtractor={(item) => item.id.toString()}
             renderItem={renderTrip}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}

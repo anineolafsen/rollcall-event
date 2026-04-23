@@ -6,11 +6,11 @@ namespace MyApp.API.Models
     public class ChatMessage
     {
         [Key]
-        public int MessageID { get; set; }
+        public int Id { get; set; }
         
         [Required]
         [ForeignKey(nameof(Chat))]
-        public int ChatID { get; set; }
+        public int ChatId { get; set; }
         
         [Required]
         public string SenderEmail { get; set; } = string.Empty;

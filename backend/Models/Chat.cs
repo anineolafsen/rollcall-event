@@ -6,14 +6,14 @@ namespace MyApp.API.Models
     public class Chat
     {
         [Key]
-        public int ChatID { get; set; }
+        public int Id { get; set; }
         
         [Required]
         [ForeignKey(nameof(Trip))]
-        public int TripID { get; set; }
+        public int TripId { get; set; }
         
         [Required]
-        public string CreatorID { get; set; } = string.Empty;
+        public string CreatorId { get; set; } = string.Empty;
         
         [Required]
         public string Title { get; set; } = string.Empty;

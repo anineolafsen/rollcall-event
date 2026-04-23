@@ -2,55 +2,84 @@ using Microsoft.AspNetCore.Mvc;
 using MyApp.API.Services;
 using MyApp.API.Models;
 using Microsoft.AspNetCore.Authorization;
+using MyApp.API.Extensions;
+
 namespace MyApp.API.Controllers
 {
   [ApiController]
   [Route("api/trips")]
+  [Authorize] // Enforce authentication for all trip actions
   public class TripController : ControllerBase
   {
     private readonly TripService _tripService;
     private readonly EventService _eventService;
+    private readonly UserService _userService;
+    private readonly InvitationService _invitationService;
 
-    public TripController(TripService tripService, EventService eventService)
+    public TripController(TripService tripService, EventService eventService, UserService userService, InvitationService invitationService)
     {
       _tripService = tripService;
       _eventService = eventService;
+      _userService = userService;
+      _invitationService = invitationService;
     }
 
-
-
-    [HttpGet]
-    public IActionResult GetTrips()
+    private User GetAuthenticatedUser()
     {
-      return Ok(_tripService.GetAllTrips());
+        var clerkId = User.GetClerkId();
+        var email = User.GetEmail();
+        if (string.IsNullOrEmpty(clerkId) || string.IsNullOrEmpty(email))
+            throw new UnauthorizedAccessException("Identity claims missing from token.");
+
+        return _userService.GetOrCreateUser(clerkId, email);
     }
 
-    // GET api/trips/my will now only return trips for the current cclerk user that is being used
+    // GET api/trips/my returns only trips for the authenticated user
     [HttpGet("my")]
-    [Authorize]
     public IActionResult GetMyTrips()
     {
-      return Ok();
+      var user = GetAuthenticatedUser();
+      return Ok(_tripService.GetTripsByUser(user.Id));
     }
 
     [HttpGet("{id}")]
     public IActionResult GetTripById(int id)
     {
-      var trip = _tripService.GetTripById(id);
-      if (trip == null)
+      var user = GetAuthenticatedUser();
+
+      // SECURITY: Check if user is a participant OR has a pending invitation
+      bool isParticipant = _tripService.UserHasAccessToTrip(id, user.Id);
+      bool isInvited = _invitationService.UserHasPendingInvitation(id, user.Email);
+
+      if (!isParticipant && !isInvited)
       {
-        return NotFound();
+          return Forbid();
       }
-      return Ok(trip);
+
+      var trip = _tripService.GetTripById(id);
+      if (trip == null) return NotFound();
+
+      // Return trip details + permission info to pass to frontend
+      return Ok(new {
+          trip.Id,
+          trip.Name,
+          trip.StartDate,
+          trip.EndDate,
+          trip.Destination,
+          trip.Description,
+          IsOrganizer = isParticipant && _tripService.UserIsOrganizer(id, user.Id)
+      });
     }
 
     [HttpGet("{id}/events")]
     public IActionResult GetTripEvents(int id)
     {
-      var trip = _tripService.GetTripById(id);
-      if (trip == null)
+      var user = GetAuthenticatedUser();
+
+      // SECURITY: Check if user is a participant of this trip
+      if (!_tripService.UserHasAccessToTrip(id, user.Id))
       {
-        return NotFound();
+          return Forbid();
       }
 
       return Ok(_eventService.GetEventsByTrip(id));
@@ -61,7 +90,8 @@ namespace MyApp.API.Controllers
     {
       try
       {
-        return Ok(_tripService.CreateTrip(trip));
+        var user = GetAuthenticatedUser();
+        return Ok(_tripService.CreateTrip(trip, user.Id));
       }
       catch (InvalidOperationException ex)
       {
@@ -78,6 +108,14 @@ namespace MyApp.API.Controllers
     {
       try
       {
+        var user = GetAuthenticatedUser();
+
+        // SECURITY: Only organizers can update trip details
+        if (!_tripService.UserIsOrganizer(id, user.Id))
+        {
+            return Forbid();
+        }
+
         var updatedTrip = _tripService.UpdateTrip(id, trip);
         if (updatedTrip == null)
         {
@@ -98,6 +136,14 @@ namespace MyApp.API.Controllers
     [HttpDelete("{id}")]
     public IActionResult DeleteTrip(int id)
     {
+      var user = GetAuthenticatedUser();
+
+      // SECURITY: Only organizers can delete trips
+      if (!_tripService.UserIsOrganizer(id, user.Id))
+      {
+          return Forbid();
+      }
+
       var deleted = _tripService.DeleteTrip(id);
       if (!deleted)
       {

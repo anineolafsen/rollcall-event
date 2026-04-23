@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Alert,
   View,
@@ -11,34 +11,44 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { useAuth } from "@clerk/expo";
 import { AppButton } from '@/components/ui/button';
 import { formatAttendanceMode, formatEventDate, formatEventTime } from '@/lib/event-format';
 import { deleteEvent as deleteEventRequest, getEventById, type EventRecord } from '@/lib/events';
 
+interface SecureEventRecord extends EventRecord {
+    isOrganizer: boolean;
+}
+
 export default function EventDetailsScreen() {
   const { id, returnTo } = useLocalSearchParams<{ id?: string; returnTo?: string }>();
   const router = useRouter();
-  const [event, setEvent] = useState<EventRecord | null>(null);
+  const { getToken } = useAuth();
+
+  const [event, setEvent] = useState<SecureEventRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const data = await getEventById(String(id));
-        setEvent(data);
-      } catch {
-        setError('Could not load event details.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchEvent = useCallback(async () => {
+    try {
+      const token = await getToken({ template: "RollCallAuth" });
+      const data = await getEventById(String(id), token);
+      // Cast to any and then to SecureEventRecord because lib doesn't recognize "isOrganizer" yet
+      setEvent(data as any as SecureEventRecord);
+    } catch {
+      setError('Could not load event details.');
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
+  useEffect(() => {
     if (id) {
       fetchEvent();
     }
-  }, [id]);
+  }, [id, fetchEvent]);
 
   const handleGoBack = () => {
     if (returnTo) {
@@ -83,8 +93,9 @@ export default function EventDetailsScreen() {
   const confirmDeleteEvent = async () => {
     try {
       setIsDeleting(true);
-      await deleteEventRequest(String(id));
-      router.replace(`/trips/${event.tripID}`);
+      const token = await getToken({ template: "RollCallAuth" });
+      await deleteEventRequest(String(id), token);
+      router.replace(`/trips/${event.tripId}`);
     } catch {
       Alert.alert('Error', 'Could not delete event.');
     } finally {
@@ -170,22 +181,25 @@ export default function EventDetailsScreen() {
           </View>
         )}
 
-        <View style={styles.actionRow}>
-          <AppButton
-            variant="edit"
-            style={styles.actionButton}
-            label="Edit"
-            onPress={() => router.push(`/events/${id}/edit`)}>
-          </AppButton>
+        {/* SECURITY: Only show Edit/Delete buttons if the user is an Organizer */}
+        {event.isOrganizer && (
+            <View style={styles.actionRow}>
+            <AppButton
+                variant="edit"
+                style={styles.actionButton}
+                label="Edit"
+                onPress={() => router.push(`/events/${id}/edit`)}>
+            </AppButton>
 
-          <AppButton
-            variant="delete"
-            style={styles.actionButton}
-            label={isDeleting ? 'Deleting...' : 'Delete'}
-            onPress={handleDelete}
-            disabled={isDeleting}
-          />
-        </View>
+            <AppButton
+                variant="delete"
+                style={styles.actionButton}
+                label={isDeleting ? 'Deleting...' : 'Delete'}
+                onPress={handleDelete}
+                disabled={isDeleting}
+            />
+            </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -197,7 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f1ec',
   },
   content: {
-    flex: 1,
+    // flex: 1, -- (forslag) jeg kommenterte ut så man kan scrolle helt ned, men bare å ta bort igjen
     backgroundColor: '#eef5fb',
     paddingHorizontal: 22,
     paddingTop: 80,
