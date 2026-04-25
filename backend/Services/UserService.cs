@@ -60,6 +60,17 @@ namespace MyApp.API.Services
       return user;
     }
 
+    public User? UpdateUser(int id, string? firstName, string? lastName, string? phone)
+    {
+      var user = _context.Users.FirstOrDefault(u => u.Id == id);
+      if (user == null) return null;
+      user.FirstName = firstName;
+      user.LastName = lastName;
+      user.Phone = phone;
+      _context.SaveChanges();
+      return user;
+    }
+
     public void DeleteUser(int id)
     {
       var user = _context.Users.FirstOrDefault(u => u.Id == id);
