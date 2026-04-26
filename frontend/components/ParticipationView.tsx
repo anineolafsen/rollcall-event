@@ -9,7 +9,7 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { useAuth, useUser } from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -35,7 +35,6 @@ interface InvitationWithTrip {
 
 export function ParticipationView() {
   const { getToken } = useAuth();
-  const { user } = useUser();
   const [invitations, setInvitations] = useState<InvitationWithTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +93,7 @@ export function ParticipationView() {
     } finally {
       setLoading(false);
     }
-  }, []); // exclude getToken to prevent infinite refreshes (auth is already stable from useAuth)
+  }, [getToken]);
 
   useEffect(() => {
     fetchInvitations();

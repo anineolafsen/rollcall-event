@@ -14,10 +14,18 @@ import {
 import { useAuth } from "@clerk/expo";
 import { AppButton } from '@/components/ui/button';
 import { formatAttendanceMode, formatEventDate, formatEventTime } from '@/lib/event-format';
-import { deleteEvent as deleteEventRequest, getEventById, type EventRecord } from '@/lib/events';
+import {
+  deleteEvent as deleteEventRequest,
+  getEventById,
+  joinEvent,
+  leaveEvent,
+  type EventRecord,
+} from '@/lib/events';
+import { CheckInMethodModal } from '@/components/ui/checkin/Checkin-method-modal';
+import { checkinService } from '@/services/checkinService';
 
 interface SecureEventRecord extends EventRecord {
-    isOrganizer: boolean;
+  isOrganizer: boolean;
 }
 
 export default function EventDetailsScreen() {
@@ -29,13 +37,14 @@ export default function EventDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingParticipation, setIsUpdatingParticipation] = useState(false);
+  const [checkinMethodModalVisible, setCheckinMethodModalVisible] = useState(false);
 
   const fetchEvent = useCallback(async () => {
     try {
       const token = await getToken({ template: "RollCallAuth" });
       const data = await getEventById(String(id), token);
-      // Cast to any and then to SecureEventRecord because lib doesn't recognize "isOrganizer" yet
-      setEvent(data as any as SecureEventRecord);
+      setEvent(data as SecureEventRecord);
     } catch {
       setError('Could not load event details.');
     } finally {
@@ -131,6 +140,73 @@ export default function EventDetailsScreen() {
     ]);
   };
 
+  const refreshEvent = async () => {
+    const token = await getToken({ template: "RollCallAuth" });
+    const data = await getEventById(String(id), token);
+    setEvent(data as SecureEventRecord);
+  };
+
+  const handleJoinLeave = async () => {
+    if (!event) {
+      return;
+    }
+
+    try {
+      setIsUpdatingParticipation(true);
+      const token = await getToken({ template: "RollCallAuth" });
+      if (event.joinButtonState === 'leave') {
+        await leaveEvent(String(id), token);
+      } else {
+        await joinEvent(String(id), token);
+      }
+
+      await refreshEvent();
+    } catch {
+      Alert.alert('Error', 'Could not update event participation.');
+    } finally {
+      setIsUpdatingParticipation(false);
+    }
+  };
+
+  const startSelfCheckin = async () => {
+    if (!event) {
+      return;
+    }
+
+    try {
+      const token = await getToken({ template: "RollCallAuth" });
+      await checkinService.startSession(event.id, 'self', 15, token);
+      setCheckinMethodModalVisible(false);
+      router.push(`/checkIn?eventId=${encodeURIComponent(String(event.id))}&tripId=${encodeURIComponent(String(event.tripId))}&isOrganizer=true` as any);
+    } catch {
+      Alert.alert('Error', 'Could not start self check-in.');
+    }
+  };
+
+  const startQrCheckin = async () => {
+    if (!event) {
+      return;
+    }
+
+    try {
+      const token = await getToken({ template: "RollCallAuth" });
+      const session = await checkinService.startSession(event.id, 'qr', 15, token);
+      setCheckinMethodModalVisible(false);
+      router.push(
+        `/qr-checkin?eventId=${encodeURIComponent(String(event.id))}&token=${encodeURIComponent(session.token ?? '')}&expiresAt=${encodeURIComponent(session.expiresAt ?? '')}` as any
+      );
+    } catch {
+      Alert.alert('Error', 'Could not start QR check-in.');
+    }
+  };
+
+  const attendeeButtonLabel =
+    event.joinButtonState === 'leave'
+      ? 'Leave'
+      : event.joinButtonState === 'mandatory'
+        ? 'Mandatory'
+        : 'Join';
+
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView style={styles.content}>
@@ -181,6 +257,31 @@ export default function EventDetailsScreen() {
           </View>
         )}
 
+        {/* Organizer check-in controls */}
+        {event.isOrganizer && (
+          <View style={styles.actionRow}>
+            <AppButton
+              variant="default"
+              style={styles.actionButton}
+              label="Start check-in"
+              onPress={() => setCheckinMethodModalVisible(true)}
+            />
+          </View>
+        )}
+
+        {/* Participant join/leave controls */}
+        {!event.isOrganizer && (
+          <View style={styles.actionRow}>
+            <AppButton
+              variant="default"
+              style={styles.actionButton}
+              label={isUpdatingParticipation ? 'Updating...' : attendeeButtonLabel}
+              onPress={handleJoinLeave}
+              disabled={isUpdatingParticipation || event.joinButtonState === 'mandatory'}
+            />
+          </View>
+        )}
+
         {/* SECURITY: Only show Edit/Delete buttons if the user is an Organizer */}
         {event.isOrganizer && (
             <View style={styles.actionRow}>
@@ -200,6 +301,17 @@ export default function EventDetailsScreen() {
             />
             </View>
         )}
+
+        <CheckInMethodModal
+          visible={checkinMethodModalVisible}
+          onClose={() => setCheckinMethodModalVisible(false)}
+          onSelectSelfCheckIn={() => {
+            void startSelfCheckin();
+          }}
+          onSelectQrCheckIn={() => {
+            void startQrCheckin();
+          }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
