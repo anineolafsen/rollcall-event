@@ -64,6 +64,7 @@ namespace MyApp.API.Controllers
         appEvent.TripParticipantCount,
         appEvent.IsJoined,
         appEvent.JoinButtonState,
+        appEvent.IsSelfCheckinActive,
         IsOrganizer = _tripService.UserIsOrganizer(appEvent.TripId, user.Id)
       });
     }

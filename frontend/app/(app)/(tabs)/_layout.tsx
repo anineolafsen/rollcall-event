@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState, type AppStateStatus, Platform, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { AppNavbar } from '@/components/ui/nav-bar';
@@ -9,9 +9,14 @@ import { getEventById } from '@/lib/events';
 import { CheckinSessionModal } from '@/components/ui/checkin/checkin-session-modal';
 
 export default function TabLayout() {
+  const POLL_BACKOFF_MS = 60000;
+  const ACTIVE_POLL_MS = 5000;
+  const IDLE_POLL_MS = 15000;
+
   const isWeb = Platform.OS === 'web';
   const router = useRouter();
   const { userId, getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEventId, setActiveEventId] = useState<number | null>(null);
@@ -19,14 +24,80 @@ export default function TabLayout() {
   const [activeTripId, setActiveTripId] = useState<number | null>(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [dismissedEventId, setDismissedEventId] = useState<number | null>(null);
+  const [isPageVisible, setIsPageVisible] = useState(true);
+  const dismissedEventIdRef = useRef<number | null>(null);
+  const modalVisibleRef = useRef(false);
+  const pausedUntilRef = useRef(0);
+  const failureCountRef = useRef(0);
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      setIsPageVisible(!document.hidden);
+    };
+
+    handleVisibilityChange();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  useEffect(() => {
+    dismissedEventIdRef.current = dismissedEventId;
+  }, [dismissedEventId]);
+
+  useEffect(() => {
+    modalVisibleRef.current = modalVisible;
+  }, [modalVisible]);
+
+  const isAuthOrNetworkError = useCallback((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const lower = message.toLowerCase();
+    return (
+      lower.includes('401') ||
+      lower.includes('unauthorized') ||
+      lower.includes('network') ||
+      lower.includes('failed to fetch') ||
+      lower.includes('connection_refused')
+    );
+  }, []);
+
+  const shouldPausePolling = useCallback(() => Date.now() < pausedUntilRef.current, []);
+
+  const recordPollFailure = useCallback((error: unknown) => {
+    if (!isAuthOrNetworkError(error)) {
+      failureCountRef.current = 0;
+      return;
+    }
+
+    failureCountRef.current += 1;
+    if (failureCountRef.current >= 2) {
+      pausedUntilRef.current = Date.now() + POLL_BACKOFF_MS;
+    }
+  }, [POLL_BACKOFF_MS, isAuthOrNetworkError]);
+
+  const clearPollBackoff = useCallback(() => {
+    pausedUntilRef.current = 0;
+    failureCountRef.current = 0;
+  }, []);
 
   const refreshActiveCheckin = useCallback(async () => {
-    if (!userId) {
+    if (!userId || !isPageVisible) {
+      return;
+    }
+
+    if (shouldPausePolling()) {
       return;
     }
 
     try {
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       const lookup = await checkinService.getActiveSessionsForUser(userId, token);
       const nextEventId = lookup.eventIds.length > 0 ? lookup.eventIds[0] : null;
 
@@ -54,27 +125,33 @@ export default function TabLayout() {
         return;
       }
 
-      if (dismissedEventId !== nextEventId && !modalVisible) {
+      if (dismissedEventIdRef.current !== nextEventId && !modalVisibleRef.current) {
         setModalVisible(true);
         Alert.alert('Check-in started', `Check in for: ${eventDetails.name}`);
       }
-    } catch {
-      // Keep silent to avoid interrupting app use on transient network errors.
+      clearPollBackoff();
+    } catch (error) {
+      recordPollFailure(error);
+      
     }
-  }, [dismissedEventId, getToken, modalVisible, userId]);
+  }, [clearPollBackoff, isPageVisible, recordPollFailure, shouldPausePolling, userId]);
 
   useEffect(() => {
     void refreshActiveCheckin();
   }, [refreshActiveCheckin]);
 
   useEffect(() => {
-    const pollMs = activeEventId ? 5000 : 15000;
+    if (!isPageVisible) {
+      return;
+    }
+
+    const pollMs = activeEventId ? ACTIVE_POLL_MS : IDLE_POLL_MS;
     const intervalId = setInterval(() => {
       void refreshActiveCheckin();
     }, pollMs);
 
     return () => clearInterval(intervalId);
-  }, [activeEventId, refreshActiveCheckin]);
+  }, [activeEventId, isPageVisible, refreshActiveCheckin]);
 
   useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
@@ -96,7 +173,7 @@ export default function TabLayout() {
 
     try {
       setIsCheckingIn(true);
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       const participants = await checkinService.getEventParticipants(activeEventId, token);
       const me = participants.find((p: EventParticipantStatus) => p.userID === userId);
 
@@ -106,6 +183,14 @@ export default function TabLayout() {
       }
 
       await checkinService.participantCheckIn(activeEventId, me.participantID, token);
+      clearPollBackoff();
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('rollcall:participant-checked-in', {
+          detail: { eventId: activeEventId },
+        }));
+      }
+
       setDismissedEventId(activeEventId);
       setModalVisible(false);
       Alert.alert('Checked in', 'You are now marked as checked in.');
@@ -114,7 +199,7 @@ export default function TabLayout() {
     } finally {
       setIsCheckingIn(false);
     }
-  }, [activeEventId, getToken, userId]);
+  }, [activeEventId, clearPollBackoff, userId]);
 
   const handleContact = useCallback(() => {
     if (activeTripId) {

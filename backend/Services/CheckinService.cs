@@ -222,29 +222,7 @@ namespace MyApp.API.Services
 
     public void CheckInParticipant(int eventId, int participantId)
     {
-      var appEvent = _context.Events.FirstOrDefault(e => e.Id == eventId);
-      if (appEvent == null)
-      {
-        return;
-      }
-
-      var hasActiveSession = _context.EventCheckinSessions
-          .Any(s => s.EventID == eventId && s.IsActive && s.SessionType == CheckinSessionType.Self);
-
-      if (!hasActiveSession)
-      {
-        return;
-      }
-
-      var participant = _context.Participants
-          .FirstOrDefault(p => p.Id == participantId && p.TripId == appEvent.TripId);
-
-      if (participant == null || participant.IsOrganizer)
-      {
-        return;
-      }
-
-      if (!IsParticipantEligibleForEvent(appEvent, participant))
+      if (!TryGetEligibleSelfSessionParticipant(eventId, participantId, out var appEvent, out _))
       {
         return;
       }
@@ -265,7 +243,7 @@ namespace MyApp.API.Services
       });
 
       _context.SaveChanges();
-      AutoStopSessionIfCompleted(appEvent, CheckinSessionType.Self);
+      AutoStopSessionIfCompleted(appEvent!, CheckinSessionType.Self);
     }
 
     public void ValidateQrAndCheckin(string token, int participantId)
@@ -326,29 +304,7 @@ namespace MyApp.API.Services
 
     public void UncheckInParticipant(int eventId, int participantId)
     {
-      var appEvent = _context.Events.FirstOrDefault(e => e.Id == eventId);
-      if (appEvent == null)
-      {
-        return;
-      }
-
-      var hasActiveSession = _context.EventCheckinSessions
-          .Any(s => s.EventID == eventId && s.IsActive && s.SessionType == CheckinSessionType.Self);
-
-      if (!hasActiveSession)
-      {
-        return;
-      }
-
-      var participant = _context.Participants
-          .FirstOrDefault(p => p.Id == participantId && p.TripId == appEvent.TripId);
-
-      if (participant == null || participant.IsOrganizer)
-      {
-        return;
-      }
-
-      if (!IsParticipantEligibleForEvent(appEvent, participant))
+      if (!TryGetEligibleSelfSessionParticipant(eventId, participantId, out _, out _))
       {
         return;
       }
@@ -365,6 +321,48 @@ namespace MyApp.API.Services
 
       _context.Checkins.Remove(checkin);
       _context.SaveChanges();
+    }
+
+    private bool TryGetEligibleSelfSessionParticipant(
+      int eventId,
+      int participantId,
+      out Event? appEvent,
+      out Participant? participant)
+    {
+      appEvent = _context.Events.FirstOrDefault(e => e.Id == eventId);
+      participant = null;
+
+      if (appEvent == null)
+      {
+        return false;
+      }
+
+      var hasActiveSession = _context.EventCheckinSessions
+        .Any(s => s.EventID == eventId && s.IsActive && s.SessionType == CheckinSessionType.Self);
+
+      if (!hasActiveSession)
+      {
+        return false;
+      }
+
+      var tripId = appEvent.TripId;
+
+      participant = _context.Participants
+        .FirstOrDefault(p => p.Id == participantId && p.TripId == tripId);
+
+      if (participant == null || participant.IsOrganizer)
+      {
+        participant = null;
+        return false;
+      }
+
+      if (!IsParticipantEligibleForEvent(appEvent, participant))
+      {
+        participant = null;
+        return false;
+      }
+
+      return true;
     }
 
     private static string GenerateToken()

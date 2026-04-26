@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useFocusEffect, usePathname, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
 
@@ -32,10 +33,14 @@ export function UpcomingEventsScreen({
   showBackButton = false,
   isOrganizer = false,
 }: UpcomingEventsScreenProps) {
+  const POLL_BACKOFF_MS = 60000;
+  const ACTIVE_POLL_MS = 5000;
+  const IDLE_POLL_MS = 30000;
+
   const router = useRouter();
-  const pathname = usePathname();
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
   const { user } = useUser();
+  const getTokenRef = useRef(getToken);
 
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,43 +49,88 @@ export function UpcomingEventsScreen({
   const [isUpdatingEventId, setIsUpdatingEventId] = useState<number | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
   const [checkinMethodModalVisible, setCheckinMethodModalVisible] = useState(false);
-  const [activeSelfCheckinEventIds, setActiveSelfCheckinEventIds] = useState<number[]>([]);
   const [checkedInEventIds, setCheckedInEventIds] = useState<number[]>([]);
+  const [activeParticipantEventIds, setActiveParticipantEventIds] = useState<number[]>([]);
+  const [isPageVisible, setIsPageVisible] = useState(true);
+  const isFetchingEventsRef = useRef(false);
+  const pausedUntilRef = useRef(0);
+  const failureCountRef = useRef(0);
 
-  const refreshActiveSelfSessions = useCallback(async (eventItems: EventRecord[], token?: string | null) => {
-    if (!isOrganizer || eventItems.length === 0) {
-      setActiveSelfCheckinEventIds([]);
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
       return;
     }
 
-    const activeLookups = await Promise.all(
-      eventItems.map(async (eventItem) => {
-        try {
-          const active = await checkinService.getActiveSessionForEvent(eventItem.id, 'self', token);
-          return { eventId: eventItem.id, isActive: active.isActive };
-        } catch {
-          return { eventId: eventItem.id, isActive: false };
-        }
-      })
+    const handleParticipantCheckedIn = (evt: Event) => {
+      const customEvent = evt as CustomEvent<{ eventId?: number }>;
+      const checkedInEventId = customEvent.detail?.eventId;
+      if (!checkedInEventId) {
+        return;
+      }
+
+      setCheckedInEventIds((prev) => (prev.includes(checkedInEventId) ? prev : [...prev, checkedInEventId]));
+    };
+
+    window.addEventListener('rollcall:participant-checked-in', handleParticipantCheckedIn as EventListener);
+    return () => {
+      window.removeEventListener('rollcall:participant-checked-in', handleParticipantCheckedIn as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      setIsPageVisible(!document.hidden);
+    };
+
+    handleVisibilityChange();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  const isAuthOrNetworkError = useCallback((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const lower = message.toLowerCase();
+    return (
+      lower.includes('401') ||
+      lower.includes('unauthorized') ||
+      lower.includes('network') ||
+      lower.includes('failed to fetch') ||
+      lower.includes('connection_refused')
     );
+  }, []);
 
-    setActiveSelfCheckinEventIds(activeLookups.filter((x) => x.isActive).map((x) => x.eventId));
-  }, [isOrganizer]);
+  const shouldPausePolling = useCallback(() => Date.now() < pausedUntilRef.current, []);
 
-  const refreshActiveSelfSessionsForCurrentEvents = useCallback(async () => {
-    if (!isOrganizer || events.length === 0) {
+  const recordPollFailure = useCallback((error: unknown) => {
+    if (!isAuthOrNetworkError(error)) {
+      failureCountRef.current = 0;
       return;
     }
 
-    try {
-      const token = await getToken({ template: 'RollCallAuth' });
-      await refreshActiveSelfSessions(events, token);
-    } catch {
-      // Keep current state on transient auth/network failures.
+    failureCountRef.current += 1;
+    if (failureCountRef.current >= 2) {
+      pausedUntilRef.current = Date.now() + POLL_BACKOFF_MS;
     }
-  }, [events, getToken, isOrganizer, refreshActiveSelfSessions]);
+  }, [POLL_BACKOFF_MS, isAuthOrNetworkError]);
 
-  const refreshParticipantCheckins = useCallback(async (eventItems: EventRecord[], token?: string | null) => {
+  const clearPollBackoff = useCallback(() => {
+    pausedUntilRef.current = 0;
+    failureCountRef.current = 0;
+  }, []);
+
+  const refreshParticipantCheckins = useCallback(async (
+    eventItems: EventRecord[],
+    activeEventIds: number[],
+    token?: string | null,
+  ) => {
     if (isOrganizer || eventItems.length === 0) {
       setCheckedInEventIds([]);
       return;
@@ -92,9 +142,17 @@ export function UpcomingEventsScreen({
       return;
     }
 
+    const activeEventSet = new Set(activeEventIds);
+    const activeEventsInView = eventItems.filter((eventItem) => activeEventSet.has(eventItem.id));
+
+    if (activeEventsInView.length === 0) {
+      setCheckedInEventIds((prev) => prev.filter((eventId) => !activeEventSet.has(eventId)));
+      return;
+    }
+
     const checkinLookups = await Promise.all(
-      eventItems.map(async (eventItem) => {
-        if (eventItem.joinButtonState !== 'leave') {
+      activeEventsInView.map(async (eventItem) => {
+        if (eventItem.joinButtonState === 'join') {
           return { eventId: eventItem.id, isCheckedIn: false };
         }
 
@@ -108,55 +166,117 @@ export function UpcomingEventsScreen({
       })
     );
 
-    setCheckedInEventIds(checkinLookups.filter((x) => x.isCheckedIn).map((x) => x.eventId));
+    const checkedInActiveIds = checkinLookups.filter((x) => x.isCheckedIn).map((x) => x.eventId);
+    setCheckedInEventIds((prev) => {
+      const preservedNonActive = prev.filter((eventId) => !activeEventSet.has(eventId));
+      return [...new Set([...preservedNonActive, ...checkedInActiveIds])];
+    });
   }, [isOrganizer, user?.primaryEmailAddress?.emailAddress]);
 
-  const fetchEvents = useCallback(async () => {
+  const refreshParticipantCheckinsForCurrentEvents = useCallback(async () => {
+    if (isOrganizer || events.length === 0 || !userId || !isPageVisible) {
+      return;
+    }
+
+    if (shouldPausePolling()) {
+      return;
+    }
+
+    try {
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
+      const activeLookup = await checkinService.getActiveSessionsForUser(userId, token);
+      const activeIdsInView = activeLookup.eventIds.filter((eventId) => events.some((eventItem) => eventItem.id === eventId));
+      setActiveParticipantEventIds(activeIdsInView);
+      await refreshParticipantCheckins(events, activeIdsInView, token);
+      clearPollBackoff();
+    } catch (error) {
+      recordPollFailure(error);
+    }
+  }, [clearPollBackoff, events, isOrganizer, isPageVisible, recordPollFailure, refreshParticipantCheckins, shouldPausePolling, userId]);
+
+  const fetchEvents = useCallback(async (force = false) => {
+    if (!force && !isPageVisible) {
+      return;
+    }
+
+    if (!force && shouldPausePolling()) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
+    if (isFetchingEventsRef.current) {
+      return;
+    }
+
+    isFetchingEventsRef.current = true;
     try {
       setError(null);
-      const token = await getToken({ template: "RollCallAuth" });
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
       const data = await getEvents(tripId, token);
       const upcoming = getUpcomingEvents(data);
       setEvents(upcoming);
-      await refreshActiveSelfSessions(upcoming, token);
-      await refreshParticipantCheckins(upcoming, token);
-    } catch {
+      if (!isOrganizer && userId) {
+        const activeLookup = await checkinService.getActiveSessionsForUser(userId, token);
+        const activeIdsInView = activeLookup.eventIds.filter((eventId) => upcoming.some((eventItem) => eventItem.id === eventId));
+        setActiveParticipantEventIds(activeIdsInView);
+        await refreshParticipantCheckins(upcoming, activeIdsInView, token);
+      }
+      clearPollBackoff();
+    } catch (error) {
+      recordPollFailure(error);
       setError('Could not load events for this trip.');
     } finally {
+      isFetchingEventsRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tripId, refreshActiveSelfSessions, refreshParticipantCheckins]); // getToken is stable
+  }, [clearPollBackoff, isOrganizer, isPageVisible, recordPollFailure, refreshParticipantCheckins, shouldPausePolling, tripId, userId]);
 
   useFocusEffect(
     useCallback(() => {
       void fetchEvents();
-      void refreshActiveSelfSessionsForCurrentEvents();
     }, [fetchEvents])
   );
 
   useEffect(() => {
-    if (!isOrganizer) {
+    if (!isOrganizer || !isPageVisible) {
       return;
     }
 
+    const pollMs = events.some((eventItem) => eventItem.isSelfCheckinActive) ? ACTIVE_POLL_MS : IDLE_POLL_MS;
+
     const intervalId = setInterval(() => {
-      void refreshActiveSelfSessionsForCurrentEvents();
-    }, 5000);
+      void fetchEvents();
+    }, pollMs);
 
     return () => clearInterval(intervalId);
-  }, [isOrganizer, refreshActiveSelfSessionsForCurrentEvents]);
+  }, [events, fetchEvents, isOrganizer, isPageVisible]);
+
+  useEffect(() => {
+    if (isOrganizer || !isPageVisible) {
+      return;
+    }
+
+    const pollMs = activeParticipantEventIds.length > 0 ? ACTIVE_POLL_MS : IDLE_POLL_MS;
+
+    const intervalId = setInterval(() => {
+      void refreshParticipantCheckinsForCurrentEvents();
+    }, pollMs);
+
+    return () => clearInterval(intervalId);
+  }, [activeParticipantEventIds.length, isOrganizer, isPageVisible, refreshParticipantCheckinsForCurrentEvents]);
 
   const onRefresh = () => {
+    clearPollBackoff();
     setRefreshing(true);
-    fetchEvents();
+    void fetchEvents(true);
   };
 
   const handleJoinLeave = async (eventItem: EventRecord) => {
     try {
       setIsUpdatingEventId(eventItem.id);
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
 
       if (eventItem.joinButtonState === 'leave') {
         await leaveEvent(eventItem.id, token);
@@ -164,7 +284,7 @@ export function UpcomingEventsScreen({
         await joinEvent(eventItem.id, token);
       }
 
-      await fetchEvents();
+      await fetchEvents(true);
     } catch {
       setError('Could not update event participation.');
     } finally {
@@ -183,9 +303,13 @@ export function UpcomingEventsScreen({
     }
 
     try {
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       await checkinService.startSession(selectedEvent.id, 'self', 15, token);
-      setActiveSelfCheckinEventIds((prev) => (prev.includes(selectedEvent.id) ? prev : [...prev, selectedEvent.id]));
+      setEvents((prev) => prev.map((eventItem) =>
+        eventItem.id === selectedEvent.id
+          ? { ...eventItem, isSelfCheckinActive: true }
+          : eventItem
+      ));
       setCheckinMethodModalVisible(false);
       router.push(`/checkIn?eventId=${encodeURIComponent(String(selectedEvent.id))}&tripId=${encodeURIComponent(String(selectedEvent.tripId))}&isOrganizer=true` as any);
     } catch {
@@ -199,7 +323,7 @@ export function UpcomingEventsScreen({
     }
 
     try {
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       const session = await checkinService.startSession(selectedEvent.id, 'qr', 15, token);
       setCheckinMethodModalVisible(false);
       router.push(
@@ -227,23 +351,20 @@ export function UpcomingEventsScreen({
   };
 
   const renderEvent = ({ item }: { item: EventRecord }) => {
-    const isSelfCheckinActive = activeSelfCheckinEventIds.includes(item.id);
+    const isSelfCheckinActive = Boolean(item.isSelfCheckinActive);
+    const isParticipantCheckinActive = activeParticipantEventIds.includes(item.id);
     const isParticipantCheckedIn = checkedInEventIds.includes(item.id);
     const actionLabel = isOrganizer
       ? isSelfCheckinActive
         ? 'Check-in active'
         : 'Start check-in'
-      : isUpdatingEventId === item.id
-        ? 'Updating...'
-        : getParticipantActionLabel(item);
+      : getParticipantActionLabel(item);
 
-    const actionVariant: 'start' | 'active' | 'checkedin' | 'join' | 'leave' | 'mandatory' | 'updating' = isOrganizer
+    const actionVariant: 'start' | 'active' | 'checkedin' | 'join' | 'leave' | 'mandatory' = isOrganizer
       ? isSelfCheckinActive
         ? 'active'
         : 'start'
-      : isUpdatingEventId === item.id
-        ? 'updating'
-        : isParticipantCheckedIn
+      : isParticipantCheckedIn
           ? 'checkedin'
         : item.joinButtonState === 'leave'
           ? 'leave'
@@ -253,7 +374,7 @@ export function UpcomingEventsScreen({
 
     const actionDisabled = isOrganizer
       ? false
-      : isUpdatingEventId !== null || item.joinButtonState === 'mandatory' || isParticipantCheckedIn;
+      : isUpdatingEventId !== null || (item.joinButtonState === 'mandatory' && !isParticipantCheckinActive) || isParticipantCheckedIn;
 
     return (
       <EventCard
@@ -263,7 +384,7 @@ export function UpcomingEventsScreen({
             pathname: '/events/[id]',
             params: {
               id: String(item.id),
-              returnTo: pathname,
+              tripId: String(item.tripId),
             },
           })
         }
@@ -319,7 +440,7 @@ export function UpcomingEventsScreen({
             ) : error ? (
               <View style={styles.centered}>
                 <Text style={styles.errorText}>{error}</Text>
-                <TouchableOpacity style={styles.retryButton} onPress={fetchEvents}>
+                <TouchableOpacity style={styles.retryButton} onPress={() => { void fetchEvents(true); }}>
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
               </View>

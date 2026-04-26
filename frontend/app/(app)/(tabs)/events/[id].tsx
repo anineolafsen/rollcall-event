@@ -29,7 +29,7 @@ interface SecureEventRecord extends EventRecord {
 }
 
 export default function EventDetailsScreen() {
-  const { id, returnTo } = useLocalSearchParams<{ id?: string; returnTo?: string }>();
+  const { id, tripId } = useLocalSearchParams<{ id?: string; tripId?: string }>();
   const router = useRouter();
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -43,38 +43,47 @@ export default function EventDetailsScreen() {
   const [isSelfCheckinActive, setIsSelfCheckinActive] = useState(false);
   const [isParticipantCheckedIn, setIsParticipantCheckedIn] = useState(false);
 
+  const applyEventState = useCallback(async (nextEvent: SecureEventRecord, token?: string | null) => {
+    setEvent(nextEvent);
+
+    if (nextEvent.isOrganizer) {
+      setIsSelfCheckinActive(Boolean(nextEvent.isSelfCheckinActive));
+      setIsParticipantCheckedIn(false);
+      return;
+    }
+
+    setIsSelfCheckinActive(false);
+    const currentUserEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+    if (!currentUserEmail || nextEvent.joinButtonState !== 'leave') {
+      setIsParticipantCheckedIn(false);
+      return;
+    }
+
+    try {
+      const participants = await checkinService.getEventParticipants(String(id), token);
+      const selfParticipant = participants.find((p) => p.email?.toLowerCase() === currentUserEmail);
+      setIsParticipantCheckedIn(Boolean(selfParticipant?.isCheckedIn));
+    } catch {
+      setIsParticipantCheckedIn(false);
+    }
+  }, [id, user?.primaryEmailAddress?.emailAddress]);
+
+  const loadEventDetails = useCallback(async () => {
+    const token = await getToken({ template: 'RollCallAuth' });
+    const data = await getEventById(String(id), token);
+    const nextEvent = data as SecureEventRecord;
+    await applyEventState(nextEvent, token);
+  }, [applyEventState, getToken, id]);
+
   const fetchEvent = useCallback(async () => {
     try {
-      const token = await getToken({ template: "RollCallAuth" });
-      const data = await getEventById(String(id), token);
-      const nextEvent = data as SecureEventRecord;
-      setEvent(nextEvent);
-      if (nextEvent.isOrganizer) {
-        const activeSession = await checkinService.getActiveSessionForEvent(String(id), 'self', token);
-        setIsSelfCheckinActive(Boolean(activeSession.isActive));
-        setIsParticipantCheckedIn(false);
-      } else {
-        setIsSelfCheckinActive(false);
-        const currentUserEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
-        if (!currentUserEmail || nextEvent.joinButtonState !== 'leave') {
-          setIsParticipantCheckedIn(false);
-        } else {
-          try {
-            const participants = await checkinService.getEventParticipants(String(id), token);
-            const selfParticipant = participants.find((p) => p.email?.toLowerCase() === currentUserEmail);
-            setIsParticipantCheckedIn(Boolean(selfParticipant?.isCheckedIn));
-          } catch {
-            setIsParticipantCheckedIn(false);
-          }
-        }
-      }
+      await loadEventDetails();
     } catch {
       setError('Could not load event details.');
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, user?.primaryEmailAddress?.emailAddress]);
+  }, [loadEventDetails]);
 
   useEffect(() => {
     if (id) {
@@ -97,18 +106,19 @@ export default function EventDetailsScreen() {
 
     const intervalId = setInterval(() => {
       void fetchEvent();
-    }, 5000);
+    }, 15000);
 
     return () => clearInterval(intervalId);
   }, [event?.isOrganizer, fetchEvent, id]);
 
   const handleGoBack = () => {
-    if (returnTo) {
-      router.replace(returnTo as any);
+    const targetTripId = event?.tripId ?? tripId;
+    if (targetTripId) {
+      router.replace(`/trips/${targetTripId}` as any);
       return;
     }
 
-    router.back();
+    router.replace('/trips' as any);
   };
 
   if (loading) {
@@ -184,31 +194,7 @@ export default function EventDetailsScreen() {
   };
 
   const refreshEvent = async () => {
-    const token = await getToken({ template: "RollCallAuth" });
-    const data = await getEventById(String(id), token);
-    const nextEvent = data as SecureEventRecord;
-    setEvent(nextEvent);
-    if (nextEvent.isOrganizer) {
-      const activeSession = await checkinService.getActiveSessionForEvent(String(id), 'self', token);
-      setIsSelfCheckinActive(Boolean(activeSession.isActive));
-      setIsParticipantCheckedIn(false);
-      return;
-    }
-
-    setIsSelfCheckinActive(false);
-    const currentUserEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
-    if (!currentUserEmail || nextEvent.joinButtonState !== 'leave') {
-      setIsParticipantCheckedIn(false);
-      return;
-    }
-
-    try {
-      const participants = await checkinService.getEventParticipants(String(id), token);
-      const selfParticipant = participants.find((p) => p.email?.toLowerCase() === currentUserEmail);
-      setIsParticipantCheckedIn(Boolean(selfParticipant?.isCheckedIn));
-    } catch {
-      setIsParticipantCheckedIn(false);
-    }
+    await loadEventDetails();
   };
 
   const handleJoinLeave = async () => {

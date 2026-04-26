@@ -68,6 +68,18 @@ namespace MyApp.API.Data
         .HasIndex(ep => new { ep.EventID, ep.UserID })
         .IsUnique();
 
+      modelBuilder.Entity<EventParticipant>()
+        .HasIndex(ep => ep.UserID);
+
+      modelBuilder.Entity<Participant>()
+        .HasIndex(p => p.UserId);
+
+      modelBuilder.Entity<Checkin>()
+        .HasIndex(c => new { c.EventID, c.ParticipantID });
+
+      modelBuilder.Entity<Checkin>()
+        .HasIndex(c => c.EventID);
+
       modelBuilder.Entity<EventCheckinSession>()
         .Property(session => session.SessionType)
         .HasConversion<string>();

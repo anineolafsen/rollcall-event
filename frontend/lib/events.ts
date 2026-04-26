@@ -19,6 +19,7 @@ export type EventRecord = {
   isJoined?: boolean;
   joinButtonState?: JoinButtonState;
   isOrganizer?: boolean;
+  isSelfCheckinActive?: boolean;
 };
 
 export type EventPayload = {
@@ -64,6 +65,7 @@ function normalizeEvent(raw: any): EventRecord {
     isJoined: raw.isJoined,
     joinButtonState: raw.joinButtonState,
     isOrganizer: raw.isOrganizer,
+    isSelfCheckinActive: raw.isSelfCheckinActive,
   };
 }
 

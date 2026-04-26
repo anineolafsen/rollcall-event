@@ -164,7 +164,69 @@ namespace MyApp.API.Services
 
     private List<Event> EnrichEvents(List<Event> events, string? userId)
     {
-      return events.Select(e => EnrichEvent(e, userId)).ToList();
+      if (events.Count == 0)
+      {
+        return events;
+      }
+
+      var eventIds = events.Select(e => e.Id).Distinct().ToList();
+      var tripIds = events.Select(e => e.TripId).Distinct().ToList();
+
+      var participantCounts = _context.EventParticipants
+        .Where(ep => eventIds.Contains(ep.EventID))
+        .GroupBy(ep => ep.EventID)
+        .Select(g => new { EventID = g.Key, Count = g.Count() })
+        .ToDictionary(x => x.EventID, x => x.Count);
+
+      var tripParticipantCounts = _context.Participants
+        .Where(p => tripIds.Contains(p.TripId))
+        .GroupBy(p => p.TripId)
+        .Select(g => new { TripId = g.Key, Count = g.Count() })
+        .ToDictionary(x => x.TripId, x => x.Count);
+
+      var activeSelfSessionEventIds = _context.EventCheckinSessions
+        .Where(session =>
+          eventIds.Contains(session.EventID) &&
+          session.IsActive &&
+          session.SessionType == CheckinSessionType.Self)
+        .Select(session => session.EventID)
+        .Distinct()
+        .ToHashSet();
+
+      HashSet<int> joinedEventIds = new();
+      if (!string.IsNullOrWhiteSpace(userId))
+      {
+        joinedEventIds = _context.EventParticipants
+          .Where(ep => ep.UserID == userId && eventIds.Contains(ep.EventID))
+          .Select(ep => ep.EventID)
+          .Distinct()
+          .ToHashSet();
+      }
+
+      foreach (var appEvent in events)
+      {
+        var isJoined = joinedEventIds.Contains(appEvent.Id);
+
+        appEvent.ParticipantCount = participantCounts.TryGetValue(appEvent.Id, out var participantCount)
+          ? participantCount
+          : 0;
+        appEvent.TripParticipantCount = tripParticipantCounts.TryGetValue(appEvent.TripId, out var tripParticipantCount)
+          ? tripParticipantCount
+          : 0;
+        appEvent.IsJoined = isJoined;
+        appEvent.IsSelfCheckinActive = activeSelfSessionEventIds.Contains(appEvent.Id);
+
+        if (appEvent.AttendanceMode == "mandatory")
+        {
+          appEvent.JoinButtonState = "mandatory";
+        }
+        else
+        {
+          appEvent.JoinButtonState = isJoined ? "leave" : "join";
+        }
+      }
+
+      return events;
     }
 
     private Event EnrichEvent(Event appEvent, string? userId)
@@ -173,10 +235,15 @@ namespace MyApp.API.Services
       var tripParticipantCount = _context.Participants.Count(p => p.TripId == appEvent.TripId);
       var isJoined = !string.IsNullOrWhiteSpace(userId) &&
         _context.EventParticipants.Any(ep => ep.EventID == appEvent.Id && ep.UserID == userId);
+      var isSelfCheckinActive = _context.EventCheckinSessions.Any(session =>
+        session.EventID == appEvent.Id &&
+        session.IsActive &&
+        session.SessionType == CheckinSessionType.Self);
 
       appEvent.ParticipantCount = participantCount;
       appEvent.TripParticipantCount = tripParticipantCount;
       appEvent.IsJoined = isJoined;
+      appEvent.IsSelfCheckinActive = isSelfCheckinActive;
 
       if (appEvent.AttendanceMode == "mandatory")
       {

@@ -35,5 +35,8 @@ namespace MyApp.API.Models
 
     [NotMapped]
     public string JoinButtonState { get; set; } = "join";
+
+    [NotMapped]
+    public bool IsSelfCheckinActive { get; set; }
   }
 }
