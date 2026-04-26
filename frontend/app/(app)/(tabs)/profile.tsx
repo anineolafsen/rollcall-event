@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -27,6 +28,7 @@ type TripNeeds = {
 export default function ProfileScreen() {
   const { getToken } = useAuth();
   const router = useRouter();
+  const getTokenRef = useRef(getToken);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -34,14 +36,19 @@ export default function ProfileScreen() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [tripNeeds, setTripNeeds] = useState<TripNeeds[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const [editingTripId, setEditingTripId] = useState<number | null>(null);
   const [draftAllergies, setDraftAllergies] = useState('');
   const [draftOtherInfo, setDraftOtherInfo] = useState('');
 
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
   const fetchData = useCallback(async () => {
     try {
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       const headers = { Authorization: `Bearer ${token}` };
 
       const [userRes, needsRes] = await Promise.all([
@@ -64,7 +71,7 @@ export default function ProfileScreen() {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [fetchData]);
 
   const handleEditProfile = async () => {
@@ -72,9 +79,11 @@ export default function ProfileScreen() {
       setIsEditingProfile(true);
       return;
     }
+
     try {
+      setIsSavingProfile(true);
       const token = await getToken({ template: 'RollCallAuth' });
-      await fetch(`${API_BASE_URL}/api/users/me`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -82,10 +91,20 @@ export default function ProfileScreen() {
         },
         body: JSON.stringify({ firstName: firstName || null, lastName: lastName || null, phone: phone || null }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to update profile (${response.status})`);
+      }
+
+      await fetchData();
+      setIsEditingProfile(false);
     } catch (error) {
       console.error('Error updating profile:', error);
+      Alert.alert('Could not save profile', 'Please try again.');
+    } finally {
+      setIsSavingProfile(false);
     }
-    setIsEditingProfile(false);
   };
 
   const startEditing = (item: TripNeeds) => {
@@ -177,7 +196,7 @@ export default function ProfileScreen() {
                   label="Cancel"
                   onPress={() => {
                       setIsEditingProfile(false);
-                    fetchData();
+                    void fetchData();
                   }}
                   style={styles.cancelButton}
                   textStyle={styles.cancelButtonText}
@@ -186,8 +205,9 @@ export default function ProfileScreen() {
             )}
             <View style={{ flex: 1 }}>
               <AppButton
-                label={isEditingProfile ? 'Save' : 'Edit profile'}
+                label={isEditingProfile ? (isSavingProfile ? 'Saving...' : 'Save') : 'Edit profile'}
                 onPress={handleEditProfile}
+                disabled={isSavingProfile}
               />
             </View>
           </View>
