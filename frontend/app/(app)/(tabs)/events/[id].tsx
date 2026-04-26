@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Alert,
@@ -11,7 +11,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { useAuth } from "@clerk/expo";
+import { useAuth, useUser } from "@clerk/expo";
 import { AppButton } from '@/components/ui/button';
 import { formatAttendanceMode, formatEventDate, formatEventTime } from '@/lib/event-format';
 import {
@@ -32,6 +32,7 @@ export default function EventDetailsScreen() {
   const { id, returnTo } = useLocalSearchParams<{ id?: string; returnTo?: string }>();
   const router = useRouter();
   const { getToken } = useAuth();
+  const { user } = useUser();
 
   const [event, setEvent] = useState<SecureEventRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,25 +40,67 @@ export default function EventDetailsScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingParticipation, setIsUpdatingParticipation] = useState(false);
   const [checkinMethodModalVisible, setCheckinMethodModalVisible] = useState(false);
+  const [isSelfCheckinActive, setIsSelfCheckinActive] = useState(false);
+  const [isParticipantCheckedIn, setIsParticipantCheckedIn] = useState(false);
 
   const fetchEvent = useCallback(async () => {
     try {
       const token = await getToken({ template: "RollCallAuth" });
       const data = await getEventById(String(id), token);
-      setEvent(data as SecureEventRecord);
+      const nextEvent = data as SecureEventRecord;
+      setEvent(nextEvent);
+      if (nextEvent.isOrganizer) {
+        const activeSession = await checkinService.getActiveSessionForEvent(String(id), 'self', token);
+        setIsSelfCheckinActive(Boolean(activeSession.isActive));
+        setIsParticipantCheckedIn(false);
+      } else {
+        setIsSelfCheckinActive(false);
+        const currentUserEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+        if (!currentUserEmail || nextEvent.joinButtonState !== 'leave') {
+          setIsParticipantCheckedIn(false);
+        } else {
+          try {
+            const participants = await checkinService.getEventParticipants(String(id), token);
+            const selfParticipant = participants.find((p) => p.email?.toLowerCase() === currentUserEmail);
+            setIsParticipantCheckedIn(Boolean(selfParticipant?.isCheckedIn));
+          } catch {
+            setIsParticipantCheckedIn(false);
+          }
+        }
+      }
     } catch {
       setError('Could not load event details.');
     } finally {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, user?.primaryEmailAddress?.emailAddress]);
 
   useEffect(() => {
     if (id) {
       fetchEvent();
     }
   }, [id, fetchEvent]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (id) {
+        void fetchEvent();
+      }
+    }, [fetchEvent, id])
+  );
+
+  useEffect(() => {
+    if (!event?.isOrganizer || !id) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      void fetchEvent();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [event?.isOrganizer, fetchEvent, id]);
 
   const handleGoBack = () => {
     if (returnTo) {
@@ -143,7 +186,29 @@ export default function EventDetailsScreen() {
   const refreshEvent = async () => {
     const token = await getToken({ template: "RollCallAuth" });
     const data = await getEventById(String(id), token);
-    setEvent(data as SecureEventRecord);
+    const nextEvent = data as SecureEventRecord;
+    setEvent(nextEvent);
+    if (nextEvent.isOrganizer) {
+      const activeSession = await checkinService.getActiveSessionForEvent(String(id), 'self', token);
+      setIsSelfCheckinActive(Boolean(activeSession.isActive));
+      setIsParticipantCheckedIn(false);
+      return;
+    }
+
+    setIsSelfCheckinActive(false);
+    const currentUserEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+    if (!currentUserEmail || nextEvent.joinButtonState !== 'leave') {
+      setIsParticipantCheckedIn(false);
+      return;
+    }
+
+    try {
+      const participants = await checkinService.getEventParticipants(String(id), token);
+      const selfParticipant = participants.find((p) => p.email?.toLowerCase() === currentUserEmail);
+      setIsParticipantCheckedIn(Boolean(selfParticipant?.isCheckedIn));
+    } catch {
+      setIsParticipantCheckedIn(false);
+    }
   };
 
   const handleJoinLeave = async () => {
@@ -176,6 +241,7 @@ export default function EventDetailsScreen() {
     try {
       const token = await getToken({ template: "RollCallAuth" });
       await checkinService.startSession(event.id, 'self', 15, token);
+      setIsSelfCheckinActive(true);
       setCheckinMethodModalVisible(false);
       router.push(`/checkIn?eventId=${encodeURIComponent(String(event.id))}&tripId=${encodeURIComponent(String(event.tripId))}&isOrganizer=true` as any);
     } catch {
@@ -201,7 +267,9 @@ export default function EventDetailsScreen() {
   };
 
   const attendeeButtonLabel =
-    event.joinButtonState === 'leave'
+    isParticipantCheckedIn
+      ? 'Checked in'
+      : event.joinButtonState === 'leave'
       ? 'Leave'
       : event.joinButtonState === 'mandatory'
         ? 'Mandatory'
@@ -262,9 +330,16 @@ export default function EventDetailsScreen() {
           <View style={styles.actionRow}>
             <AppButton
               variant="default"
-              style={styles.actionButton}
-              label="Start check-in"
-              onPress={() => setCheckinMethodModalVisible(true)}
+              style={[styles.actionButton, isSelfCheckinActive ? styles.activeCheckinButton : null]}
+              textStyle={isSelfCheckinActive ? styles.activeCheckinButtonText : undefined}
+              label={isSelfCheckinActive ? 'Check-in active' : 'Start check-in'}
+              onPress={() => {
+                if (isSelfCheckinActive) {
+                  router.push(`/checkIn?eventId=${encodeURIComponent(String(event.id))}&tripId=${encodeURIComponent(String(event.tripId))}&isOrganizer=true` as any);
+                  return;
+                }
+                setCheckinMethodModalVisible(true);
+              }}
             />
           </View>
         )}
@@ -274,10 +349,11 @@ export default function EventDetailsScreen() {
           <View style={styles.actionRow}>
             <AppButton
               variant="default"
-              style={styles.actionButton}
+              style={[styles.actionButton, isParticipantCheckedIn ? styles.activeCheckinButton : null]}
+              textStyle={isParticipantCheckedIn ? styles.activeCheckinButtonText : undefined}
               label={isUpdatingParticipation ? 'Updating...' : attendeeButtonLabel}
               onPress={handleJoinLeave}
-              disabled={isUpdatingParticipation || event.joinButtonState === 'mandatory'}
+              disabled={isUpdatingParticipation || event.joinButtonState === 'mandatory' || isParticipantCheckedIn}
             />
           </View>
         )}
@@ -422,5 +498,13 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  activeCheckinButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+  },
+  activeCheckinButtonText: {
+    color: '#111111',
   },
 });

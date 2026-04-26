@@ -9,7 +9,7 @@ type EventCardProps = {
   actionLabel?: string;
   onActionPress?: () => void;
   actionDisabled?: boolean;
-  actionVariant?: 'start' | 'join' | 'leave' | 'mandatory' | 'updating';
+  actionVariant?: 'start' | 'active' | 'checkedin' | 'join' | 'leave' | 'mandatory' | 'updating';
 };
 
 export function EventCard({
@@ -78,6 +78,8 @@ export function EventCard({
           style={[
             styles.actionButton,
             actionVariant === 'start' && styles.actionButtonStart,
+            actionVariant === 'active' && styles.actionButtonActive,
+            actionVariant === 'checkedin' && styles.actionButtonCheckedIn,
             actionVariant === 'join' && styles.actionButtonJoin,
             actionVariant === 'leave' && styles.actionButtonLeave,
             actionVariant === 'mandatory' && styles.actionButtonMandatory,
@@ -210,6 +212,14 @@ const styles = StyleSheet.create({
   actionButtonStart: {
     backgroundColor: '#77c88a',
     borderColor: '#4c915f',
+  },
+  actionButtonActive: {
+    backgroundColor: '#ffffff',
+    borderColor: '#7e8d9a',
+  },
+  actionButtonCheckedIn: {
+    backgroundColor: '#ffffff',
+    borderColor: '#7e8d9a',
   },
   actionButtonJoin: {
     backgroundColor: '#77c88a',

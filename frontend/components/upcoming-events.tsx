@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, usePathname, useRouter } from 'expo-router';
 import {
   View,
@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { useAuth } from "@clerk/expo";
+import { useAuth, useUser } from "@clerk/expo";
 
 import { EventCard } from '@/components/event-card';
 import { AppButton } from '@/components/ui/button';
@@ -35,6 +35,7 @@ export function UpcomingEventsScreen({
   const router = useRouter();
   const pathname = usePathname();
   const { getToken } = useAuth();
+  const { user } = useUser();
 
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,13 +44,82 @@ export function UpcomingEventsScreen({
   const [isUpdatingEventId, setIsUpdatingEventId] = useState<number | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
   const [checkinMethodModalVisible, setCheckinMethodModalVisible] = useState(false);
+  const [activeSelfCheckinEventIds, setActiveSelfCheckinEventIds] = useState<number[]>([]);
+  const [checkedInEventIds, setCheckedInEventIds] = useState<number[]>([]);
+
+  const refreshActiveSelfSessions = useCallback(async (eventItems: EventRecord[], token?: string | null) => {
+    if (!isOrganizer || eventItems.length === 0) {
+      setActiveSelfCheckinEventIds([]);
+      return;
+    }
+
+    const activeLookups = await Promise.all(
+      eventItems.map(async (eventItem) => {
+        try {
+          const active = await checkinService.getActiveSessionForEvent(eventItem.id, 'self', token);
+          return { eventId: eventItem.id, isActive: active.isActive };
+        } catch {
+          return { eventId: eventItem.id, isActive: false };
+        }
+      })
+    );
+
+    setActiveSelfCheckinEventIds(activeLookups.filter((x) => x.isActive).map((x) => x.eventId));
+  }, [isOrganizer]);
+
+  const refreshActiveSelfSessionsForCurrentEvents = useCallback(async () => {
+    if (!isOrganizer || events.length === 0) {
+      return;
+    }
+
+    try {
+      const token = await getToken({ template: 'RollCallAuth' });
+      await refreshActiveSelfSessions(events, token);
+    } catch {
+      // Keep current state on transient auth/network failures.
+    }
+  }, [events, getToken, isOrganizer, refreshActiveSelfSessions]);
+
+  const refreshParticipantCheckins = useCallback(async (eventItems: EventRecord[], token?: string | null) => {
+    if (isOrganizer || eventItems.length === 0) {
+      setCheckedInEventIds([]);
+      return;
+    }
+
+    const currentUserEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+    if (!currentUserEmail) {
+      setCheckedInEventIds([]);
+      return;
+    }
+
+    const checkinLookups = await Promise.all(
+      eventItems.map(async (eventItem) => {
+        if (eventItem.joinButtonState !== 'leave') {
+          return { eventId: eventItem.id, isCheckedIn: false };
+        }
+
+        try {
+          const participants = await checkinService.getEventParticipants(eventItem.id, token);
+          const selfParticipant = participants.find((p) => p.email?.toLowerCase() === currentUserEmail);
+          return { eventId: eventItem.id, isCheckedIn: Boolean(selfParticipant?.isCheckedIn) };
+        } catch {
+          return { eventId: eventItem.id, isCheckedIn: false };
+        }
+      })
+    );
+
+    setCheckedInEventIds(checkinLookups.filter((x) => x.isCheckedIn).map((x) => x.eventId));
+  }, [isOrganizer, user?.primaryEmailAddress?.emailAddress]);
 
   const fetchEvents = useCallback(async () => {
     try {
       setError(null);
       const token = await getToken({ template: "RollCallAuth" });
       const data = await getEvents(tripId, token);
-      setEvents(getUpcomingEvents(data));
+      const upcoming = getUpcomingEvents(data);
+      setEvents(upcoming);
+      await refreshActiveSelfSessions(upcoming, token);
+      await refreshParticipantCheckins(upcoming, token);
     } catch {
       setError('Could not load events for this trip.');
     } finally {
@@ -57,13 +127,26 @@ export function UpcomingEventsScreen({
       setRefreshing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tripId]); // getToken is stable
+  }, [tripId, refreshActiveSelfSessions, refreshParticipantCheckins]); // getToken is stable
 
   useFocusEffect(
     useCallback(() => {
-      fetchEvents();
+      void fetchEvents();
+      void refreshActiveSelfSessionsForCurrentEvents();
     }, [fetchEvents])
   );
+
+  useEffect(() => {
+    if (!isOrganizer) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      void refreshActiveSelfSessionsForCurrentEvents();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [isOrganizer, refreshActiveSelfSessionsForCurrentEvents]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -102,6 +185,7 @@ export function UpcomingEventsScreen({
     try {
       const token = await getToken({ template: 'RollCallAuth' });
       await checkinService.startSession(selectedEvent.id, 'self', 15, token);
+      setActiveSelfCheckinEventIds((prev) => (prev.includes(selectedEvent.id) ? prev : [...prev, selectedEvent.id]));
       setCheckinMethodModalVisible(false);
       router.push(`/checkIn?eventId=${encodeURIComponent(String(selectedEvent.id))}&tripId=${encodeURIComponent(String(selectedEvent.tripId))}&isOrganizer=true` as any);
     } catch {
@@ -127,6 +211,10 @@ export function UpcomingEventsScreen({
   };
 
   const getParticipantActionLabel = (eventItem: EventRecord) => {
+    if (checkedInEventIds.includes(eventItem.id)) {
+      return 'Checked in';
+    }
+
     if (eventItem.joinButtonState === 'leave') {
       return 'Leave';
     }
@@ -139,16 +227,24 @@ export function UpcomingEventsScreen({
   };
 
   const renderEvent = ({ item }: { item: EventRecord }) => {
+    const isSelfCheckinActive = activeSelfCheckinEventIds.includes(item.id);
+    const isParticipantCheckedIn = checkedInEventIds.includes(item.id);
     const actionLabel = isOrganizer
-      ? 'Start check-in'
+      ? isSelfCheckinActive
+        ? 'Check-in active'
+        : 'Start check-in'
       : isUpdatingEventId === item.id
         ? 'Updating...'
         : getParticipantActionLabel(item);
 
-    const actionVariant: 'start' | 'join' | 'leave' | 'mandatory' | 'updating' = isOrganizer
-      ? 'start'
+    const actionVariant: 'start' | 'active' | 'checkedin' | 'join' | 'leave' | 'mandatory' | 'updating' = isOrganizer
+      ? isSelfCheckinActive
+        ? 'active'
+        : 'start'
       : isUpdatingEventId === item.id
         ? 'updating'
+        : isParticipantCheckedIn
+          ? 'checkedin'
         : item.joinButtonState === 'leave'
           ? 'leave'
           : item.joinButtonState === 'mandatory'
@@ -157,7 +253,7 @@ export function UpcomingEventsScreen({
 
     const actionDisabled = isOrganizer
       ? false
-      : isUpdatingEventId !== null || item.joinButtonState === 'mandatory';
+      : isUpdatingEventId !== null || item.joinButtonState === 'mandatory' || isParticipantCheckedIn;
 
     return (
       <EventCard
@@ -175,6 +271,10 @@ export function UpcomingEventsScreen({
         actionVariant={actionVariant}
         onActionPress={() => {
           if (isOrganizer) {
+            if (isSelfCheckinActive) {
+              router.push(`/checkIn?eventId=${encodeURIComponent(String(item.id))}&tripId=${encodeURIComponent(String(item.tripId))}&isOrganizer=true` as any);
+              return;
+            }
             openCheckinMethodModal(item);
             return;
           }
