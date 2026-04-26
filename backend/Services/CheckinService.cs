@@ -153,7 +153,9 @@ namespace MyApp.API.Services
           {
             ParticipantID = p.Id,
             UserID = u.ClerkId,
-            Name = u.Name ?? u.Email,
+            Name = string.IsNullOrWhiteSpace($"{u.FirstName} {u.LastName}".Trim())
+              ? u.Email
+              : $"{u.FirstName} {u.LastName}".Trim(),
             Email = u.Email,
             Phone = u.Phone,
             IsCheckedIn = latestCheckinByParticipant.ContainsKey(p.Id),
