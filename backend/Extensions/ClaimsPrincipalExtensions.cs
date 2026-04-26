@@ -6,15 +6,17 @@ namespace MyApp.API.Extensions
     {
         public static string? GetClerkId(this ClaimsPrincipal user)
         {
-            // Clerk User ID is stored in the "sub" claim
-            return user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Clerk user id may be mapped to NameIdentifier or kept as raw "sub".
+            return user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? user.FindFirst("sub")?.Value;
         }
 
         public static string? GetEmail(this ClaimsPrincipal user)
         {
-            // Clerk often uses the "email" claim or standard XML email claim
-            return user.FindFirst(ClaimTypes.Email)?.Value 
-                ?? user.FindFirst("email")?.Value;
+            // Email claim names can differ by token template/provider.
+            return user.FindFirst(ClaimTypes.Email)?.Value
+                ?? user.FindFirst("email")?.Value
+                ?? user.FindFirst("email_address")?.Value;
         }
     }
 }
