@@ -6,14 +6,25 @@ import type { EventRecord } from '@/lib/events';
 type EventCardProps = {
   event: EventRecord;
   onPress: () => void;
+  actionLabel?: string;
+  onActionPress?: () => void;
+  actionDisabled?: boolean;
+  actionVariant?: 'start' | 'join' | 'leave' | 'mandatory' | 'updating';
 };
 
-export function EventCard({ event, onPress }: EventCardProps) {
+export function EventCard({
+  event,
+  onPress,
+  actionLabel,
+  onActionPress,
+  actionDisabled = false,
+  actionVariant = 'join',
+}: EventCardProps) {
   const isStartingSoon = isEventWithinNext24Hours(event);
 
   return (
-    <TouchableOpacity onPress={onPress}>
-      <View style={[styles.card, isStartingSoon && styles.cardSoon]}>
+    <View style={[styles.card, isStartingSoon && styles.cardSoon]}>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
         <View style={styles.cardHeader}>
           <View style={styles.headingBlock}>
             <Text style={styles.eventName}>{event.name}</Text>
@@ -39,8 +50,35 @@ export function EventCard({ event, onPress }: EventCardProps) {
         </View>
 
         {event.location ? <Text style={styles.location}>Location: {event.location}</Text> : null}
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+
+      {actionLabel && onActionPress ? (
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            actionVariant === 'start' && styles.actionButtonStart,
+            actionVariant === 'join' && styles.actionButtonJoin,
+            actionVariant === 'leave' && styles.actionButtonLeave,
+            actionVariant === 'mandatory' && styles.actionButtonMandatory,
+            actionVariant === 'updating' && styles.actionButtonUpdating,
+            actionDisabled && styles.actionButtonDisabled,
+          ]}
+          onPress={onActionPress}
+          disabled={actionDisabled}
+          activeOpacity={0.85}
+        >
+          <Text
+            style={[
+              styles.actionButtonText,
+              actionVariant === 'leave' && styles.actionButtonTextLeave,
+              actionVariant === 'mandatory' && styles.actionButtonTextMandatory,
+            ]}
+          >
+            {actionLabel}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
   );
 }
 
@@ -52,6 +90,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderWidth: 4,
     borderColor: '#75baf0',
+    gap: 10,
   },
   cardSoon: {
     backgroundColor: '#fff2c7',
@@ -128,5 +167,58 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: '#23425f',
     fontWeight: '600',
+  },
+  actionButton: {
+    marginTop: 2,
+    alignSelf: 'flex-end',
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    shadowColor: '#000000',
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    elevation: 2,
+  },
+  actionButtonStart: {
+    backgroundColor: '#77c88a',
+    borderColor: '#4c915f',
+  },
+  actionButtonJoin: {
+    backgroundColor: '#77c88a',
+    borderColor: '#4c915f',
+  },
+  actionButtonLeave: {
+    backgroundColor: '#ff6f80',
+    borderColor: '#d45162',
+  },
+  actionButtonMandatory: {
+    backgroundColor: '#d9dd8a',
+    borderColor: '#a9ac5f',
+  },
+  actionButtonUpdating: {
+    backgroundColor: '#a9b7c4',
+    borderColor: '#7e8d9a',
+  },
+  actionButtonDisabled: {
+    opacity: 0.6,
+  },
+  actionButtonText: {
+    color: '#111111',
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 24,
+  },
+  actionButtonTextLeave: {
+    color: '#111111',
+  },
+  actionButtonTextMandatory: {
+    color: '#111111',
   },
 });

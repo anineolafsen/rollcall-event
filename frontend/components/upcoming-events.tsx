@@ -14,8 +14,10 @@ import { useAuth } from "@clerk/expo";
 
 import { EventCard } from '@/components/event-card';
 import { AppButton } from '@/components/ui/button';
+import { CheckInMethodModal } from '@/components/ui/checkin/Checkin-method-modal';
 import { getUpcomingEvents } from '@/lib/event-format';
-import { getEvents, type EventRecord } from '@/lib/events';
+import { checkinService } from '@/services/checkinService';
+import { getEvents, joinEvent, leaveEvent, type EventRecord } from '@/lib/events';
 
 type UpcomingEventsScreenProps = {
   tripId?: string | number;
@@ -38,6 +40,9 @@ export function UpcomingEventsScreen({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdatingEventId, setIsUpdatingEventId] = useState<number | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
+  const [checkinMethodModalVisible, setCheckinMethodModalVisible] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -65,7 +70,95 @@ export function UpcomingEventsScreen({
     fetchEvents();
   };
 
+  const handleJoinLeave = async (eventItem: EventRecord) => {
+    try {
+      setIsUpdatingEventId(eventItem.id);
+      const token = await getToken({ template: 'RollCallAuth' });
+
+      if (eventItem.joinButtonState === 'leave') {
+        await leaveEvent(eventItem.id, token);
+      } else {
+        await joinEvent(eventItem.id, token);
+      }
+
+      await fetchEvents();
+    } catch {
+      setError('Could not update event participation.');
+    } finally {
+      setIsUpdatingEventId(null);
+    }
+  };
+
+  const openCheckinMethodModal = (eventItem: EventRecord) => {
+    setSelectedEvent(eventItem);
+    setCheckinMethodModalVisible(true);
+  };
+
+  const startSelfCheckin = async () => {
+    if (!selectedEvent) {
+      return;
+    }
+
+    try {
+      const token = await getToken({ template: 'RollCallAuth' });
+      await checkinService.startSession(selectedEvent.id, 'self', 15, token);
+      setCheckinMethodModalVisible(false);
+      router.push(`/checkIn?eventId=${encodeURIComponent(String(selectedEvent.id))}&tripId=${encodeURIComponent(String(selectedEvent.tripId))}&isOrganizer=true` as any);
+    } catch {
+      setError('Could not start self check-in.');
+    }
+  };
+
+  const startQrCheckin = async () => {
+    if (!selectedEvent) {
+      return;
+    }
+
+    try {
+      const token = await getToken({ template: 'RollCallAuth' });
+      const session = await checkinService.startSession(selectedEvent.id, 'qr', 15, token);
+      setCheckinMethodModalVisible(false);
+      router.push(
+        `/qr-checkin?eventId=${encodeURIComponent(String(selectedEvent.id))}&token=${encodeURIComponent(session.token ?? '')}&expiresAt=${encodeURIComponent(session.expiresAt ?? '')}` as any
+      );
+    } catch {
+      setError('Could not start QR check-in.');
+    }
+  };
+
+  const getParticipantActionLabel = (eventItem: EventRecord) => {
+    if (eventItem.joinButtonState === 'leave') {
+      return 'Leave';
+    }
+
+    if (eventItem.joinButtonState === 'mandatory') {
+      return 'Mandatory';
+    }
+
+    return 'Join';
+  };
+
   const renderEvent = ({ item }: { item: EventRecord }) => {
+    const actionLabel = isOrganizer
+      ? 'Start check-in'
+      : isUpdatingEventId === item.id
+        ? 'Updating...'
+        : getParticipantActionLabel(item);
+
+    const actionVariant: 'start' | 'join' | 'leave' | 'mandatory' | 'updating' = isOrganizer
+      ? 'start'
+      : isUpdatingEventId === item.id
+        ? 'updating'
+        : item.joinButtonState === 'leave'
+          ? 'leave'
+          : item.joinButtonState === 'mandatory'
+            ? 'mandatory'
+            : 'join';
+
+    const actionDisabled = isOrganizer
+      ? false
+      : isUpdatingEventId !== null || item.joinButtonState === 'mandatory';
+
     return (
       <EventCard
         event={item}
@@ -78,6 +171,17 @@ export function UpcomingEventsScreen({
             },
           })
         }
+        actionLabel={actionLabel}
+        actionVariant={actionVariant}
+        onActionPress={() => {
+          if (isOrganizer) {
+            openCheckinMethodModal(item);
+            return;
+          }
+
+          void handleJoinLeave(item);
+        }}
+        actionDisabled={actionDisabled}
       />
     );
   };
@@ -141,6 +245,17 @@ export function UpcomingEventsScreen({
             )}
           </View>
         </View>
+
+        <CheckInMethodModal
+          visible={checkinMethodModalVisible}
+          onClose={() => setCheckinMethodModalVisible(false)}
+          onSelectSelfCheckIn={() => {
+            void startSelfCheckin();
+          }}
+          onSelectQrCheckIn={() => {
+            void startQrCheckin();
+          }}
+        />
       </View>
     </SafeAreaView>
   );
