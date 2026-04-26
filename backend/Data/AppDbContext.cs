@@ -26,6 +26,12 @@ namespace MyApp.API.Data
         .HasIndex(i => new { i.TripId, i.Email })
         .IsUnique();
 
+      modelBuilder.Entity<Invitation>()
+        .HasOne<Trip>()
+        .WithMany()
+        .HasForeignKey(i => i.TripId)
+        .OnDelete(DeleteBehavior.Cascade);
+
       modelBuilder.Entity<Participant>()
         .HasIndex(p => new { p.TripId, p.UserId })
         .IsUnique();

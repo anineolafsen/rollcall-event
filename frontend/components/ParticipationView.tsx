@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useAuth } from '@clerk/expo';
+import { TripNeedsModal } from '@/components/TripNeedsModal';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -39,6 +40,8 @@ export function ParticipationView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<number | null>(null);
+  const [needsModalVisible, setNeedsModalVisible] = useState(false);
+  const [acceptedTripId, setAcceptedTripId] = useState<number | null>(null);
 
   const fetchInvitations = useCallback(async () => {
     try {
@@ -86,7 +89,7 @@ export function ParticipationView() {
         })
       );
 
-      setInvitations(invitationsWithTrips);
+      setInvitations(invitationsWithTrips.filter((item) => item.trip !== null));
     } catch (err) {
       setError('Could not load invitations. Please try again.');
       console.error(err);
@@ -99,7 +102,7 @@ export function ParticipationView() {
     fetchInvitations();
   }, [fetchInvitations]);
 
-  const handleAccept = async (invitationId: number) => {
+  const handleAccept = async (invitationId: number, tripId: number) => {
     try {
       const token = await getToken({ template: "RollCallAuth" });
       if (!token) {
@@ -112,7 +115,7 @@ export function ParticipationView() {
       // Accept the invitation in a joint backend transaction using the auth token
       const acceptResponse = await fetch(
         `${API_BASE_URL}/api/invitations/accept?invitationId=${invitationId}`,
-        { 
+        {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -129,7 +132,8 @@ export function ParticipationView() {
         prev.filter((item) => item.invitation.id !== invitationId)
       );
 
-      Alert.alert('Success', 'You have accepted the invitation!');
+      setAcceptedTripId(tripId);
+      setNeedsModalVisible(true);
     } catch (err) {
       Alert.alert('Error', 'Failed to accept invitation. Please try again.');
       console.error(err);
@@ -215,7 +219,7 @@ export function ParticipationView() {
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.button, styles.acceptButton, actionInProgress === invitation.id && styles.buttonDisabled]}
-            onPress={() => handleAccept(invitation.id)}
+            onPress={() => handleAccept(invitation.id, invitation.tripId)}
             disabled={actionInProgress !== null}
           >
             {actionInProgress === invitation.id ? (
@@ -271,6 +275,15 @@ export function ParticipationView() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <TripNeedsModal
+        visible={needsModalVisible}
+        tripId={acceptedTripId}
+        onClose={() => {
+          setNeedsModalVisible(false);
+          setAcceptedTripId(null);
+        }}
+      />
     </SafeAreaView>
   );
 }

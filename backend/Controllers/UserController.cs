@@ -6,6 +6,8 @@ using MyApp.API.Extensions;
 
 namespace MyApp.API.Controllers
 {
+  public record UpdateUserRequest(string? FirstName, string? LastName, string? Phone);
+
   [ApiController]
   [Route("api/users")]
   [Authorize] // Enforce authentication for user actions
@@ -16,6 +18,31 @@ namespace MyApp.API.Controllers
     public UserController(UserService userService)
     {
       _userService = userService;
+    }
+
+    private User GetAuthenticatedUser()
+    {
+      var clerkId = User.GetClerkId();
+      var email = User.GetEmail();
+      if (string.IsNullOrEmpty(clerkId) || string.IsNullOrEmpty(email))
+        throw new UnauthorizedAccessException("Identity claims missing from token.");
+      return _userService.GetOrCreateUser(clerkId, email);
+    }
+
+    [HttpGet("me")]
+    public IActionResult GetCurrentUser()
+    {
+      var user = GetAuthenticatedUser();
+      return Ok(new { user.Id, user.FirstName, user.LastName, user.Email, user.Phone });
+    }
+
+    [HttpPut("me")]
+    public IActionResult UpdateCurrentUser([FromBody] UpdateUserRequest request)
+    {
+      var user = GetAuthenticatedUser();
+      var updated = _userService.UpdateUser(user.Id, request.FirstName, request.LastName, request.Phone);
+      if (updated == null) return NotFound();
+      return Ok(new { updated.Id, updated.FirstName, updated.LastName, updated.Email, updated.Phone });
     }
 
     [HttpGet]
@@ -32,16 +59,10 @@ namespace MyApp.API.Controllers
       var authenticatedClerkId = User.GetClerkId();
       
       // SECURITY: A user should only be able to fetch their own internal record
-      if (authenticatedClerkId != clerkId)
-      {
-          return Forbid();
-      }
+      if (authenticatedClerkId != clerkId) return Forbid();
 
       var user = _userService.GetByClerkId(clerkId);
-      if (user == null)
-      {
-        return NotFound();
-      }
+      if (user == null) return NotFound();
       return Ok(user);
     }
 
@@ -50,7 +71,7 @@ namespace MyApp.API.Controllers
     {
       var authenticatedClerkId = User.GetClerkId();
       var userToDelete = _userService.GetAllUsers().FirstOrDefault(u => u.Id == id);
-      
+
       if (userToDelete == null) return NotFound();
 
       // SECURITY: A user can only delete their own account
