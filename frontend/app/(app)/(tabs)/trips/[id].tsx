@@ -97,6 +97,17 @@ export default function TripDetails() {
                 <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
             </TouchableOpacity>
             <TouchableOpacity
+                style={styles.needsButton}
+                onPress={() =>
+                router.push({
+                    pathname: '/trips/[id]/participant-needs',
+                    params: { id: String(trip.id), tripName: trip.name },
+                })
+                }
+            >
+                <Text style={styles.needsButtonText}>View Needs</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
                 style={styles.editButton}
                 onPress={() =>
                 router.push({
@@ -150,7 +161,8 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 10,
     alignItems: 'center',
   },
   inviteButton: {
@@ -161,6 +173,17 @@ const styles = StyleSheet.create({
   },
   inviteButtonText: {
     color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  needsButton: {
+    backgroundColor: '#d9e8f5',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  needsButtonText: {
+    color: '#1a3d5c',
     fontWeight: '600',
     fontSize: 14,
   },
