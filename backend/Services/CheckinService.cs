@@ -50,6 +50,16 @@ namespace MyApp.API.Services
         session.EndedAt = DateTime.UtcNow;
       }
 
+      // New session should always start from a clean check-in state for this event.
+      var existingCheckins = _context.Checkins
+          .Where(c => c.EventID == eventId)
+          .ToList();
+
+      if (existingCheckins.Count > 0)
+      {
+        _context.Checkins.RemoveRange(existingCheckins);
+      }
+
       var newSession = new EventCheckinSession
       {
         EventID = eventId,
@@ -255,6 +265,7 @@ namespace MyApp.API.Services
       });
 
       _context.SaveChanges();
+      AutoStopSessionIfCompleted(appEvent, CheckinSessionType.Self);
     }
 
     public void ValidateQrAndCheckin(string token, int participantId)
@@ -310,6 +321,7 @@ namespace MyApp.API.Services
       });
 
       _context.SaveChanges();
+      AutoStopSessionIfCompleted(appEvent, CheckinSessionType.Qr);
     }
 
     public void UncheckInParticipant(int eventId, int participantId)
@@ -386,6 +398,67 @@ namespace MyApp.API.Services
 
       return _context.EventParticipants
           .Any(ep => ep.EventID == appEvent.Id && ep.UserID == user.ClerkId);
+    }
+
+    private void AutoStopSessionIfCompleted(Event appEvent, CheckinSessionType sessionType)
+    {
+      var eligibleParticipantIds = GetEligibleParticipantIds(appEvent);
+      if (eligibleParticipantIds.Count == 0)
+      {
+        return;
+      }
+
+      var checkedInParticipantIds = _context.Checkins
+          .Where(c => c.EventID == appEvent.Id && eligibleParticipantIds.Contains(c.ParticipantID))
+          .Select(c => c.ParticipantID)
+          .Distinct()
+          .ToList();
+
+      if (checkedInParticipantIds.Count != eligibleParticipantIds.Count)
+      {
+        return;
+      }
+
+      var activeSession = _context.EventCheckinSessions
+          .FirstOrDefault(s => s.EventID == appEvent.Id && s.IsActive && s.SessionType == sessionType);
+
+      if (activeSession == null)
+      {
+        return;
+      }
+
+      activeSession.IsActive = false;
+      activeSession.EndedAt = DateTime.UtcNow;
+      _context.SaveChanges();
+    }
+
+    private List<int> GetEligibleParticipantIds(Event appEvent)
+    {
+      var participants = _context.Participants
+          .Where(p => p.TripId == appEvent.TripId && !p.IsOrganizer)
+          .ToList();
+
+      if (IsMandatoryAttendance(appEvent))
+      {
+        return participants.Select(p => p.Id).ToList();
+      }
+
+      var joinedUserIds = _context.EventParticipants
+          .Where(ep => ep.EventID == appEvent.Id)
+          .Select(ep => ep.UserID)
+          .Distinct()
+          .ToList();
+
+      var userIdsByParticipant = _context.Users
+          .Where(u => participants.Select(p => p.UserId).Contains(u.Id))
+          .Select(u => new { u.Id, u.ClerkId })
+          .ToList()
+          .ToDictionary(x => x.Id, x => x.ClerkId);
+
+      return participants
+          .Where(p => userIdsByParticipant.TryGetValue(p.UserId, out var clerkId) && joinedUserIds.Contains(clerkId))
+          .Select(p => p.Id)
+          .ToList();
     }
   }
 }

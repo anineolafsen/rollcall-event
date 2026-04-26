@@ -1,5 +1,5 @@
 import { FlatList, View, Text, TextInput, StyleSheet, Pressable } from "react-native";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ParticipantItem } from "./participant-item";
 import { useCheckins } from "@/hooks/useCheckins";
 import TabSwitcher from "./tab-switcher";
@@ -20,6 +20,46 @@ export function CheckInCard({ eventId, tripId, isOrganizer, token }: CheckInCard
   const [activeTab, setActiveTab] = useState<'checked_in' | 'not_checked_in'>('checked_in');
   const [search, setSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [sessionClosedNotice, setSessionClosedNotice] = useState(false);
+  const hideNoticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const refreshSessionState = useCallback(async () => {
+    if (!isOrganizer) {
+      return;
+    }
+
+    try {
+      const activeSession = await checkinService.getActiveSessionForEvent(eventId, 'self', token);
+      if (!activeSession.isActive) {
+        return;
+      }
+    } catch {
+      // Keep existing UI state if active lookup fails temporarily.
+    }
+  }, [eventId, isOrganizer, token]);
+
+  useEffect(() => {
+    void refreshSessionState();
+
+    if (!isOrganizer) {
+      return () => {
+        if (hideNoticeTimer.current) {
+          clearTimeout(hideNoticeTimer.current);
+        }
+      };
+    }
+
+    const intervalId = setInterval(() => {
+      void refreshSessionState();
+    }, 5000);
+
+    return () => {
+      clearInterval(intervalId);
+      if (hideNoticeTimer.current) {
+        clearTimeout(hideNoticeTimer.current);
+      }
+    };
+  }, [isOrganizer, refreshSessionState]);
 
   const list = activeTab === 'checked_in' ? checkedIn : notCheckedIn;
   const filtered = list.filter(p =>
@@ -34,7 +74,22 @@ export function CheckInCard({ eventId, tripId, isOrganizer, token }: CheckInCard
       } else {
         await checkinService.participantUncheckIn(eventId, id, token);
       }
+
+      if (isOrganizer && value) {
+        const activeSession = await checkinService.getActiveSessionForEvent(eventId, 'self', token);
+        if (!activeSession.isActive) {
+          setSessionClosedNotice(true);
+          if (hideNoticeTimer.current) {
+            clearTimeout(hideNoticeTimer.current);
+          }
+          hideNoticeTimer.current = setTimeout(() => {
+            setSessionClosedNotice(false);
+          }, 5000);
+        }
+      }
+
       await refetch();
+      await refreshSessionState();
     } finally {
       setIsSaving(false);
     }
@@ -52,7 +107,9 @@ export function CheckInCard({ eventId, tripId, isOrganizer, token }: CheckInCard
         </Pressable>
       )}
       <Text style={styles.title}>{event.title}</Text>
-
+      {sessionClosedNotice ? (
+        <Text style={styles.noticeText}>All participants are checked in. Session closed automatically.</Text>
+      ) : null}
       {loading ? <Text style={styles.infoText}>Loading participants...</Text> : null}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -119,6 +176,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#4a7ca8',
     marginBottom: 8,
+    fontWeight: '600',
+  },
+  noticeText: {
+    textAlign: 'center',
+    color: '#1b5e20',
+    backgroundColor: '#d9f2dd',
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     fontWeight: '600',
   },
   errorText: {
