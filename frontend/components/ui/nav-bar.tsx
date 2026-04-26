@@ -17,6 +17,7 @@ export function AppNavbar() {
   const isCalendarActive = pathname === '/events' || pathname.startsWith('/trips');
   const isHomeActive = pathname === '/' || pathname === '/index';
   const isProfileActive = pathname.startsWith('/profile');
+  const shouldHideNavbar = pathname === '/trips';
 
   return (
     <Tabs
@@ -26,6 +27,7 @@ export function AppNavbar() {
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
+          display: shouldHideNavbar ? 'none' : 'flex',
           position: 'absolute',
           height: 70,
           backgroundColor: '#79b9ee',

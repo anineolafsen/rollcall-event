@@ -13,6 +13,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { AppButton } from '@/components/ui/button';
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -28,6 +29,7 @@ interface Trip {
 export function ViewTripsScreen() {
   const router = useRouter();
   const {getToken} = useAuth();
+  const setSelectedTripId = useMobileTripStore((state) => state.setSelectedTripId);
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +78,11 @@ export function ViewTripsScreen() {
   };
 
   const renderTrip = ({ item }: { item: Trip }) => (
-    <TouchableOpacity onPress={() => router.push(`/trips/${item.id}`)}>
+    <TouchableOpacity
+      onPress={() => {
+        setSelectedTripId(item.id);
+        router.push(`/trips/${item.id}`);
+      }}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.tripName}>{item.name}</Text>

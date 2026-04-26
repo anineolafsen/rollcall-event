@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpaci
 import { useAuth } from "@clerk/expo";
 
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
@@ -20,6 +21,7 @@ export default function TripDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const {getToken} = useAuth();
+  const setSelectedTripId = useMobileTripStore((state) => state.setSelectedTripId);
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -36,6 +38,7 @@ export default function TripDetails() {
 
         const data: Trip = await response.json();
         setTrip(data);
+        setSelectedTripId(data.id);
       } catch {
         setError('Could not load trip details.');
       } finally {
@@ -47,7 +50,7 @@ export default function TripDetails() {
       fetchTrip();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]); // getToken is stable
+  }, [id, setSelectedTripId]); // getToken is stable
 
   if (loading) {
     return (
@@ -123,7 +126,7 @@ export default function TripDetails() {
       </View>
       <UpcomingEventsScreen 
         tripId={trip.id} 
-        title={trip.name} 
+        title="Upcoming Events" 
         showBackButton={false} 
         isOrganizer={trip.isOrganizer} 
       />
