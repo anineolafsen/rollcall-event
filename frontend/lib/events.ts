@@ -15,6 +15,7 @@ export type EventRecord = {
   attendanceMode?: string;
   tripId: number;
   participantCount?: number;
+  tripParticipantCount?: number;
   isJoined?: boolean;
   joinButtonState?: JoinButtonState;
   isOrganizer?: boolean;
@@ -59,6 +60,7 @@ function normalizeEvent(raw: any): EventRecord {
     attendanceMode: raw.attendanceMode,
     tripId: raw.tripId ?? raw.tripID,
     participantCount: raw.participantCount,
+    tripParticipantCount: raw.tripParticipantCount,
     isJoined: raw.isJoined,
     joinButtonState: raw.joinButtonState,
     isOrganizer: raw.isOrganizer,

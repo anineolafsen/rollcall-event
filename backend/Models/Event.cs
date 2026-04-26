@@ -28,6 +28,9 @@ namespace MyApp.API.Models
     public int ParticipantCount { get; set; }
 
     [NotMapped]
+    public int TripParticipantCount { get; set; }
+
+    [NotMapped]
     public bool IsJoined { get; set; }
 
     [NotMapped]

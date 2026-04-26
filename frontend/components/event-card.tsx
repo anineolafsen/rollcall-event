@@ -22,6 +22,23 @@ export function EventCard({
 }: EventCardProps) {
   const isStartingSoon = isEventWithinNext24Hours(event);
 
+  const tripTotal = event.tripParticipantCount ?? 0;
+  const joinedCount = event.participantCount ?? 0;
+
+  const participantCounter = (() => {
+    if (event.attendanceMode === 'mandatory') {
+      const total = tripTotal;
+      return `${total}/${total}`;
+    }
+
+    if (event.hasUnlimitedCapacity || !event.capacity) {
+      const total = tripTotal;
+      return `${joinedCount}/${total}`;
+    }
+
+    return `${joinedCount}/${event.capacity}`;
+  })();
+
   return (
     <View style={[styles.card, isStartingSoon && styles.cardSoon]}>
       <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
@@ -46,6 +63,10 @@ export function EventCard({
           <View style={styles.metaRow}>
             <Text style={styles.metaLabel}>Time:</Text>
             <Text style={styles.metaValue}>{formatEventTime(event.startDate)}</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaLabel}>Participants:</Text>
+            <Text style={styles.metaValue}>{participantCounter}</Text>
           </View>
         </View>
 

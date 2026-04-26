@@ -170,10 +170,12 @@ namespace MyApp.API.Services
     private Event EnrichEvent(Event appEvent, string? userId)
     {
       var participantCount = _context.EventParticipants.Count(ep => ep.EventID == appEvent.Id);
+      var tripParticipantCount = _context.Participants.Count(p => p.TripId == appEvent.TripId);
       var isJoined = !string.IsNullOrWhiteSpace(userId) &&
         _context.EventParticipants.Any(ep => ep.EventID == appEvent.Id && ep.UserID == userId);
 
       appEvent.ParticipantCount = participantCount;
+      appEvent.TripParticipantCount = tripParticipantCount;
       appEvent.IsJoined = isJoined;
 
       if (appEvent.AttendanceMode == "mandatory")

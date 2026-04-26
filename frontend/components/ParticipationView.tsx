@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -36,6 +36,7 @@ interface InvitationWithTrip {
 
 export function ParticipationView() {
   const { getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
   const [invitations, setInvitations] = useState<InvitationWithTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,12 +44,16 @@ export function ParticipationView() {
   const [needsModalVisible, setNeedsModalVisible] = useState(false);
   const [acceptedTripId, setAcceptedTripId] = useState<number | null>(null);
 
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
   const fetchInvitations = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const token = await getToken({ template: "RollCallAuth" });
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
       if (!token) {
         setError('Authentication token not found');
         return;
@@ -96,7 +101,7 @@ export function ParticipationView() {
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, []);
 
   useEffect(() => {
     fetchInvitations();
@@ -144,11 +149,22 @@ export function ParticipationView() {
 
   const handleIgnore = async (invitationId: number, tripId: number, email: string) => {
     try {
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
+      if (!token) {
+        Alert.alert('Error', 'User authentication not found');
+        return;
+      }
+
       setActionInProgress(invitationId);
 
       const response = await fetch(
         `${API_BASE_URL}/api/invitations?tripId=${tripId}&email=${encodeURIComponent(email)}`,
-        { method: 'DELETE' }
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
       );
 
       if (!response.ok) {

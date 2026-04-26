@@ -61,6 +61,7 @@ namespace MyApp.API.Controllers
         appEvent.AttendanceMode,
         appEvent.TripId,
         appEvent.ParticipantCount,
+        appEvent.TripParticipantCount,
         appEvent.IsJoined,
         appEvent.JoinButtonState,
         IsOrganizer = _tripService.UserIsOrganizer(appEvent.TripId, user.Id)
