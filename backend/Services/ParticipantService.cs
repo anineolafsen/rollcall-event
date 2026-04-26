@@ -12,6 +12,15 @@ namespace MyApp.API.Services
     public string? OtherInfo { get; set; }
   }
 
+  public class ParticipantNeedsDto
+  {
+    public int UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? Allergies { get; set; }
+    public string? OtherInfo { get; set; }
+  }
+
   public class ParticipantService
   {
     private readonly AppDbContext _context;
@@ -30,6 +39,22 @@ namespace MyApp.API.Services
     {
       return _context.Participants
         .Where(p => p.TripId == tripId)
+        .ToList();
+    }
+
+    public List<ParticipantNeedsDto> GetNeedsByTrip(int tripId)
+    {
+      return _context.Participants
+        .Include(p => p.User)
+        .Where(p => p.TripId == tripId)
+        .Select(p => new ParticipantNeedsDto
+        {
+          UserId = p.UserId,
+          Name = (p.User!.FirstName + " " + p.User.LastName).Trim(),
+          Email = p.User!.Email,
+          Allergies = p.Allergies,
+          OtherInfo = p.OtherInfo
+        })
         .ToList();
     }
 

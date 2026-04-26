@@ -15,13 +15,15 @@ namespace MyApp.API.Controllers
     private readonly EventService _eventService;
     private readonly UserService _userService;
     private readonly InvitationService _invitationService;
+    private readonly ParticipantService _participantService;
 
-    public TripController(TripService tripService, EventService eventService, UserService userService, InvitationService invitationService)
+    public TripController(TripService tripService, EventService eventService, UserService userService, InvitationService invitationService, ParticipantService participantService)
     {
       _tripService = tripService;
       _eventService = eventService;
       _userService = userService;
       _invitationService = invitationService;
+      _participantService = participantService;
     }
 
     private User GetAuthenticatedUser()
@@ -39,7 +41,17 @@ namespace MyApp.API.Controllers
     public IActionResult GetMyTrips()
     {
       var user = GetAuthenticatedUser();
-      return Ok(_tripService.GetTripsByUser(user.Id));
+      var trips = _tripService.GetTripsByUser(user.Id);
+      var result = trips.Select(t => new {
+        t.Id,
+        t.Name,
+        t.StartDate,
+        t.EndDate,
+        t.Destination,
+        t.Description,
+        IsOrganizer = _tripService.UserIsOrganizer(t.Id, user.Id)
+      });
+      return Ok(result);
     }
 
     [HttpGet("{id}")]
@@ -152,6 +164,19 @@ namespace MyApp.API.Controllers
         return NotFound();
       }
       return NoContent();
+    }
+
+    // GET api/trips/{id}/participants/needs — organizer only
+    [HttpGet("{id}/participants/needs")]
+    public IActionResult GetParticipantNeeds(int id)
+    {
+      var user = GetAuthenticatedUser();
+
+      if (!_tripService.UserIsOrganizer(id, user.Id))
+          return Forbid();
+
+      var needs = _participantService.GetNeedsByTrip(id);
+      return Ok(needs);
     }
   }
 }
