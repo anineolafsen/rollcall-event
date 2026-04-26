@@ -83,6 +83,15 @@ export const checkinService = {
     await readJsonOrThrow(response);
   },
 
+  async participantUncheckIn(eventId: string | number, participantId: number, token?: string | null): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/checkins/events/${eventId}/participants/${participantId}`, {
+      method: 'DELETE',
+      headers: buildHeaders(token),
+    });
+
+    await readJsonOrThrow(response);
+  },
+
   async validateQrToken(tokenValue: string, participantId: number, token?: string | null): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/api/checkins/sessions/qr/validate`, {
       method: 'POST',

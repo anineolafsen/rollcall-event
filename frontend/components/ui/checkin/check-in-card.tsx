@@ -27,13 +27,13 @@ export function CheckInCard({ eventId, tripId, isOrganizer, token }: CheckInCard
   );
 
   const handleToggle = async (id: number, value: boolean) => {
-    if (!value) {
-      return;
-    }
-
     try {
       setIsSaving(true);
-      await checkinService.participantCheckIn(eventId, id, token);
+      if (value) {
+        await checkinService.participantCheckIn(eventId, id, token);
+      } else {
+        await checkinService.participantUncheckIn(eventId, id, token);
+      }
       await refetch();
     } finally {
       setIsSaving(false);
