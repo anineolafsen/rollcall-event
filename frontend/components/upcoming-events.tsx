@@ -10,6 +10,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
 
@@ -55,6 +57,10 @@ export function UpcomingEventsScreen({
   const isFetchingEventsRef = useRef(false);
   const pausedUntilRef = useRef(0);
   const failureCountRef = useRef(0);
+
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaveReason, setLeaveReason] = useState('');
+  const [eventToLeave, setEventToLeave] = useState<EventRecord | null>(null);
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -279,7 +285,10 @@ export function UpcomingEventsScreen({
       const token = await getTokenRef.current({ template: 'RollCallAuth' });
 
       if (eventItem.joinButtonState === 'leave') {
-        await leaveEvent(eventItem.id, token);
+        setEventToLeave(eventItem);
+        setShowLeaveModal(true);
+        setIsUpdatingEventId(null);
+        return;
       } else {
         await joinEvent(eventItem.id, token);
       }
@@ -289,6 +298,36 @@ export function UpcomingEventsScreen({
       setError('Could not update event participation.');
     } finally {
       setIsUpdatingEventId(null);
+    }
+  };
+
+  const handleLeaveWithReason = async () => {
+    if (!eventToLeave) return;
+
+    try {
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
+      await leaveEvent(eventToLeave.id, token, leaveReason);
+      setShowLeaveModal(false);
+      setLeaveReason('');
+      setEventToLeave(null);
+      await fetchEvents(true);
+    } catch {
+      setError('Could not leave event.');
+    }
+  };
+
+  const handleLeaveWithoutReason = async () => {
+    if (!eventToLeave) return;
+
+    try {
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
+      await leaveEvent(eventToLeave.id, token);
+      setShowLeaveModal(false);
+      setLeaveReason('');
+      setEventToLeave(null);
+      await fetchEvents(true);
+    } catch {
+      setError('Could not leave event.');
     }
   };
 
@@ -478,6 +517,43 @@ export function UpcomingEventsScreen({
           }}
         />
       </View>
+      <Modal visible={showLeaveModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Leave event</Text>
+
+            <Text style={{ marginBottom: 8 }}>
+              Why are you not attending:
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Reason (optional)"
+              value={leaveReason}
+              onChangeText={setLeaveReason}
+              multiline
+            />
+
+            <View style={styles.modalButtons}>
+              <AppButton
+                variant="edit"
+                label="Cancel"
+                onPress={() => setShowLeaveModal(false)}
+              />
+
+              <AppButton
+                variant="delete"
+                label="Leave"
+                onPress={handleLeaveWithReason}
+              />
+
+              <TouchableOpacity onPress={handleLeaveWithoutReason}>
+                <Text style={styles.skipText}>Leave without reason</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>      
     </SafeAreaView>
   );
 }
@@ -572,4 +648,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7a9ab8',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    width: '80%',
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
+    minHeight: 80,
+    marginBottom: 12,
+  },
+
+  modalButtons: {
+    gap: 8,
+  },
+
+  skipText: {
+    marginTop: 8,
+    textAlign: 'right',
+    color: '#7a9ab8',
+    fontSize: 13,
+  },  
 });

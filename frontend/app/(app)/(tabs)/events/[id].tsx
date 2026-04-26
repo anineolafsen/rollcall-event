@@ -10,6 +10,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
 import { AppButton } from '@/components/ui/button';
@@ -42,6 +44,9 @@ export default function EventDetailsScreen() {
   const [checkinMethodModalVisible, setCheckinMethodModalVisible] = useState(false);
   const [isSelfCheckinActive, setIsSelfCheckinActive] = useState(false);
   const [isParticipantCheckedIn, setIsParticipantCheckedIn] = useState(false);
+
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaveReason, setLeaveReason] = useState('');
 
   const applyEventState = useCallback(async (nextEvent: SecureEventRecord, token?: string | null) => {
     setEvent(nextEvent);
@@ -119,6 +124,34 @@ export default function EventDetailsScreen() {
     }
 
     router.replace('/trips' as any);
+  };
+
+    const handleLeaveWithoutReason = async () => {
+    if (!event) return;
+
+    try {
+      const token = await getToken();
+      const updated = await leaveEvent(event.id, token ?? undefined, undefined);
+      setEvent(updated as SecureEventRecord);
+      setShowLeaveModal(false);
+      setLeaveReason('');
+    } catch {
+      Alert.alert('Error', 'Could not leave event.');
+    }
+  };
+
+  const handleLeaveWithReason = async () => {
+    if (!event) return;
+
+    try {
+      const token = await getToken();
+      const updated = await leaveEvent(event.id, token ?? undefined, leaveReason);
+      setEvent(updated as SecureEventRecord);
+      setShowLeaveModal(false);
+      setLeaveReason('');
+    } catch {
+      Alert.alert('Error', 'Could not leave event.');
+    }
   };
 
   if (loading) {
@@ -206,9 +239,10 @@ export default function EventDetailsScreen() {
       setIsUpdatingParticipation(true);
       const token = await getToken({ template: "RollCallAuth" });
       if (event.joinButtonState === 'leave') {
-        await leaveEvent(String(id), token);
+        setShowLeaveModal(true);
       } else {
-        await joinEvent(String(id), token);
+        const updated = await joinEvent(String(id), token);
+        setEvent(updated as SecureEventRecord);
       }
 
       await refreshEvent();
@@ -332,16 +366,68 @@ export default function EventDetailsScreen() {
 
         {/* Participant join/leave controls */}
         {!event.isOrganizer && (
-          <View style={styles.actionRow}>
-            <AppButton
-              variant="default"
-              style={[styles.actionButton, isParticipantCheckedIn ? styles.activeCheckinButton : null]}
-              textStyle={isParticipantCheckedIn ? styles.activeCheckinButtonText : undefined}
-              label={isUpdatingParticipation ? 'Updating...' : attendeeButtonLabel}
-              onPress={handleJoinLeave}
-              disabled={isUpdatingParticipation || event.joinButtonState === 'mandatory' || isParticipantCheckedIn}
-            />
-          </View>
+          <>
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={[
+                  styles.joinLeaveButton,
+                  isParticipantCheckedIn && styles.joinLeaveButtonCheckedIn,
+                  event.joinButtonState === 'leave' && !isParticipantCheckedIn && styles.joinLeaveButtonLeave,
+                  event.joinButtonState === 'mandatory' && styles.joinLeaveButtonMandatory,
+                  (!isParticipantCheckedIn && event.joinButtonState !== 'leave' && event.joinButtonState !== 'mandatory') && styles.joinLeaveButtonJoin,
+                  (isUpdatingParticipation || event.joinButtonState === 'mandatory' || isParticipantCheckedIn) && styles.joinLeaveButtonDisabled,
+                ]}
+                onPress={handleJoinLeave}
+                disabled={isUpdatingParticipation || event.joinButtonState === 'mandatory' || isParticipantCheckedIn}
+                activeOpacity={0.85}
+              >
+                <Text style={[
+                  styles.joinLeaveButtonText,
+                  event.joinButtonState === 'leave' && !isParticipantCheckedIn && styles.joinLeaveButtonTextLeave,
+                  event.joinButtonState === 'mandatory' && styles.joinLeaveButtonTextMandatory,
+                ]}>
+                  {isUpdatingParticipation ? 'Updating...' : attendeeButtonLabel}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Modal visible={showLeaveModal} transparent animationType="fade">
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Leave event</Text>
+
+                  <Text style={{ marginBottom: 8 }}>
+                    Why are you not attending:
+                  </Text>
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Reason (optional)"
+                    value={leaveReason}
+                    onChangeText={setLeaveReason}
+                    multiline
+                  />
+
+                  <View style={styles.modalButtons}>
+                    <AppButton
+                      variant="edit"
+                      label="Cancel"
+                      onPress={() => setShowLeaveModal(false)}
+                    />
+
+                    <AppButton
+                      variant="delete"
+                      label="Leave"
+                      onPress={handleLeaveWithReason}
+                    />
+
+                    <TouchableOpacity onPress={handleLeaveWithoutReason}>
+                      <Text style={styles.skipText}>Leave without reason</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+          </Modal>
+        </>
         )}
 
         {/* SECURITY: Only show Edit/Delete buttons if the user is an Organizer */}
@@ -491,6 +577,90 @@ const styles = StyleSheet.create({
     borderColor: '#d9e8f5',
   },
   activeCheckinButtonText: {
+    color: '#111111',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    width: '80%',
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
+    minHeight: 80,
+    marginBottom: 12,
+  },
+
+  modalButtons: {
+    gap: 8,
+  },
+
+  skipText: {
+    marginTop: 8,
+    textAlign: 'right',
+    color: '#7a9ab8',
+    fontSize: 13,
+  },
+  joinLeaveButton: {
+    flex: 1,
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    shadowColor: '#000000',
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  joinLeaveButtonJoin: {
+    backgroundColor: '#77c88a',
+    borderColor: '#4c915f',
+  },
+  joinLeaveButtonLeave: {
+    backgroundColor: '#ff6f80',
+    borderColor: '#d45162',
+  },
+  joinLeaveButtonMandatory: {
+    backgroundColor: '#d9dd8a',
+    borderColor: '#a9ac5f',
+  },
+  joinLeaveButtonCheckedIn: {
+    backgroundColor: '#ffffff',
+    borderColor: '#7e8d9a',
+  },
+  joinLeaveButtonDisabled: {
+    opacity: 0.6,
+  },
+  joinLeaveButtonText: {
+    color: '#111111',
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 24,
+  },
+  joinLeaveButtonTextLeave: {
+    color: '#111111',
+  },
+  joinLeaveButtonTextMandatory: {
     color: '#111111',
   },
 });
