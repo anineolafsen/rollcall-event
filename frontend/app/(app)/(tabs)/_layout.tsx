@@ -1,12 +1,13 @@
-import { Platform, View } from 'react-native';
+import { Platform, View, useWindowDimensions } from 'react-native';
 import { Stack } from 'expo-router';
 import { AppNavbar } from '@/components/ui/nav-bar';
 import { AppSidebar } from '@/components/ui/side-bar';
 
 export default function TabLayout() {
-  const isWeb = Platform.OS === 'web';
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === 'web' && width >= 900;
 
-  if (isWeb) {
+  if (isDesktopWeb) {
     return (
       <View style={{ flex: 1, flexDirection: 'row' }}>
         <AppSidebar />

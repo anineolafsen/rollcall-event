@@ -1,30 +1,54 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 import { PlatformPressable } from '@react-navigation/elements';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
+const hiddenTabOptions = {
+  href: null,
+  tabBarItemStyle: {
+    display: 'none' as const,
+  },
+};
+
 export function AppNavbar() {
+  const pathname = usePathname();
+  const isCalendarActive = pathname === '/events' || pathname.startsWith('/trips');
+  const isHomeActive = pathname === '/' || pathname === '/index';
+  const isProfileActive = pathname.startsWith('/profile');
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#77C6FE',
-        tabBarInactiveTintColor: '#77C6FE',
+        tabBarActiveTintColor: '#0b0b0b',
+        tabBarInactiveTintColor: '#ffffff',
+        tabBarShowLabel: false,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: '#343434',
-          borderTopColor: '#343434',
-        },
-        tabBarLabelStyle: {
-          color: '#F4FAFF', 
+          position: 'absolute',
+          height: 70,
+          backgroundColor: '#79b9ee',
+          borderTopWidth: 0,
+          borderTopColor: 'transparent',
+          paddingTop: 14,
+          paddingBottom: 8,
+          paddingHorizontal: 18,
+          shadowColor: '#000000',
+          shadowOpacity: 0.2,
+          shadowRadius: 14,
+          shadowOffset: {
+            width: 0,
+            height: 8,
+          },
+          elevation: 10,
         },
         tabBarButton: (props) => (
           <PlatformPressable
             {...props}
             style={[
-              props.style,
               styles.tabButton,
+              props.style,
               props.accessibilityState?.selected && styles.tabButtonActive,
             ]}
           >
@@ -34,35 +58,74 @@ export function AppNavbar() {
         headerShown: false,
       }}>
       <Tabs.Screen
-        name="index"
+        name="events"
         options={{
-          href: null,
+          title: 'Calendar',
+          tabBarIcon: () => (
+            <IconSymbol size={40} name="calendar" color={isCalendarActive ? '#0b0b0b' : '#ffffff'} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="events"
+        name="index"
         options={{
-          href: null,
+          title: 'Home',
+          tabBarIcon: () => (
+            <IconSymbol size={53} name="house.fill" color={isHomeActive ? '#0b0b0b' : '#ffffff'} />
+          ),
         }}
       />
       <Tabs.Screen
         name="trips"
-        options={{
-          title: 'Trips',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="suitcase.fill" color={color} />,
-        }}
+        options={hiddenTabOptions}
       />
       <Tabs.Screen
         name="my-invitations"
-        options={{
-          href: null,
-        }}
+        options={hiddenTabOptions}
+      />
+      <Tabs.Screen
+        name="invite"
+        options={hiddenTabOptions}
+      />
+      <Tabs.Screen
+        name="trips/create"
+        options={hiddenTabOptions}
+      />
+      <Tabs.Screen
+        name="trips/[id]"
+        options={hiddenTabOptions}
+      />
+      <Tabs.Screen
+        name="trips/[id]/edit"
+        options={hiddenTabOptions}
+      />
+      <Tabs.Screen
+        name="trips/[id]/manage-invitations"
+        options={hiddenTabOptions}
+      />
+      <Tabs.Screen
+        name="trips/[id]/participant-needs"
+        options={hiddenTabOptions}
+      />
+      <Tabs.Screen
+        name="events/create"
+        options={hiddenTabOptions}
+      />
+      <Tabs.Screen
+        name="events/[id]"
+        options={hiddenTabOptions}
+      />
+      <Tabs.Screen
+        name="events/[id]/edit"
+        options={hiddenTabOptions}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+          tabBarIcon: () => (
+            <IconSymbol size={50} name="person.fill" color={isProfileActive ? '#0b0b0b' : '#ffffff'} />
+          ),
         }}
       />
     </Tabs>
@@ -71,10 +134,13 @@ export function AppNavbar() {
 
 const styles = StyleSheet.create({
   tabButton: {
-    borderTopWidth: 2,
-    borderTopColor: 'transparent',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
+    marginHorizontal: 0,
   },
   tabButtonActive: {
-    borderTopColor: '#77C6FE',
+    transform: [{ translateY: -2 }],
   },
 });
