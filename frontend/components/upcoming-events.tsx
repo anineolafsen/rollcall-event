@@ -59,6 +59,7 @@ export function UpcomingEventsScreen({
   const [activeParticipantEventIds, setActiveParticipantEventIds] = useState<number[]>([]);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const isFetchingEventsRef = useRef(false);
+  const activeRequestIdRef = useRef(0);
   const pausedUntilRef = useRef(0);
   const failureCountRef = useRef(0);
 
@@ -106,6 +107,23 @@ export function UpcomingEventsScreen({
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
+
+  useEffect(() => {
+    activeRequestIdRef.current += 1;
+    isFetchingEventsRef.current = false;
+    setEvents([]);
+    setLoading(true);
+    setRefreshing(false);
+    setError(null);
+    setCheckedInEventIds([]);
+    setActiveParticipantEventIds([]);
+    setIsUpdatingEventId(null);
+    setSelectedEvent(null);
+    setCheckinMethodModalVisible(false);
+    setShowLeaveModal(false);
+    setLeaveReason('');
+    setEventToLeave(null);
+  }, [isOrganizer, tripId]);
 
   const isAuthOrNetworkError = useCallback((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
@@ -207,6 +225,8 @@ export function UpcomingEventsScreen({
   }, [clearPollBackoff, events, isOrganizer, isPageVisible, recordPollFailure, refreshParticipantCheckins, shouldPausePolling, userId]);
 
   const fetchEvents = useCallback(async (force = false) => {
+    const requestId = activeRequestIdRef.current;
+
     if (!force && !isPageVisible) {
       return;
     }
@@ -227,21 +247,34 @@ export function UpcomingEventsScreen({
       const token = await getTokenRef.current({ template: "RollCallAuth" });
       const data = await getEvents(tripId, token);
       const upcoming = getUpcomingEvents(data);
+
+      if (requestId !== activeRequestIdRef.current) {
+        return;
+      }
+
       setEvents(upcoming);
       if (!isOrganizer && userId) {
         const activeLookup = await checkinService.getActiveSessionsForUser(userId, token);
         const activeIdsInView = activeLookup.eventIds.filter((eventId) => upcoming.some((eventItem) => eventItem.id === eventId));
+        if (requestId !== activeRequestIdRef.current) {
+          return;
+        }
         setActiveParticipantEventIds(activeIdsInView);
         await refreshParticipantCheckins(upcoming, activeIdsInView, token);
       }
       clearPollBackoff();
     } catch (error) {
+      if (requestId !== activeRequestIdRef.current) {
+        return;
+      }
       recordPollFailure(error);
       setError('Could not load events for this trip.');
     } finally {
-      isFetchingEventsRef.current = false;
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === activeRequestIdRef.current) {
+        isFetchingEventsRef.current = false;
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [clearPollBackoff, isOrganizer, isPageVisible, recordPollFailure, refreshParticipantCheckins, shouldPausePolling, tripId, userId]);
 

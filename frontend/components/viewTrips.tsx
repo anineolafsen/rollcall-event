@@ -25,6 +25,7 @@ interface Trip {
   name: string;
   startDate: string;
   endDate: string;
+  isOrganizer?: boolean;
   destination?: string;
   description?: string;
 }
@@ -33,7 +34,7 @@ export function ViewTripsScreen() {
   const router = useRouter();
   const {getToken} = useAuth();
   const { width } = useWindowDimensions();
-  const setSelectedTripId = useMobileTripStore((state) => state.setSelectedTripId);
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
 
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -85,8 +86,13 @@ export function ViewTripsScreen() {
   const renderTrip = ({ item }: { item: Trip }) => (
     <Pressable
       onPress={() => {
-        setSelectedTripId(item.id);
-        router.push(`/trips/${item.id}`);
+        setSelectedTrip({ id: item.id, isOrganizer: Boolean(item.isOrganizer) });
+        if (isDesktopWeb) {
+          router.push(`/trips/${item.id}`);
+          return;
+        }
+
+        router.push('/');
       }}
       style={({ hovered, pressed }) => [
         styles.card,

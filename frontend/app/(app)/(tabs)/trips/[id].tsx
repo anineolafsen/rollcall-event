@@ -24,7 +24,7 @@ export default function TripDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const {getToken} = useAuth();
-  const setSelectedTripId = useMobileTripStore((state) => state.setSelectedTripId);
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
   const showBackButton = Platform.OS === 'web' && width >= 900;
 
   const handleBack = () => {
@@ -51,7 +51,7 @@ export default function TripDetails() {
 
         const data: Trip = await response.json();
         setTrip(data);
-        setSelectedTripId(data.id);
+        setSelectedTrip({ id: data.id, isOrganizer: data.isOrganizer });
       } catch {
         setError('Could not load trip details.');
       } finally {
@@ -63,7 +63,7 @@ export default function TripDetails() {
       fetchTrip();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, setSelectedTripId]); // getToken is stable
+  }, [id, setSelectedTrip]); // getToken is stable
 
   if (loading) {
     return (
