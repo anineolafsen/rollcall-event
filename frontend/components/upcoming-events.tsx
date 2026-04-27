@@ -66,6 +66,7 @@ export function UpcomingEventsScreen({
   const [leaveReason, setLeaveReason] = useState('');
   const [eventToLeave, setEventToLeave] = useState<EventRecord | null>(null);
   const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
+  const showMobileHeaderDivider = !showDesktopBackButton;
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -478,6 +479,7 @@ export function UpcomingEventsScreen({
             </Pressable>
           ) :null}
         </View>
+        {showMobileHeaderDivider ? <View style={styles.titleDivider} /> : null}
 
         <View style={styles.timelineSection}>
           <View style={styles.timelineRail} />
@@ -577,8 +579,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#edf4fa',
     paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 28,
+    paddingTop: 18,
+    paddingBottom: 36,
   },
   backButton: {
     marginBottom: 24,
@@ -598,15 +600,15 @@ const styles = StyleSheet.create({
     width: 16,
     backgroundColor: '#75baf0',
     marginRight: 22,
-    marginBottom: -28,
+    marginBottom: -36,
   },
   timelineContent: {
     flex: 1,
   },
   listContent: {
     gap: 22,
-    paddingTop: 2,
-    paddingBottom: 48,
+    paddingTop: 8,
+    paddingBottom: 72,
   },
   centered: {
     flex: 1,
@@ -680,6 +682,14 @@ const styles = StyleSheet.create({
   justifyContent: 'center',
   marginBottom: 18,
   position: 'relative',
+},
+titleDivider: {
+  height: 3,
+  backgroundColor: '#76b6ee',
+  borderRadius: 999,
+  marginTop: -4,
+  marginBottom: 24,
+  marginHorizontal: 28,
 },
 title: {
   fontSize: 28,

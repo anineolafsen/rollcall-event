@@ -1,9 +1,9 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, useWindowDimensions } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import { PlatformPressable } from '@react-navigation/elements';
-
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { CalendarDays, House, User } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const hiddenTabOptions = {
   href: null,
@@ -14,10 +14,14 @@ const hiddenTabOptions = {
 
 export function AppNavbar() {
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const isCalendarActive = pathname === '/events' || pathname.startsWith('/trips');
   const isHomeActive = pathname === '/' || pathname === '/index';
   const isProfileActive = pathname.startsWith('/profile');
   const shouldHideNavbar = pathname === '/trips';
+  const isTablet = width >= 768;
+  const navHeight = 76 + insets.bottom;
 
   return (
     <Tabs
@@ -29,19 +33,21 @@ export function AppNavbar() {
         tabBarStyle: {
           display: shouldHideNavbar ? 'none' : 'flex',
           position: 'absolute',
-          height: 70,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: navHeight,
           backgroundColor: '#79b9ee',
-          borderTopWidth: 0,
           borderTopColor: 'transparent',
-          paddingTop: 14,
-          paddingBottom: 8,
-          paddingHorizontal: 18,
+          paddingTop: 10,
+          paddingBottom: Math.max(insets.bottom, 10),
+          paddingHorizontal: isTablet ? 28 : 18,
           shadowColor: '#000000',
-          shadowOpacity: 0.2,
-          shadowRadius: 14,
+          shadowOpacity: 0.28,
+          shadowRadius: 18,
           shadowOffset: {
             width: 0,
-            height: 8,
+            height: 10,
           },
           elevation: 10,
         },
@@ -64,7 +70,11 @@ export function AppNavbar() {
         options={{
           title: 'Calendar',
           tabBarIcon: () => (
-            <IconSymbol size={40} name="calendar" color={isCalendarActive ? '#0b0b0b' : '#ffffff'} />
+            <CalendarDays
+              size={isTablet ? 42 : 38}
+              strokeWidth={2.4}
+              color={isCalendarActive ? '#0b0b0b' : '#ffffff'}
+            />
           ),
         }}
       />
@@ -73,7 +83,11 @@ export function AppNavbar() {
         options={{
           title: 'Home',
           tabBarIcon: () => (
-            <IconSymbol size={53} name="house.fill" color={isHomeActive ? '#0b0b0b' : '#ffffff'} />
+            <House
+              size={isTablet ? 50 : 46}
+              strokeWidth={2.6}
+              color={isHomeActive ? '#0b0b0b' : '#ffffff'}
+            />
           ),
         }}
       />
@@ -126,7 +140,11 @@ export function AppNavbar() {
         options={{
           title: 'Profile',
           tabBarIcon: () => (
-            <IconSymbol size={50} name="person.fill" color={isProfileActive ? '#0b0b0b' : '#ffffff'} />
+            <User
+              size={isTablet ? 48 : 44}
+              strokeWidth={2.4}
+              color={isProfileActive ? '#0b0b0b' : '#ffffff'}
+            />
           ),
         }}
       />

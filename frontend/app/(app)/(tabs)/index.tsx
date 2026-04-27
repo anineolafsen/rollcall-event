@@ -22,6 +22,7 @@ export default function Home() {
   const { width } = useWindowDimensions();
   const selectedTripId = useMobileTripStore((state) => state.selectedTripId);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
+  const showMobileHeaderDivider = !isDesktopWeb;
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,11 +79,14 @@ export default function Home() {
             tintColor="#76b6ee"
           />
         }
-      >
+        >
         <View style={styles.mainContent}>
-          <Text style={styles.title}>
-            {activeTrip ? activeTrip.name : 'Trip description'}
-          </Text>
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>
+              {activeTrip ? activeTrip.name : 'Trip description'}
+            </Text>
+            {showMobileHeaderDivider ? <View style={styles.titleDivider} /> : null}
+          </View>
 
           {loading && !refreshing ? (
             <View style={styles.centered}>
@@ -168,13 +172,22 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
   },
+  titleSection: {
+    marginBottom: 24,
+  },
   title: {
     fontSize: 30,
     lineHeight: 36,
     fontWeight: '700',
     color: '#090909',
-    marginBottom: 24,
     textAlign: 'center',
+  },
+  titleDivider: {
+    height: 3,
+    backgroundColor: '#76b6ee',
+    borderRadius: 999,
+    marginTop: 14,
+    marginHorizontal: 28,
   },
   buttonRow: {
     flexDirection: 'row',
