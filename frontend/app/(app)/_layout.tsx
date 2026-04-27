@@ -1,5 +1,8 @@
 import { Redirect, Slot } from "expo-router";
+import { View } from 'react-native';
 import { useAuth } from "@clerk/expo";
+
+import { TripsBackButton } from '@/components/ui/trips-back-button';
 
 export default function AppLayout() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -10,5 +13,10 @@ export default function AppLayout() {
     return <Redirect href="/sign-in" />;
   }
 
-  return <Slot />;
+  return (
+    <View style={{ flex: 1 }}>
+      <Slot />
+      <TripsBackButton />
+    </View>
+  );
 }

@@ -2,7 +2,7 @@ import { useAuth } from '@clerk/expo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
@@ -19,7 +19,9 @@ type Trip = {
 export default function Home() {
   const router = useRouter();
   const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
   const selectedTripId = useMobileTripStore((state) => state.selectedTripId);
+  const isDesktopWeb = Platform.OS === 'web' && width >= 900;
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,10 +144,12 @@ export default function Home() {
           )}
         </View>
       </ScrollView>
-      <Pressable style={styles.switchButton} onPress={() => router.push('/trips')}>
-        <MaterialIcons name="swap-horiz" size={20} color="#ffffff" />
-        <Text style={styles.switchButtonText}>Switch trip</Text>
-      </Pressable>
+      {isDesktopWeb ? (
+        <Pressable style={styles.switchButton} onPress={() => router.push('/trips')}>
+          <MaterialIcons name="swap-horiz" size={20} color="#ffffff" />
+          <Text style={styles.switchButtonText}>Switch trip</Text>
+        </Pressable>
+      ) : null}
     </SafeAreaView>
   );
 }
