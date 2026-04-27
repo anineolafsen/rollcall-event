@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from "@clerk/expo";
+import { Plus } from 'lucide-react-native';
 
 import {
   View,
@@ -11,6 +12,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   RefreshControl,
+  Pressable,
 } from 'react-native';
 import { AppButton } from '@/components/ui/button';
 
@@ -76,40 +78,52 @@ export function ViewTripsScreen() {
   };
 
   const renderTrip = ({ item }: { item: Trip }) => (
-    <TouchableOpacity onPress={() => router.push(`/trips/${item.id}`)}>
-      <View style={styles.card}>
+    <Pressable 
+      onPress={() => router.push(`/trips/${item.id}`)}
+      style={({ hovered, pressed }) => [
+        styles.card,
+        hovered && styles.cardHovered,
+        pressed && {opacity: 0.9 },
+      ]}>
         <View style={styles.cardHeader}>
           <Text style={styles.tripName}>{item.name}</Text>
           {item.destination && (
             <Text style={styles.destination}>{item.destination}</Text>
           )}
         </View>
-
-        <View style={styles.cardDivider} />
-
-        <View style={styles.dateRow}>
+        <View style={styles.cardBody}>
           <View style={styles.dateBlock}>
             <Text style={styles.dateLabel}>From</Text>
-            <Text style={styles.dateValue}>{formatDate(item.startDate)}</Text>
+            <Text style={styles.dateValue}>{item.startDate ? formatDate(item.startDate) : '-'}</Text>
           </View>
-          <View style={styles.dateSeparator} />
           <View style={styles.dateBlock}>
             <Text style={styles.dateLabel}>To</Text>
-            <Text style={styles.dateValue}>{formatDate(item.endDate)}</Text>
+            <Text style={styles.dateValue}>{item.endDate ? formatDate(item.endDate) : '-'}</Text>
           </View>
         </View>
-
         {item.description ? (
           <Text style={styles.description}>{item.description}</Text>
         ) : null}
-      </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.content}>
-        <Text style={styles.title}>My Trips</Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>My Trips</Text>
+          <Pressable
+            onPress={() => router.push('/trips/create')}
+            style={({ pressed, hovered }) => [
+              styles.createButton,
+              hovered && styles.createButtonHovered,
+              pressed && { opacity: 0.8 },
+            ]}>
+            {({ hovered }) => (
+            <Plus size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
+            )}
+          </Pressable>
+        </View>
         <View style={styles.titleDivider} />
 
         {loading && !refreshing ? (
@@ -132,6 +146,7 @@ export function ViewTripsScreen() {
             data={trips}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderTrip}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -143,12 +158,6 @@ export function ViewTripsScreen() {
             }
           />
         )}
-        <AppButton
-          variant="create"
-          style={styles.createButton}
-          label="Create new trip +"
-          onPress={() => router.push('/trips/create')}
-        />
       </View>
     </SafeAreaView>
   );
@@ -163,15 +172,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#eef5fb',
     paddingHorizontal: 22,
-    paddingTop: 80,
-    paddingBottom: 80,
+    paddingTop: 40,
+    paddingBottom: 2,
+    
   },
   title: {
-    fontSize: 28,
+    fontSize: 34,
     lineHeight: 34,
     fontWeight: '700',
-    textAlign: 'center',
     color: '#090909',
+    textAlign: 'center',
   },
   titleDivider: {
     height: 3,
@@ -182,61 +192,58 @@ const styles = StyleSheet.create({
     marginHorizontal: 28,
   },
   listContent: {
-    gap: 14,
     paddingBottom: 16,
+    gap: 16,
   },
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#d9e8f5',
+    borderWidth: 0.5,
+    borderColor: '#d0e5f7',
+    overflow: 'hidden',
   },
   cardHeader: {
-    marginBottom: 10,
+    backgroundColor: '#4a7ca8', 
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   },
   tripName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#090909',
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#ffffff',
   },
   destination: {
     fontSize: 13,
-    color: '#4a7ca8',
+    color: 'rgba(255,255,255,0.65)',
     marginTop: 2,
   },
-  cardDivider: {
-    height: 1,
-    backgroundColor: '#d9e8f5',
-    marginBottom: 12,
-  },
-  dateRow: {
+  cardBody: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   },
   dateBlock: {
     flex: 1,
+    borderLeftWidth: 1,
+    borderLeftColor: '#d0e5f7',
+    paddingLeft: 12,
   },
   dateLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#7a9ab8',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   dateValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#1a3d5c',
   },
-  dateSeparator: {
-    width: 1,
-    height: 32,
-    backgroundColor: '#d9e8f5',
-    marginHorizontal: 16,
-  },
   description: {
-    marginTop: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
     fontSize: 13,
     color: '#5a7a94',
     lineHeight: 19,
@@ -267,23 +274,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7a9ab8',
   },
-  buttonContainer: {
-    gap: 12,
-  },
-  participationButton: {
-    backgroundColor: '#d9e8f5',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  participationButtonText: {
-    color: '#4a7ca8',
-    fontSize: 15,
-    fontWeight: '700',
-  },
   createButton: {
-    marginTop: 20,
-    alignSelf: 'center',
-    minWidth: 290,
+    position: 'absolute',
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#4a7ca8',
+    borderRadius: 10,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4a7ca8',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBotton: 14,
+    },
+    separator: {
+      height: 1,
+      backgroundColor: '#d0e5f7',
+      marginVertical: 8,
+      marginHorizontal: 4,
+      opacity: 1,
+    },
+    createButtonHovered: {
+      backgroundColor: '#4a7ca8',
+      borderColor: '#4a7ca8',
+    },
+    cardHovered: {
+      borderColor: '#4a7ca8',
+      
+    },
 });

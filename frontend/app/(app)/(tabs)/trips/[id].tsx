@@ -80,7 +80,6 @@ export default function TripDetails() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
-        <Text style={styles.tripTitle}>{trip.name}</Text>
         
         {/* Only show management buttons if the user is an Organizer */}
         {trip.isOrganizer && (
@@ -141,8 +140,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#d9e8f5',
+    
   },
   backButton: {
     marginBottom: 12,
