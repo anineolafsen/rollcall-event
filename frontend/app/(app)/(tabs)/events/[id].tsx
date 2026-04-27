@@ -633,15 +633,15 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   joinLeaveButtonJoin: {
-    backgroundColor: '#77c88a',
+    backgroundColor: '#eaf7ec',
     borderColor: '#4c915f',
   },
   joinLeaveButtonLeave: {
-    backgroundColor: '#ff6f80',
+    backgroundColor: '#fff0f1',
     borderColor: '#d45162',
   },
   joinLeaveButtonMandatory: {
-    backgroundColor: '#d9dd8a',
+    backgroundColor: '#fafadc',
     borderColor: '#a9ac5f',
   },
   joinLeaveButtonCheckedIn: {
@@ -652,15 +652,14 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   joinLeaveButtonText: {
-    color: '#111111',
-    fontSize: 18,
+    color: '#1a3d1a',
+    fontSize: 20,
     fontWeight: '700',
-    lineHeight: 24,
   },
   joinLeaveButtonTextLeave: {
-    color: '#111111',
+    color: '#b0192a',
   },
   joinLeaveButtonTextMandatory: {
-    color: '#111111',
+    color: '#5a5a00',
   },
 });
