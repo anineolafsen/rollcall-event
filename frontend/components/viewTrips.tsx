@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
   SafeAreaView,
   TouchableOpacity,
+  Pressable,
   RefreshControl,
+  useWindowDimensions,
+  Platform,
 } from 'react-native';
-import { AppButton } from '@/components/ui/button';
 import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -81,27 +83,35 @@ export function ViewTripsScreen() {
   };
 
   const renderTrip = ({ item }: { item: Trip }) => (
-    <TouchableOpacity onPress={() => router.push(`/trips/${item.id}`)}>
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.tripName}>{item.name}</Text>
-          {item.destination && (
-            <Text style={styles.destination}>{item.destination}</Text>
-          )}
+    <Pressable
+      onPress={() => {
+        setSelectedTripId(item.id);
+        router.push(`/trips/${item.id}`);
+      }}
+      style={({ hovered, pressed }) => [
+        styles.card,
+        isDesktopWeb && hovered && styles.cardHovered,
+        pressed && styles.cardPressed,
+      ]}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.tripName}>{item.name}</Text>
+        {item.destination && (
+          <Text style={styles.destination}>{item.destination}</Text>
+        )}
+      </View>
+      <View style={styles.cardBody}>
+        <View style={styles.dateBlock}>
+          <Text style={styles.dateLabel}>From</Text>
+          <Text style={styles.dateValue}>{item.startDate ? formatDate(item.startDate) : '-'}</Text>
         </View>
-        <View style={styles.cardBody}>
-          <View style={styles.dateBlock}>
-            <Text style={styles.dateLabel}>From</Text>
-            <Text style={styles.dateValue}>{item.startDate ? formatDate(item.startDate) : '-'}</Text>
-          </View>
-          <View style={styles.dateBlock}>
-            <Text style={styles.dateLabel}>To</Text>
-            <Text style={styles.dateValue}>{item.endDate ? formatDate(item.endDate) : '-'}</Text>
-          </View>
+        <View style={styles.dateBlock}>
+          <Text style={styles.dateLabel}>To</Text>
+          <Text style={styles.dateValue}>{item.endDate ? formatDate(item.endDate) : '-'}</Text>
         </View>
-        {item.description ? (
-          <Text style={styles.description}>{item.description}</Text>
-        ) : null}
+      </View>
+      {item.description ? (
+        <Text style={styles.description}>{item.description}</Text>
+      ) : null}
     </Pressable>
   );
 
@@ -200,6 +210,9 @@ const styles = StyleSheet.create({
     borderColor: '#d0e5f7',
     overflow: 'hidden',
   },
+  cardPressed: {
+    opacity: 0.92,
+  },
   cardHeader: {
     backgroundColor: '#4a7ca8', 
     paddingHorizontal: 18,
@@ -289,25 +302,24 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBotton: 14,
-    },
-    separator: {
-      height: 1,
-      backgroundColor: '#d0e5f7',
-      marginVertical: 8,
-      marginHorizontal: 4,
-      opacity: 1,
-    },
-    createButtonHovered: {
-      backgroundColor: '#4a7ca8',
-      borderColor: '#4a7ca8',
-    },
-    cardHovered: {
-      borderColor: '#4a7ca8',
-      
-    },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#d0e5f7',
+    marginVertical: 8,
+    marginHorizontal: 4,
+    opacity: 1,
+  },
+  createButtonHovered: {
+    backgroundColor: '#4a7ca8',
+    borderColor: '#4a7ca8',
+  },
+  cardHovered: {
+    borderColor: '#4a7ca8',
+  },
 });

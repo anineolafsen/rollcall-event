@@ -12,6 +12,8 @@ import {
   Platform,
   Modal,
   TextInput,
+  useWindowDimensions,
+  Pressable,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
 import { Plus } from 'lucide-react-native';
