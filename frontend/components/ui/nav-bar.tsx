@@ -124,6 +124,10 @@ export function AppNavbar() {
         options={hiddenTabOptions}
       />
       <Tabs.Screen
+        name="trips/[id]/notify"
+        options={hiddenTabOptions}
+      />
+      <Tabs.Screen
         name="events/create"
         options={hiddenTabOptions}
       />

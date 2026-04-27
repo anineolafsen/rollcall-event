@@ -16,7 +16,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
-import { Plus } from 'lucide-react-native';
+import { Bell, Plus } from 'lucide-react-native';
 
 import { EventCard } from '@/components/event-card';
 import { AppButton } from '@/components/ui/button';
@@ -68,6 +68,7 @@ export function UpcomingEventsScreen({
   const [eventToLeave, setEventToLeave] = useState<EventRecord | null>(null);
   const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
   const showMobileHeaderDivider = !showDesktopBackButton;
+  const showMobileHeaderActions = Boolean(tripId && isOrganizer && !showDesktopBackButton);
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -375,6 +376,17 @@ export function UpcomingEventsScreen({
     setCheckinMethodModalVisible(true);
   };
 
+  const handleOpenNotify = () => {
+    if (!tripId) {
+      return;
+    }
+
+    router.push({
+      pathname: '/trips/[id]/notify',
+      params: { id: String(tripId) },
+    });
+  };
+
   const startSelfCheckin = async () => {
     if (!selectedEvent) {
       return;
@@ -495,21 +507,37 @@ export function UpcomingEventsScreen({
         ) : null}
 
         
-        <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
-          {/* SECURITY: Only show Create button if user is an organizer */}
+        <View style={[styles.header, showMobileHeaderActions && styles.headerMobile]}>
+          <Text style={[styles.title, showMobileHeaderActions && styles.titleMobile]}>{title}</Text>
           {tripId && isOrganizer ? (
-            <Pressable
-              onPress={() => router.push(`/events/create?tripId=${tripId}`)}
-              style={({ pressed, hovered }) => [
-                styles.createButton,
-                hovered && styles.createButtonHovered,
-                pressed && { opacity: 0.8 },
-              ]}>
-              {({ hovered }) => (
-                <Plus size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
-              )}
-            </Pressable>
+            <View style={[styles.headerActions, showMobileHeaderActions && styles.headerActionsMobile]}>
+              {showMobileHeaderActions ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Notify participants"
+                  onPress={handleOpenNotify}
+                  style={({ pressed, hovered }) => [
+                    styles.notifyButton,
+                    hovered && styles.notifyButtonHovered,
+                    pressed && { opacity: 0.8 },
+                  ]}>
+                  {({ hovered }) => (
+                    <Bell size={18} color={hovered ? '#ffffff' : '#4a7ca8'} />
+                  )}
+                </Pressable>
+              ) : null}
+              <Pressable
+                onPress={() => router.push(`/events/create?tripId=${tripId}`)}
+                style={({ pressed, hovered }) => [
+                  styles.createButton,
+                  hovered && styles.createButtonHovered,
+                  pressed && { opacity: 0.8 },
+                ]}>
+                {({ hovered }) => (
+                  <Plus size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
+                )}
+              </Pressable>
+            </View>
           ) :null}
         </View>
         {showMobileHeaderDivider ? <View style={styles.titleDivider} /> : null}
@@ -710,46 +738,84 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },  
   header: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 18,
-  position: 'relative',
-},
-titleDivider: {
-  height: 3,
-  backgroundColor: '#76b6ee',
-  borderRadius: 999,
-  marginTop: -4,
-  marginBottom: 24,
-  marginHorizontal: 28,
-},
-title: {
-  fontSize: 28,
-  lineHeight: 34,
-  fontWeight: '700',
-  textAlign: 'center',
-  color: '#090909',
-},
-createButton: {
-  position: 'absolute',
-  right: 0,
-  backgroundColor: '#ffffff',
-  borderWidth: 1,
-  borderColor: '#4a7ca8',
-  borderRadius: 10,
-  width: 40,
-  height: 40,
-  alignItems: 'center',
-  justifyContent: 'center',
-  shadowColor: '#4a7ca8',
-  shadowOpacity: 0.15,
-  shadowRadius: 4,
-  shadowOffset: { width: 0, height: 2 },
-  elevation: 2,
-},
-createButtonHovered: {
-  backgroundColor: '#4a7ca8',
-  borderColor: '#4a7ca8',
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+    position: 'relative',
+  },
+  headerMobile: {
+    flexDirection: 'column',
+    gap: 14,
+    marginBottom: 14,
+  },
+  headerActions: {
+    position: 'absolute',
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  headerActionsMobile: {
+    position: 'relative',
+    right: 'auto',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  titleDivider: {
+    height: 3,
+    backgroundColor: '#76b6ee',
+    borderRadius: 999,
+    marginTop: -4,
+    marginBottom: 24,
+    marginHorizontal: 28,
+  },
+  title: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#090909',
+  },
+  titleMobile: {
+    width: '100%',
+  },
+  notifyButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#4a7ca8',
+    borderRadius: 10,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4a7ca8',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  notifyButtonHovered: {
+    backgroundColor: '#4a7ca8',
+    borderColor: '#4a7ca8',
+  },
+  createButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#4a7ca8',
+    borderRadius: 10,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4a7ca8',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  createButtonHovered: {
+    backgroundColor: '#4a7ca8',
+    borderColor: '#4a7ca8',
+  },
 });
