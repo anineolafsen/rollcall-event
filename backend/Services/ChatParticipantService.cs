@@ -15,7 +15,7 @@ namespace MyApp.API.Services
     public List<ChatParticipant> GetParticipantsByChat(int chatId)
     {
       return _context.ChatParticipants
-        .Where(cp => cp.ChatID == chatId)
+        .Where(cp => cp.ChatId == chatId)
         .OrderBy(cp => cp.JoinedAt)
         .ToList();
     }
@@ -23,14 +23,14 @@ namespace MyApp.API.Services
     public ChatParticipant? GetParticipant(int chatId, string userEmail)
     {
       return _context.ChatParticipants
-        .FirstOrDefault(cp => cp.ChatID == chatId && cp.UserEmail == userEmail);
+        .FirstOrDefault(cp => cp.ChatId == chatId && cp.UserEmail == userEmail);
     }
 
     public ChatParticipant AddParticipant(int chatId, string userEmail)
     {
       var participant = new ChatParticipant
       {
-        ChatID = chatId,
+        ChatId = chatId,
         UserEmail = userEmail,
         JoinedAt = DateTime.UtcNow
       };
@@ -43,7 +43,7 @@ namespace MyApp.API.Services
     public bool RemoveParticipant(int chatId, string userEmail)
     {
       var participant = _context.ChatParticipants
-        .FirstOrDefault(cp => cp.ChatID == chatId && cp.UserEmail == userEmail);
+        .FirstOrDefault(cp => cp.ChatId == chatId && cp.UserEmail == userEmail);
 
       if (participant == null)
       {
@@ -58,7 +58,7 @@ namespace MyApp.API.Services
     public bool ParticipantExists(int chatId, string userEmail)
     {
       return _context.ChatParticipants
-        .Any(cp => cp.ChatID == chatId && cp.UserEmail == userEmail);
+        .Any(cp => cp.ChatId == chatId && cp.UserEmail == userEmail);
     }
   }
 }

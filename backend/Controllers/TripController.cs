@@ -42,6 +42,28 @@ namespace MyApp.API.Controllers
       return Ok(_tripService.GetTripsByUser(user.Id));
     }
 
+    // DEBUG endpoint - shows current user info
+    [HttpGet("debug/user-info")]
+    public IActionResult GetUserInfo()
+    {
+      try
+      {
+        var user = GetAuthenticatedUser();
+        var userTrips = _tripService.GetTripsByUser(user.Id);
+        return Ok(new {
+          userId = user.Id,
+          userEmail = user.Email,
+          clerkId = User.FindFirst("sub")?.Value,
+          tripCount = userTrips.Count,
+          trips = userTrips.Select(t => new { t.Id, t.Name }).ToList()
+        });
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = ex.Message });
+      }
+    }
+
     [HttpGet("{id}")]
     public IActionResult GetTripById(int id)
     {
@@ -69,6 +91,33 @@ namespace MyApp.API.Controllers
           trip.Description,
           IsOrganizer = isParticipant && _tripService.UserIsOrganizer(id, user.Id)
       });
+    }
+
+    // DEBUG endpoint - checks access to a specific trip
+    [HttpGet("{id}/debug/access")]
+    public IActionResult CheckTripAccess(int id)
+    {
+      try
+      {
+        var user = GetAuthenticatedUser();
+        bool isParticipant = _tripService.UserHasAccessToTrip(id, user.Id);
+        bool isInvited = _invitationService.UserHasPendingInvitation(id, user.Email);
+        bool isOrganizer = isParticipant && _tripService.UserIsOrganizer(id, user.Id);
+        
+        return Ok(new {
+          userId = user.Id,
+          userEmail = user.Email,
+          tripId = id,
+          isParticipant,
+          isInvited,
+          isOrganizer,
+          hasAccess = isParticipant || isInvited
+        });
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = ex.Message });
+      }
     }
 
     [HttpGet("{id}/events")]

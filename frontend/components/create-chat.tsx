@@ -12,12 +12,12 @@ import {
   FlatList,
   Alert,
 } from 'react-native';
-import { useUser } from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
 interface Trip {
-  tripID: number;
+  id: number;
   name: string;
 }
 
@@ -27,7 +27,7 @@ interface ChatParticipant {
 }
 
 export default function CreateChatScreen() {
-  const { user } = useUser();
+  const { getToken } = useAuth();
   const router = useRouter();
 
   const [title, setTitle] = useState('');
@@ -41,14 +41,19 @@ export default function CreateChatScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showTripDropdown, setShowTripDropdown] = useState(false);
 
-  // Fetch all trips
+  // Fetch authenticated user's trips
   useEffect(() => {
     const fetchTrips = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`${API_BASE_URL}/api/trips`);
+        const token = await getToken({ template: "RollCallAuth" });
+        const response = await fetch(`${API_BASE_URL}/api/trips/my`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         const data: Trip[] = response.ok ? await response.json() : [];
         setTrips(data);
       } catch (err) {
@@ -153,23 +158,20 @@ export default function CreateChatScreen() {
       return;
     }
 
-    if (!user?.primaryEmailAddress?.emailAddress) {
-      Alert.alert('Error', 'User email not found');
-      return;
-    }
-
     try {
       setCreating(true);
+      const token = await getToken({ template: "RollCallAuth" });
 
       // Create chat
       const chatResponse = await fetch(`${API_BASE_URL}/api/chats`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          tripID: selectedTripId,
-          creatorID: user.primaryEmailAddress.emailAddress,
+          tripId: selectedTripId,
           title: title.trim(),
-          createdAt: new Date().toISOString(),
         }),
       });
 
@@ -184,9 +186,12 @@ export default function CreateChatScreen() {
         try {
           await fetch(`${API_BASE_URL}/api/chat-participants`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
             body: JSON.stringify({
-              chatID: chat.chatID,
+              chatId: chat.id,
               userEmail: email,
             }),
           });
@@ -215,7 +220,7 @@ export default function CreateChatScreen() {
     );
   }
 
-  const selectedTrip = trips.find((t) => t.tripID === selectedTripId);
+  const selectedTrip = trips.find((t) => t.id === selectedTripId);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -264,20 +269,20 @@ export default function CreateChatScreen() {
               ) : (
                 trips.map((trip) => (
                   <TouchableOpacity
-                    key={trip.tripID}
+                    key={trip.id}
                     style={[
                       styles.dropdownItem,
-                      selectedTripId === trip.tripID && styles.dropdownItemSelected,
+                      selectedTripId === trip.id && styles.dropdownItemSelected,
                     ]}
                     onPress={() => {
-                      setSelectedTripId(trip.tripID);
+                      setSelectedTripId(trip.id);
                       setShowTripDropdown(false);
                     }}
                   >
                     <Text
                       style={[
                         styles.dropdownItemText,
-                        selectedTripId === trip.tripID && styles.dropdownItemTextSelected,
+                        selectedTripId === trip.id && styles.dropdownItemTextSelected,
                       ]}
                     >
                       {trip.name}

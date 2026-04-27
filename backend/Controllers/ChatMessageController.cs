@@ -56,14 +56,14 @@ namespace MyApp.API.Controllers
         return BadRequest("Content and SenderEmail are required.");
       }
 
-      var chat = _chatService.GetChatById(message.ChatID);
+      var chat = _chatService.GetChatById(message.ChatId);
       if (chat == null)
       {
         return BadRequest("Chat not found.");
       }
 
       var createdMessage = _messageService.AddMessage(message);
-      return CreatedAtAction(nameof(GetMessageById), new { id = createdMessage.MessageID }, createdMessage);
+      return CreatedAtAction(nameof(GetMessageById), new { id = createdMessage.Id }, createdMessage);
     }
 
     [HttpPut("{id}")]

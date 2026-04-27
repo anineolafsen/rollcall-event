@@ -8,7 +8,7 @@ namespace MyApp.API.Models
         [Key]
         [Column(Order = 0)]
         [ForeignKey(nameof(Chat))]
-        public int ChatID { get; set; }
+        public int ChatId { get; set; }
         
         [Key]
         [Column(Order = 1)]

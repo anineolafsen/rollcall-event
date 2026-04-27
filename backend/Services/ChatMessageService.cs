@@ -15,14 +15,14 @@ namespace MyApp.API.Services
     public List<ChatMessage> GetMessagesByChat(int chatId)
     {
       return _context.ChatMessages
-        .Where(m => m.ChatID == chatId)
+        .Where(m => m.ChatId == chatId)
         .OrderBy(m => m.Timestamp)
         .ToList();
     }
 
     public ChatMessage? GetMessageById(int messageId)
     {
-      return _context.ChatMessages.FirstOrDefault(m => m.MessageID == messageId);
+      return _context.ChatMessages.FirstOrDefault(m => m.Id == messageId);
     }
 
     public ChatMessage AddMessage(ChatMessage message)
@@ -35,7 +35,7 @@ namespace MyApp.API.Services
 
     public ChatMessage? UpdateMessage(int messageId, string newContent)
         {
-            var message = _context.ChatMessages.FirstOrDefault(m => m.MessageID == messageId);
+            var message = _context.ChatMessages.FirstOrDefault(m => m.Id == messageId);
             if (message == null)
             {
                 return null;
@@ -54,7 +54,7 @@ namespace MyApp.API.Services
 
     public bool DeleteMessage(int messageId)
     {
-      var message = _context.ChatMessages.FirstOrDefault(m => m.MessageID == messageId);
+      var message = _context.ChatMessages.FirstOrDefault(m => m.Id == messageId);
       if (message == null)
       {
         return false;

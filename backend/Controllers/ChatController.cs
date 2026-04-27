@@ -1,18 +1,33 @@
 using Microsoft.AspNetCore.Mvc;
 using MyApp.API.Models;
 using MyApp.API.Services;
+using Microsoft.AspNetCore.Authorization;
+using MyApp.API.Extensions;
 
 namespace MyApp.API.Controllers
 {
   [ApiController]
   [Route("api/chats")]
+  [Authorize] // Enforce authentication for all chat actions
   public class ChatController : ControllerBase
   {
     private readonly ChatService _chatService;
+    private readonly UserService _userService;
 
-    public ChatController(ChatService chatService)
+    public ChatController(ChatService chatService, UserService userService)
     {
       _chatService = chatService;
+      _userService = userService;
+    }
+
+    private User GetAuthenticatedUser()
+    {
+      var clerkId = User.GetClerkId();
+      var email = User.GetEmail();
+      if (string.IsNullOrEmpty(clerkId) || string.IsNullOrEmpty(email))
+        throw new UnauthorizedAccessException("Identity claims missing from token.");
+
+      return _userService.GetOrCreateUser(clerkId, email);
     }
 
     [HttpGet("trip/{tripId}")]
@@ -42,18 +57,34 @@ namespace MyApp.API.Controllers
     [HttpPost]
     public IActionResult CreateChat([FromBody] Chat chat)
     {
-      if (string.IsNullOrWhiteSpace(chat.Title) || string.IsNullOrWhiteSpace(chat.CreatorID))
+      try
       {
-        return BadRequest("Title and CreatorID are required.");
-      }
+        var user = GetAuthenticatedUser();
 
-      if (!_chatService.TripExists(chat.TripID))
+        if (string.IsNullOrWhiteSpace(chat.Title))
+        {
+          return BadRequest("Title is required.");
+        }
+
+        if (!_chatService.TripExists(chat.TripId))
+        {
+          return BadRequest("Trip not found.");
+        }
+
+        // Set the creator to the authenticated user
+        chat.CreatorId = user.Email;
+        
+        var createdChat = _chatService.CreateChat(chat);
+        return CreatedAtAction(nameof(GetChatById), new { id = createdChat.Id }, createdChat);
+      }
+      catch (UnauthorizedAccessException)
       {
-        return BadRequest("Trip not found.");
+        return Unauthorized();
       }
-
-      var createdChat = _chatService.CreateChat(chat);
-      return CreatedAtAction(nameof(GetChatById), new { id = createdChat.ChatID }, createdChat);
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = ex.Message });
+      }
     }
 
     [HttpPut("{id}")]

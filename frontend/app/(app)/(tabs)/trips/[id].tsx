@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
 import { useAuth } from "@clerk/expo";
 
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
@@ -22,7 +22,7 @@ export default function TripDetails() {
   const {getToken} = useAuth();
 
   useEffect(() => {
-    const fetchTripData = async () => {
+    const fetchTrip = async () => {
       try {
         const token = await getToken({ template: "RollCallAuth" });
         const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
@@ -36,9 +36,6 @@ export default function TripDetails() {
 
         const data: Trip = await response.json();
         setTrip(data);
-
-        // Fetch invitations and participants
-        await fetchParticipantStatus(data.tripID);
       } catch {
         setError('Could not load trip details.');
       } finally {
@@ -47,7 +44,7 @@ export default function TripDetails() {
     };
 
     if (id) {
-      fetchTripData();
+      fetchTrip();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]); // getToken is stable
@@ -177,76 +174,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 14,
-  },
-  tripInfoSection: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#d9e8f5',
-  },
-  tripInfoText: {
-    fontSize: 16,
-    color: '#000000',
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  contentContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-  },
-  leftColumn: {
-    flex: 1,
-    borderRightWidth: 1,
-    borderRightColor: '#d9e8f5',
-  },
-  rightColumn: {
-    width: 500,
-    backgroundColor: '#f9fafb',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderLeftWidth: 1,
-    borderLeftColor: '#d9e8f5',
-  },
-  participantTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#090909',
-    marginBottom: 12,
-  },
-  participantList: {
-    flex: 1,
-  },
-  noParticipants: {
-    fontSize: 13,
-    color: '#9ca3af',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  participantRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  statusCircle: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  statusCircleAccepted: {
-    backgroundColor: '#10b981',
-  },
-  statusCircleInvited: {
-    backgroundColor: '#f97316',
-  },
-  participantEmail: {
-    fontSize: 12,
-    color: '#6b7280',
-    flex: 1,
   },
   centered: {
     flex: 1,

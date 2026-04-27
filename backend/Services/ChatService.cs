@@ -15,19 +15,19 @@ namespace MyApp.API.Services
     public List<Chat> GetChatsByTrip(int tripId)
     {
       return _context.Chats
-        .Where(c => c.TripID == tripId)
+        .Where(c => c.TripId == tripId)
         .OrderByDescending(c => c.CreatedAt)
         .ToList();
     }
 
     public Chat? GetChatById(int chatId)
     {
-      return _context.Chats.FirstOrDefault(c => c.ChatID == chatId);
+      return _context.Chats.FirstOrDefault(c => c.Id == chatId);
     }
 
     public bool TripExists(int tripId)
     {
-      return _context.Trips.Any(t => t.TripID == tripId);
+      return _context.Trips.Any(t => t.Id == tripId);
     }
 
     public Chat CreateChat(Chat chat)
@@ -39,7 +39,7 @@ namespace MyApp.API.Services
 
     public Chat? UpdateChat(int chatId, Chat updatedChat)
     {
-      var existingChat = _context.Chats.FirstOrDefault(c => c.ChatID == chatId);
+      var existingChat = _context.Chats.FirstOrDefault(c => c.Id == chatId);
       if (existingChat == null)
       {
         return null;
@@ -52,7 +52,7 @@ namespace MyApp.API.Services
 
     public bool DeleteChat(int chatId)
     {
-      var chat = _context.Chats.FirstOrDefault(c => c.ChatID == chatId);
+      var chat = _context.Chats.FirstOrDefault(c => c.Id == chatId);
       if (chat == null)
       {
         return false;

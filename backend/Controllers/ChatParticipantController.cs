@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using MyApp.API.Models;
 using MyApp.API.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace MyApp.API.Controllers
 {
   [ApiController]
   [Route("api/chat-participants")]
+  [Authorize]
   public class ChatParticipantController : ControllerBase
   {
     private readonly ChatParticipantService _participantService;
@@ -33,42 +35,50 @@ namespace MyApp.API.Controllers
     [HttpPost]
     public IActionResult AddParticipant([FromBody] ChatParticipant request)
     {
-      if (string.IsNullOrWhiteSpace(request.UserEmail))
+      try
       {
-        return BadRequest("UserEmail is required.");
-      }
+        if (string.IsNullOrWhiteSpace(request.UserEmail))
+        {
+          return BadRequest("UserEmail is required.");
+        }
 
-      var chat = _chatService.GetChatById(request.ChatID);
-      if (chat == null)
+        var chat = _chatService.GetChatById(request.ChatId);
+        if (chat == null)
+        {
+          return BadRequest("Chat not found.");
+        }
+
+        if (_participantService.ParticipantExists(request.ChatId, request.UserEmail))
+        {
+          return BadRequest("User is already a participant in this chat.");
+        }
+
+        var participant = _participantService.AddParticipant(request.ChatId, request.UserEmail);
+        return CreatedAtAction(nameof(GetParticipantsByChat), new { chatId = request.ChatId }, participant);
+      }
+      catch (Exception ex)
       {
-        return BadRequest("Chat not found.");
+        return StatusCode(500, new { error = ex.Message });
       }
-
-      if (_participantService.ParticipantExists(request.ChatID, request.UserEmail))
-      {
-        return BadRequest("User is already a participant in this chat.");
-      }
-
-      var participant = _participantService.AddParticipant(request.ChatID, request.UserEmail);
-      return CreatedAtAction(nameof(GetParticipantsByChat), new { chatId = request.ChatID }, participant);
     }
 
     [HttpDelete("{chatId}/{userEmail}")]
     public IActionResult RemoveParticipant(int chatId, string userEmail)
     {
-      var success = _participantService.RemoveParticipant(chatId, userEmail);
-      if (!success)
+      try
       {
-        return NotFound();
+        var success = _participantService.RemoveParticipant(chatId, userEmail);
+        if (!success)
+        {
+          return NotFound();
+        }
+
+        return NoContent();
       }
-
-      return NoContent();
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = ex.Message });
+      }
     }
-  }
-
-  public class ChatParticipant
-  {
-    public int ChatID { get; set; }
-    public string UserEmail { get; set; } = string.Empty;
   }
 }
