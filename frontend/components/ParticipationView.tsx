@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { useAuth, useUser } from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
+import { TripNeedsModal } from '@/components/TripNeedsModal';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -35,18 +36,24 @@ interface InvitationWithTrip {
 
 export function ParticipationView() {
   const { getToken } = useAuth();
-  const { user } = useUser();
+  const getTokenRef = useRef(getToken);
   const [invitations, setInvitations] = useState<InvitationWithTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<number | null>(null);
+  const [needsModalVisible, setNeedsModalVisible] = useState(false);
+  const [acceptedTripId, setAcceptedTripId] = useState<number | null>(null);
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   const fetchInvitations = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const token = await getToken({ template: "RollCallAuth" });
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
       if (!token) {
         setError('Authentication token not found');
         return;
@@ -87,20 +94,20 @@ export function ParticipationView() {
         })
       );
 
-      setInvitations(invitationsWithTrips);
+      setInvitations(invitationsWithTrips.filter((item) => item.trip !== null));
     } catch (err) {
       setError('Could not load invitations. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, []); // exclude getToken to prevent infinite refreshes (auth is already stable from useAuth)
+  }, []);
 
   useEffect(() => {
     fetchInvitations();
   }, [fetchInvitations]);
 
-  const handleAccept = async (invitationId: number) => {
+  const handleAccept = async (invitationId: number, tripId: number) => {
     try {
       const token = await getToken({ template: "RollCallAuth" });
       if (!token) {
@@ -113,7 +120,7 @@ export function ParticipationView() {
       // Accept the invitation in a joint backend transaction using the auth token
       const acceptResponse = await fetch(
         `${API_BASE_URL}/api/invitations/accept?invitationId=${invitationId}`,
-        { 
+        {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -130,7 +137,8 @@ export function ParticipationView() {
         prev.filter((item) => item.invitation.id !== invitationId)
       );
 
-      Alert.alert('Success', 'You have accepted the invitation!');
+      setAcceptedTripId(tripId);
+      setNeedsModalVisible(true);
     } catch (err) {
       Alert.alert('Error', 'Failed to accept invitation. Please try again.');
       console.error(err);
@@ -141,11 +149,22 @@ export function ParticipationView() {
 
   const handleIgnore = async (invitationId: number, tripId: number, email: string) => {
     try {
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
+      if (!token) {
+        Alert.alert('Error', 'User authentication not found');
+        return;
+      }
+
       setActionInProgress(invitationId);
 
       const response = await fetch(
         `${API_BASE_URL}/api/invitations?tripId=${tripId}&email=${encodeURIComponent(email)}`,
-        { method: 'DELETE' }
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
       );
 
       if (!response.ok) {
@@ -216,7 +235,7 @@ export function ParticipationView() {
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.button, styles.acceptButton, actionInProgress === invitation.id && styles.buttonDisabled]}
-            onPress={() => handleAccept(invitation.id)}
+            onPress={() => handleAccept(invitation.id, invitation.tripId)}
             disabled={actionInProgress !== null}
           >
             {actionInProgress === invitation.id ? (
@@ -272,6 +291,15 @@ export function ParticipationView() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <TripNeedsModal
+        visible={needsModalVisible}
+        tripId={acceptedTripId}
+        onClose={() => {
+          setNeedsModalVisible(false);
+          setAcceptedTripId(null);
+        }}
+      />
     </SafeAreaView>
   );
 }

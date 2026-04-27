@@ -34,7 +34,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-   builder.Services.AddAuthorization(); // Required for [Authorize] attributes to work
+builder.Services.AddAuthorization(); // Required for [Authorize] attributes to work
 
 // Add DbContext with PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -46,6 +46,7 @@ builder.Services.AddScoped<TripService>();
 builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<ParticipantService>();
 builder.Services.AddScoped<EventService>();
+builder.Services.AddScoped<CheckinService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<ChatMessageService>();
 builder.Services.AddScoped<ChatParticipantService>();

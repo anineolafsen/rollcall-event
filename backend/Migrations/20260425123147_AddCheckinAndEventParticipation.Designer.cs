@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyApp.API.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyApp.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260425123147_AddCheckinAndEventParticipation")]
+    partial class AddCheckinAndEventParticipation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,10 +43,6 @@ namespace MyApp.API.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("CheckinID");
-
-                    b.HasIndex("EventID");
-
-                    b.HasIndex("EventID", "ParticipantID");
 
                     b.ToTable("Checkins");
                 });
@@ -146,8 +145,6 @@ namespace MyApp.API.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("EventParticipantID");
-
-                    b.HasIndex("UserID");
 
                     b.HasIndex("EventID", "UserID")
                         .IsUnique();
@@ -259,10 +256,7 @@ namespace MyApp.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("FirstName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("LastName")
+                    b.Property<string>("Name")
                         .HasColumnType("text");
 
                     b.Property<string>("Phone")
@@ -293,15 +287,6 @@ namespace MyApp.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Event");
-                });
-
-            modelBuilder.Entity("MyApp.API.Models.Invitation", b =>
-                {
-                    b.HasOne("MyApp.API.Models.Trip", null)
-                        .WithMany()
-                        .HasForeignKey("TripId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("MyApp.API.Models.Participant", b =>
