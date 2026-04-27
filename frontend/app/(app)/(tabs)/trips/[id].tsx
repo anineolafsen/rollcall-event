@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { useAuth } from "@clerk/expo";
 
+import { NotifyButton } from '@/components/NotifyButton';
+import { TripActionButton } from '@/components/ui/trip-action-button';
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
 import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
@@ -103,39 +105,37 @@ export default function TripDetails() {
         {/* Only show management buttons if the user is an Organizer */}
         {trip.isOrganizer && (
             <View style={styles.buttonRow}>
-            <TouchableOpacity
-                style={styles.inviteButton}
+            <TripActionButton
+                label="+ Manage Invitations"
                 onPress={() =>
                 router.push({
                     pathname: '/trips/[id]/manage-invitations',
                     params: { id: String(trip.id), tripId: trip.id, tripName: trip.name },
                 })
                 }
-            >
-                <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.needsButton}
+            />
+            <TripActionButton
+                label="View Needs"
+                backgroundColor="#d9e8f5"
+                textColor="#1a3d5c"
                 onPress={() =>
                 router.push({
                     pathname: '/trips/[id]/participant-needs',
                     params: { id: String(trip.id), tripName: trip.name },
                 })
                 }
-            >
-                <Text style={styles.needsButtonText}>View Needs</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.editButton}
+            />
+            <TripActionButton
+                label="✎ Edit"
+                backgroundColor="#76b6ee"
                 onPress={() =>
                 router.push({
                     pathname: '/trips/create',
                     params: { id: trip.id },
                 })
                 }
-            >
-                <Text style={styles.editButtonText}>✎ Edit</Text>
-            </TouchableOpacity>
+            />
+            <NotifyButton tripId={trip.id} tripName={trip.name} />
             </View>
         )}
       </View>
@@ -182,39 +182,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
     alignItems: 'center',
-  },
-  inviteButton: {
-    backgroundColor: '#4a7ca8',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  inviteButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  needsButton: {
-    backgroundColor: '#d9e8f5',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  needsButtonText: {
-    color: '#1a3d5c',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  editButton: {
-    backgroundColor: '#76b6ee',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  editButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 14,
   },
   centered: {
     flex: 1,
