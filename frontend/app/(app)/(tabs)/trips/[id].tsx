@@ -95,11 +95,9 @@ export default function TripDetails() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        {showBackButton ? (
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
-        ) : null}
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>← Go back</Text>
+        </TouchableOpacity>
         <Text style={styles.tripTitle}>{trip.name}</Text>
         
         {/* Only show management buttons if the user is an Organizer */}
@@ -159,8 +157,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#d9e8f5',
+    
   },
   backButton: {
     marginBottom: 12,

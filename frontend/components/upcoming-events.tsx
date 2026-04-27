@@ -12,9 +12,9 @@ import {
   Platform,
   Modal,
   TextInput,
-  useWindowDimensions,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
+import { Plus } from 'lucide-react-native';
 
 import { EventCard } from '@/components/event-card';
 import { AppButton } from '@/components/ui/button';
@@ -458,19 +458,24 @@ export function UpcomingEventsScreen({
           </TouchableOpacity>
         ) : null}
 
-        <Text style={styles.title}>{title}</Text>
-        <View style={styles.titleDivider} />
-
-        {/* SECURITY: Only show Create button if user is an organizer */}
-        {tripId && isOrganizer ? (
-          <AppButton
-            variant="create"
-            style={styles.createButtonTop}
-            textStyle={styles.createButtonText}
-            label="Create event +"
-            onPress={() => router.push(`/events/create?tripId=${tripId}`)}
-          />
-        ) : null}
+        
+        <View style={styles.header}>
+          <Text style={styles.title}>{title}</Text>
+          {/* SECURITY: Only show Create button if user is an organizer */}
+          {tripId && isOrganizer ? (
+            <Pressable
+              onPress={() => router.push(`/events/create?tripId=${tripId}`)}
+              style={({ pressed, hovered }) => [
+                styles.createButton,
+                hovered && styles.createButtonHovered,
+                pressed && { opacity: 0.8 },
+              ]}>
+              {({ hovered }) => (
+                <Plus size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
+              )}
+            </Pressable>
+          ) :null}
+        </View>
 
         <View style={styles.timelineSection}>
           <View style={styles.timelineRail} />
@@ -570,7 +575,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#edf4fa',
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 10,
     paddingBottom: 28,
   },
   backButton: {
@@ -581,29 +586,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#4a7ca8',
     fontWeight: '600',
-  },
-  title: {
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '700',
-    textAlign: 'center',
-    color: '#090909',
-  },
-  titleDivider: {
-    height: 3,
-    backgroundColor: '#75baf0',
-    borderRadius: 999,
-    marginTop: 5,
-    marginBottom: 18,
-    marginHorizontal: 12,
-  },
-  createButtonTop: {
-    alignSelf: 'center',
-    marginBottom: 24,
-    minWidth: 280,
-  },
-  createButtonText: {
-    fontSize: 26,
   },
   timelineSection: {
     flex: 1,
@@ -690,4 +672,39 @@ const styles = StyleSheet.create({
     color: '#7a9ab8',
     fontSize: 13,
   },  
+  header: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: 18,
+  position: 'relative',
+},
+title: {
+  fontSize: 28,
+  lineHeight: 34,
+  fontWeight: '700',
+  textAlign: 'center',
+  color: '#090909',
+},
+createButton: {
+  position: 'absolute',
+  right: 0,
+  backgroundColor: '#ffffff',
+  borderWidth: 1,
+  borderColor: '#4a7ca8',
+  borderRadius: 10,
+  width: 40,
+  height: 40,
+  alignItems: 'center',
+  justifyContent: 'center',
+  shadowColor: '#4a7ca8',
+  shadowOpacity: 0.15,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 2,
+},
+createButtonHovered: {
+  backgroundColor: '#4a7ca8',
+  borderColor: '#4a7ca8',
+},
 });

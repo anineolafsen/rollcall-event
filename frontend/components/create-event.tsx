@@ -308,9 +308,7 @@ export function CreateEventScreen() {
           <View style={styles.titleDivider} />
 
           {isLoadingEvent ? <Text style={styles.helperText}>Loading event details...</Text> : null}
-          {eventTripId ? (
-            <Text style={styles.helperText}>This event will be connected to trip #{eventTripId}.</Text>
-          ) : null}
+          
 
           <FormField
             label="Name of Event"
