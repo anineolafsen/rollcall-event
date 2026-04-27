@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#edf4fa',
     paddingHorizontal: 24,
-    paddingTop: 18,
+    paddingTop: 74,
     paddingBottom: 36,
   },
   backButton: {

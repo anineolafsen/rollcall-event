@@ -13,6 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -29,6 +30,8 @@ export default function NotifyScreen() {
   const { id, tripName } = useLocalSearchParams<{ id: string; tripName?: string }>();
   const router = useRouter();
   const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
+  const showBackButton = Platform.OS === 'web' && width >= 900;
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,12 +116,14 @@ export default function NotifyScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.replace({ pathname: '/trips/[id]', params: { id } })}
-            >
-              <Text style={styles.backButtonText}>← Go back</Text>
-            </TouchableOpacity>
+            {showBackButton ? (
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.replace({ pathname: '/trips/[id]', params: { id } })}
+              >
+                <Text style={styles.backButtonText}>← Go back</Text>
+              </TouchableOpacity>
+            ) : null}
             <Text style={styles.title}>Notify all participants</Text>
             {tripName ? <Text style={styles.tripName}>{tripName}</Text> : null}
             <View style={styles.divider} />
