@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { useAuth } from "@clerk/expo";
 
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
@@ -17,11 +17,22 @@ interface Trip {
 export default function TripDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const {getToken} = useAuth();
   const setSelectedTripId = useMobileTripStore((state) => state.setSelectedTripId);
+  const showBackButton = Platform.OS === 'web' && width >= 900;
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.push('/trips');
+  };
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -66,9 +77,11 @@ export default function TripDetails() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.screen}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.push("/trips")}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
+          {showBackButton ? (
+            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error || 'Trip not found'}</Text>
           </View>
@@ -80,9 +93,11 @@ export default function TripDetails() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Go back</Text>
-        </TouchableOpacity>
+        {showBackButton ? (
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.tripTitle}>{trip.name}</Text>
         
         {/* Only show management buttons if the user is an Organizer */}

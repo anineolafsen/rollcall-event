@@ -11,6 +11,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   RefreshControl,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { AppButton } from '@/components/ui/button';
 import { useMobileTripStore } from '@/lib/mobile-trip-store';
@@ -29,7 +31,9 @@ interface Trip {
 export function ViewTripsScreen() {
   const router = useRouter();
   const {getToken} = useAuth();
+  const { width } = useWindowDimensions();
   const setSelectedTripId = useMobileTripStore((state) => state.setSelectedTripId);
+  const isDesktopWeb = Platform.OS === 'web' && width >= 900;
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +85,12 @@ export function ViewTripsScreen() {
     <TouchableOpacity
       onPress={() => {
         setSelectedTripId(item.id);
-        router.push(`/trips/${item.id}`);
+        if (isDesktopWeb) {
+          router.push(`/trips/${item.id}`);
+          return;
+        }
+
+        router.push('/');
       }}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>

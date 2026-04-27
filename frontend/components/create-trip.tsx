@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -74,12 +75,14 @@ export function CreateTripScreen() {
   const router = useRouter();
   const isEditing = Boolean(tripId);
   const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTrip, setIsLoadingTrip] = useState(false);
+  const showBackButton = Platform.OS === 'web' && width >= 900;
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -268,9 +271,11 @@ export function CreateTripScreen() {
         
         {/* Trip Creation Form */}
         <View style={styles.content}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
+          {showBackButton ? (
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
           
           <Text style={styles.title}>{isEditing ? 'Edit Trip' : 'Create New Trip'}</Text>
           <View style={styles.titleDivider} />

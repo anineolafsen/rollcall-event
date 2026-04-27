@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useAuth } from "@clerk/expo";
@@ -49,6 +50,7 @@ export function CreateEventScreen() {
   const { id, tripId } = useLocalSearchParams<{ id?: string; tripId?: string }>();
   const router = useRouter();
   const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -59,6 +61,7 @@ export function CreateEventScreen() {
   const [eventTripId, setEventTripId] = useState<number | null>(tripId ? Number(tripId) : null);
   const minimumStartValue = formatDateValue(new Date());
   const isEditing = Boolean(id);
+  const showBackButton = Platform.OS === 'web' && width >= 900;
 
   const capacityHint = formValues.hasUnlimitedCapacity
     ? 'No participant limit is set for this event.'
@@ -295,9 +298,11 @@ export function CreateEventScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
+          {showBackButton ? (
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
 
           <Text style={styles.title}>{isEditing ? 'Edit Event' : 'Create New Event'}</Text>
           <View style={styles.titleDivider} />

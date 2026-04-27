@@ -12,6 +12,7 @@ import {
   Platform,
   TextInput,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
 import { AppButton } from '@/components/ui/button';
@@ -35,6 +36,7 @@ export default function EventDetailsScreen() {
   const router = useRouter();
   const { getToken } = useAuth();
   const { user } = useUser();
+  const { width } = useWindowDimensions();
 
   const [event, setEvent] = useState<SecureEventRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,7 @@ export default function EventDetailsScreen() {
 
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [leaveReason, setLeaveReason] = useState('');
+  const showBackButton = Platform.OS === 'web' && width >= 900;
 
   const applyEventState = useCallback(async (nextEvent: SecureEventRecord, token?: string | null) => {
     setEvent(nextEvent);
@@ -168,9 +171,11 @@ export default function EventDetailsScreen() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.content}>
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
+          {showBackButton ? (
+            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error || 'Event not found'}</Text>
           </View>
@@ -298,9 +303,11 @@ export default function EventDetailsScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView style={styles.content}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-          <Text style={styles.backButtonText}>← Go back</Text>
-        </TouchableOpacity>
+        {showBackButton ? (
+          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
+        ) : null}
 
         <Text style={styles.title}>{event.name}</Text>
         <View style={styles.titleDivider} />

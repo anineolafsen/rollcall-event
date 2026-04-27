@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   ActivityIndicator,
   SafeAreaView,
@@ -16,10 +17,12 @@ import EmailInviteUploader, { type UploadState } from '@/components/invitationsF
 
 export default function InvitationsView() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const searchParams = useLocalSearchParams();
   const tripId = searchParams.tripId ? Number(searchParams.tripId) : null;
   const tripName = searchParams.tripName as string;
   const [uploadState, setUploadState] = useState<UploadState>('idle');
+  const showBackButton = Platform.OS === 'web' && width >= 900;
 
   if (!tripId || !tripName) {
     return (
@@ -32,6 +35,11 @@ export default function InvitationsView() {
   }
 
   const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
     router.push('/trips');
   };
 
@@ -52,9 +60,11 @@ export default function InvitationsView() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
+          {showBackButton ? (
+            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
 
           <Text style={styles.title}>Invite Participants</Text>
           <Text style={styles.tripName}>{tripName}</Text>

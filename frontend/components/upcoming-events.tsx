@@ -12,6 +12,7 @@ import {
   Platform,
   Modal,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
 
@@ -40,6 +41,7 @@ export function UpcomingEventsScreen({
   const IDLE_POLL_MS = 30000;
 
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const { getToken, userId } = useAuth();
   const { user } = useUser();
   const getTokenRef = useRef(getToken);
@@ -61,6 +63,7 @@ export function UpcomingEventsScreen({
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [leaveReason, setLeaveReason] = useState('');
   const [eventToLeave, setEventToLeave] = useState<EventRecord | null>(null);
+  const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -449,7 +452,7 @@ export function UpcomingEventsScreen({
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.content}>
-        {showBackButton ? (
+        {showBackButton && showDesktopBackButton ? (
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>

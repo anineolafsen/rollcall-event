@@ -3,10 +3,12 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useAuth } from '@clerk/expo';
@@ -16,10 +18,12 @@ export default function ParticipantNeedsScreen() {
   const { id, tripName } = useLocalSearchParams<{ id: string; tripName?: string }>();
   const router = useRouter();
   const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
 
   const [participants, setParticipants] = useState<ParticipantNeedsDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const showBackButton = Platform.OS === 'web' && width >= 900;
 
   useEffect(() => {
     const load = async () => {
@@ -75,9 +79,11 @@ export default function ParticipantNeedsScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Go back</Text>
-        </TouchableOpacity>
+        {showBackButton ? (
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.title}>Participant Needs</Text>
         {tripName ? <Text style={styles.tripName}>{tripName}</Text> : null}
         <View style={styles.divider} />
