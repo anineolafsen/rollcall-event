@@ -53,7 +53,7 @@ export default function NotifyScreen() {
       }
     };
     if (id) fetchContacts();
-  }, [id]);
+  }, [id, getToken]);
 
   const handleSend = async () => {
     setSending(true);
