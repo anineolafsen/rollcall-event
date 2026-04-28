@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { useAuth } from "@clerk/expo";
+import { useAuth, useClerk } from "@clerk/expo";
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Plus } from 'lucide-react-native';
 
 import {
+  Alert,
   View,
   Text,
   FlatList,
@@ -32,7 +34,8 @@ interface Trip {
 
 export function ViewTripsScreen() {
   const router = useRouter();
-  const {getToken} = useAuth();
+  const { getToken } = useAuth();
+  const { signOut } = useClerk();
   const { width } = useWindowDimensions();
   const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
@@ -41,8 +44,13 @@ export function ViewTripsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const fetchTrips = useCallback(async () => {
+    if (isSigningOut) {
+      return;
+    }
+
     try {
       setError(null);
       const token = await getToken({ template: "RollCallAuth" });
@@ -63,16 +71,44 @@ export function ViewTripsScreen() {
       setRefreshing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // getToken is stable
+  }, [getToken, isSigningOut]); // getToken is stable
 
   useEffect(() => {
-    fetchTrips();
+    void fetchTrips();
   }, [fetchTrips]);
 
   const onRefresh = () => {
+    if (isSigningOut) {
+      return;
+    }
+
     setRefreshing(true);
-    fetchTrips();
+    void fetchTrips();
   };
+
+  const performSignOut = useCallback(async () => {
+    setIsSigningOut(true);
+    setSelectedTrip({ id: null });
+    await signOut();
+  }, [setSelectedTrip, signOut]);
+
+  const handleSignOut = useCallback(() => {
+    if (Platform.OS === 'web') {
+      void performSignOut();
+      return;
+    }
+
+    Alert.alert('Sign out', 'Do you want to sign out of your account?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: async () => {
+          await performSignOut();
+        },
+      },
+    ]);
+  }, [performSignOut]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -125,13 +161,35 @@ export function ViewTripsScreen() {
     <SafeAreaView style={styles.screen}>
       <View style={styles.content}>
         <View style={styles.header}>
+          {!isDesktopWeb ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Sign out"
+              onPress={handleSignOut}
+              disabled={isSigningOut}
+              style={({ pressed, hovered }) => [
+                styles.iconButton,
+                styles.leftIconButton,
+                hovered && styles.createButtonHovered,
+                isSigningOut && styles.iconButtonDisabled,
+                pressed && styles.iconButtonPressed,
+              ]}
+            >
+              {({ hovered }) => (
+                <MaterialIcons name="logout" size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
+              )}
+            </Pressable>
+          ) : null}
           <Text style={styles.title}>My Trips</Text>
           <Pressable
             onPress={() => router.push('/trips/create')}
+            disabled={isSigningOut}
             style={({ pressed, hovered }) => [
-              styles.createButton,
+              styles.iconButton,
+              styles.rightIconButton,
               hovered && styles.createButtonHovered,
-              pressed && { opacity: 0.8 },
+              isSigningOut && styles.iconButtonDisabled,
+              pressed && styles.iconButtonPressed,
             ]}>
             {({ hovered }) => (
             <Plus size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
@@ -173,6 +231,11 @@ export function ViewTripsScreen() {
           />
         )}
       </View>
+      {isSigningOut ? (
+        <View style={styles.signOutOverlay}>
+          <ActivityIndicator size="large" color="#4a7ca8" />
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -291,9 +354,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7a9ab8',
   },
-  createButton: {
-    position: 'absolute',
-    right: 0,
+  iconButton: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#4a7ca8',
@@ -308,11 +369,33 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
+  leftIconButton: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 2,
+  },
+  rightIconButton: {
+    position: 'absolute',
+    right: 0,
+    zIndex: 2,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
+  },
+  iconButtonPressed: {
+    opacity: 0.8,
+  },
+  iconButtonDisabled: {
+    opacity: 0.55,
+  },
+  signOutOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(238, 245, 251, 0.6)',
   },
   separator: {
     height: 1,
