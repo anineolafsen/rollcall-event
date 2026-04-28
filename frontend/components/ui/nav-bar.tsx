@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import { PlatformPressable } from '@react-navigation/elements';
 import { CalendarDays, House, User } from 'lucide-react-native';
@@ -19,9 +19,9 @@ export function AppNavbar() {
   const isCalendarActive = pathname === '/events' || pathname.startsWith('/trips');
   const isHomeActive = pathname === '/' || pathname === '/index';
   const isProfileActive = pathname.startsWith('/profile');
-  const shouldHideNavbar = pathname === '/trips';
+  const shouldHideNavbar = pathname === '/trips' || pathname === '/trips/create';
   const isTablet = width >= 768;
-  const navHeight = 76 + insets.bottom;
+  const navHeight = 68 + insets.bottom;
 
   return (
     <Tabs
@@ -39,8 +39,8 @@ export function AppNavbar() {
           height: navHeight,
           backgroundColor: '#79b9ee',
           borderTopColor: 'transparent',
-          paddingTop: 10,
-          paddingBottom: Math.max(insets.bottom, 10),
+          paddingTop: 8,
+          paddingBottom: Math.max(insets.bottom, 8),
           paddingHorizontal: isTablet ? 28 : 18,
           shadowColor: '#000000',
           shadowOpacity: 0.28,
@@ -70,11 +70,13 @@ export function AppNavbar() {
         options={{
           title: 'Calendar',
           tabBarIcon: () => (
-            <CalendarDays
-              size={isTablet ? 42 : 38}
-              strokeWidth={2.4}
-              color={isCalendarActive ? '#0b0b0b' : '#ffffff'}
-            />
+            <View style={styles.iconScaleUp}>
+              <CalendarDays
+                size={isTablet ? 46 : 35}
+                strokeWidth={2.4}
+                color={isCalendarActive ? '#0b0b0b' : '#ffffff'}
+              />
+            </View>
           ),
         }}
       />
@@ -83,11 +85,13 @@ export function AppNavbar() {
         options={{
           title: 'Home',
           tabBarIcon: () => (
-            <House
-              size={isTablet ? 50 : 46}
-              strokeWidth={2.6}
-              color={isHomeActive ? '#0b0b0b' : '#ffffff'}
-            />
+            <View style={styles.iconScaleUp}>
+              <House
+                size={isTablet ? 54 : 40}
+                strokeWidth={2.6}
+                color={isHomeActive ? '#0b0b0b' : '#ffffff'}
+              />
+            </View>
           ),
         }}
       />
@@ -144,11 +148,13 @@ export function AppNavbar() {
         options={{
           title: 'Profile',
           tabBarIcon: () => (
-            <User
-              size={isTablet ? 48 : 44}
-              strokeWidth={2.4}
-              color={isProfileActive ? '#0b0b0b' : '#ffffff'}
-            />
+            <View style={styles.iconScaleUp}>
+              <User
+                size={isTablet ? 52 : 40}
+                strokeWidth={2.4}
+                color={isProfileActive ? '#0b0b0b' : '#ffffff'}
+              />
+            </View>
           ),
         }}
       />
@@ -166,5 +172,8 @@ const styles = StyleSheet.create({
   },
   tabButtonActive: {
     transform: [{ translateY: -2 }],
+  },
+  iconScaleUp: {
+    transform: [{ scale: 1.15 }, { translateY: 3 }],
   },
 });
