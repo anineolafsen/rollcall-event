@@ -18,6 +18,7 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
 import { AppButton } from '@/components/ui/button';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;

@@ -24,6 +24,7 @@ export default function TripDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const {getToken} = useAuth();
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
 
   useEffect(() => {
     const fetchTrip = async () => {
