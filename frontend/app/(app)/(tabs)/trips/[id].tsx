@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
 import { useAuth } from "@clerk/expo";
 
+import { NotifyButton } from '@/components/NotifyButton';
+import { TripActionButton } from '@/components/ui/trip-action-button';
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
@@ -80,6 +82,44 @@ export default function TripDetails() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
+        <Text style={styles.tripTitle}>{trip.name}</Text>
+        
+        {/* Only show management buttons if the user is an Organizer */}
+        {trip.isOrganizer && (
+            <View style={styles.buttonRow}>
+            <TripActionButton
+                label="+ Manage Invitations"
+                onPress={() =>
+                router.push({
+                    pathname: '/trips/[id]/manage-invitations',
+                    params: { id: String(trip.id), tripId: trip.id, tripName: trip.name },
+                })
+                }
+            />
+            <TripActionButton
+                label="View Needs"
+                backgroundColor="#d9e8f5"
+                textColor="#1a3d5c"
+                onPress={() =>
+                router.push({
+                    pathname: '/trips/[id]/participant-needs',
+                    params: { id: String(trip.id), tripName: trip.name },
+                })
+                }
+            />
+            <TripActionButton
+                label="✎ Edit"
+                backgroundColor="#76b6ee"
+                onPress={() =>
+                router.push({
+                    pathname: '/trips/create',
+                    params: { id: trip.id },
+                })
+                }
+            />
+            <NotifyButton tripId={trip.id} tripName={trip.name} />
+            </View>
+        )}
       </View>
       <UpcomingEventsScreen 
         tripId={trip.id} 
@@ -102,6 +142,13 @@ export default function TripDetails() {
             <TouchableOpacity
               style={styles.needsButton}
               onPress={() =>
+                }
+            />
+            <TripActionButton
+                label="View Needs"
+                backgroundColor="#d9e8f5"
+                textColor="#1a3d5c"
+                onPress={() =>
                 router.push({
                   pathname: '/trips/[id]/participant-needs',
                   params: { id: String(trip.id), tripName: trip.name },
@@ -113,6 +160,12 @@ export default function TripDetails() {
             <TouchableOpacity
               style={styles.editButton}
               onPress={() =>
+                }
+            />
+            <TripActionButton
+                label="✎ Edit"
+                backgroundColor="#76b6ee"
+                onPress={() =>
                 router.push({
                   pathname: '/trips/create',
                   params: { id: trip.id },
@@ -129,6 +182,17 @@ export default function TripDetails() {
             </TouchableOpacity>
           </View>
         ) : undefined}
+                }
+            />
+            <NotifyButton tripId={trip.id} tripName={trip.name} />
+            </View>
+        )}
+      </View>
+      <UpcomingEventsScreen 
+        tripId={trip.id} 
+        title={trip.name} 
+        showBackButton={false} 
+        isOrganizer={trip.isOrganizer} 
       />
     </SafeAreaView>
   );
@@ -178,39 +242,6 @@ const styles = StyleSheet.create({
   },
   createEventButtonText: {
     color: '#1a3d5c',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  inviteButton: {
-    backgroundColor: '#4a7ca8',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  inviteButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  needsButton: {
-    backgroundColor: '#d9e8f5',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  needsButtonText: {
-    color: '#1a3d5c',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  editButton: {
-    backgroundColor: '#76b6ee',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  editButtonText: {
-    color: '#ffffff',
     fontWeight: '600',
     fontSize: 14,
   },
