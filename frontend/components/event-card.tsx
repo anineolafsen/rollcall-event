@@ -1,4 +1,4 @@
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet, Pressable } from 'react-native';
 
 import { formatEventDate, formatEventTime, isEventWithinNext24Hours } from '@/lib/event-format';
 import type { EventRecord } from '@/lib/events';
@@ -80,8 +80,8 @@ export function EventCard({
       </TouchableOpacity>
 
       {actionLabel && onActionPress ? (
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({ hovered, pressed }) => [
             styles.actionButton,
             actionVariant === 'start' && styles.actionButtonStart,
             actionVariant === 'active' && styles.actionButtonActive,
@@ -89,11 +89,12 @@ export function EventCard({
             actionVariant === 'join' && styles.actionButtonJoin,
             actionVariant === 'leave' && styles.actionButtonLeave,
             actionVariant === 'mandatory' && styles.actionButtonMandatory,
+            !actionDisabled && hovered && styles.actionButtonHovered,
+            !actionDisabled && pressed && styles.actionButtonPressed,
             actionDisabled && styles.actionButtonDisabled,
           ]}
           onPress={onActionPress}
           disabled={actionDisabled}
-          activeOpacity={0.85}
         >
           <Text
             style={[
@@ -104,7 +105,7 @@ export function EventCard({
           >
             {actionLabel}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -130,11 +131,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  cardHeaderSoon: {
+    backgroundColor: '#fff8e8',
+  },
   headingBlock: {
     flex: 1,
   },
   eventName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     color: '#1a3d5c',
   },
@@ -172,20 +176,20 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   metaLabel: {
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 20,
     color: '#7a9ab8',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
   metaValue: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#1a3d5c',
     fontWeight: '600',
   },
   location: {
     paddingTop: 10,
-    fontSize: 14,
+    fontSize: 16,
     color: '#4a7ca8',
     fontWeight: '500',
     paddingHorizontal: 18,
@@ -201,6 +205,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    shadowColor: '#2a4f73',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
   actionButtonStart: {
     backgroundColor: '#eaf7ec',
@@ -228,6 +237,17 @@ const styles = StyleSheet.create({
   },
   actionButtonDisabled: {
     opacity: 0.5,
+  },
+  actionButtonHovered: {
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    transform: [{ translateY: -1 }],
+  },
+  actionButtonPressed: {
+    opacity: 0.88,
+    transform: [{ translateY: 0 }],
   },
   actionButtonText: {
     color: '#1a3d1a',

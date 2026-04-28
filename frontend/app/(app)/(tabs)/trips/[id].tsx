@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
-import { useAuth } from "@clerk/expo";
+import { useAuth } from '@clerk/expo';
 
 import { NotifyButton } from '@/components/NotifyButton';
 import { TripActionButton } from '@/components/ui/trip-action-button';
@@ -24,27 +24,17 @@ export default function TripDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const {getToken} = useAuth();
-  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
-  const showBackButton = Platform.OS === 'web' && width >= 900;
-
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-
-    router.push('/trips');
-  };
 
   useEffect(() => {
     const fetchTrip = async () => {
       try {
-        const token = await getToken({ template: "RollCallAuth" });
+        const token = await getToken({ template: 'RollCallAuth' });
         const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+
         if (!response.ok) {
           throw new Error(`Server responded with ${response.status}`);
         }
@@ -60,7 +50,7 @@ export default function TripDetails() {
     };
 
     if (id) {
-      fetchTrip();
+      void fetchTrip();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, setSelectedTrip]); // getToken is stable
@@ -79,11 +69,9 @@ export default function TripDetails() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.screen}>
-          {showBackButton ? (
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>← Go back</Text>
-            </TouchableOpacity>
-          ) : null}
+          <TouchableOpacity style={styles.backButton} onPress={() => router.push("/trips")}>
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error || 'Trip not found'}</Text>
           </View>
@@ -95,53 +83,56 @@ export default function TripDetails() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        {showBackButton ? (
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
-        ) : null}
-        <Text style={styles.tripTitle}>{trip.name}</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>← Go back</Text>
+        </TouchableOpacity>
         
         {/* Only show management buttons if the user is an Organizer */}
         {trip.isOrganizer && (
             <View style={styles.buttonRow}>
-            <TripActionButton
+              <TripActionButton
                 label="+ Manage Invitations"
                 onPress={() =>
-                router.push({
+                  router.push({
                     pathname: '/trips/[id]/manage-invitations',
                     params: { id: String(trip.id), tripId: trip.id, tripName: trip.name },
-                })
+                  })
                 }
-            />
-            <TripActionButton
+              />
+              <TripActionButton
                 label="View Needs"
                 backgroundColor="#d9e8f5"
                 textColor="#1a3d5c"
                 onPress={() =>
-                router.push({
+                  router.push({
                     pathname: '/trips/[id]/participant-needs',
                     params: { id: String(trip.id), tripName: trip.name },
-                })
+                  })
                 }
-            />
-            <TripActionButton
+              />
+              <TripActionButton
                 label="✎ Edit"
                 backgroundColor="#76b6ee"
                 onPress={() =>
-                router.push({
+                  router.push({
                     pathname: '/trips/create',
                     params: { id: trip.id },
-                })
+                  })
                 }
-            />
-            <NotifyButton tripId={trip.id} tripName={trip.name} />
+              />
+              <NotifyButton tripId={trip.id} tripName={trip.name} />
+              <TripActionButton
+                label="+ Create event"
+                backgroundColor="#ffffff"
+                textColor="#1a3d5c"
+                onPress={() => router.push(`/events/create?tripId=${trip.id}`)}
+              />
             </View>
         )}
       </View>
       <UpcomingEventsScreen 
         tripId={trip.id} 
-        title="Upcoming Events" 
+        title={trip.name} 
         showBackButton={false} 
         isOrganizer={trip.isOrganizer} 
       />
@@ -158,8 +149,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef5fb',
     paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 16,
-    
+    paddingBottom: 0,
   },
   backButton: {
     marginBottom: 12,
@@ -170,17 +160,12 @@ const styles = StyleSheet.create({
     color: '#4a7ca8',
     fontWeight: '600',
   },
-  tripTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#090909',
-    marginBottom: 12,
-  },
   buttonRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   centered: {
     flex: 1,

@@ -9,10 +9,10 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
-  ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
 
+import { AppButton } from '@/components/ui/button';
 import EmailInviteUploader, { type UploadState } from '@/components/invitationsFileUpload';
 import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
@@ -93,10 +93,7 @@ export default function InvitationsView({
       style={[styles.screen, isMobileStandalone && styles.mobileScreen]}
     >
       <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          isMobileStandalone && styles.mobileScrollContent,
-        ]}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -128,22 +125,12 @@ export default function InvitationsView({
           </View>
         </View>
 
-        <View style={[styles.footer, isMobileStandalone && styles.mobileFooter]}>
+        <View style={styles.footer}>
           <TouchableOpacity 
-            style={[
-              styles.completeButton,
-              isMobileStandalone && styles.mobileCompleteButton,
-              isLoading && styles.completeButtonLoading,
-            ]}
+            style={[styles.completeButton, isLoading && styles.completeButtonLoading]}
             onPress={handleComplete}
             disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.completeButtonText}>Done</Text>
-            )}
-          </TouchableOpacity>
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -153,7 +140,10 @@ export default function InvitationsView({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#eef5fb',
+  },
+  scroll: {
+    backgroundColor: '#eef5fb',
   },
   mobileScreen: {
     backgroundColor: '#eef5fb',
@@ -180,9 +170,9 @@ const styles = StyleSheet.create({
     paddingBottom: 128,
   },
   header: {
-    paddingHorizontal: 22,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 0,
     backgroundColor: '#eef5fb',
   },
   mobileHeader: {
@@ -193,7 +183,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButton: {
-    marginBottom: 16,
+    marginBottom: 12,
     alignSelf: 'flex-start',
   },
   backButtonText: {
@@ -206,6 +196,7 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     fontWeight: '700',
     color: '#090909',
+    textAlign: 'center',
     marginBottom: 4,
   },
   mobileTitle: {
@@ -214,16 +205,20 @@ const styles = StyleSheet.create({
   tripName: {
     fontSize: 16,
     color: '#6B7280',
-    marginBottom: 12,
+    marginBottom: 0,
     fontWeight: '500',
+    textAlign: 'center',
   },
   mobileTripName: {
     textAlign: 'center',
   },
   divider: {
-    height: 2,
+    height: 3,
     backgroundColor: '#76b6ee',
     borderRadius: 999,
+    marginTop: 14,
+    marginBottom: 28,
+    marginHorizontal: 28,
   },
   mobileDivider: {
     height: 3,
@@ -236,6 +231,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 20,
+    backgroundColor: '#eef5fb',
   },
   mobileContent: {
     paddingHorizontal: 0,
@@ -247,8 +243,8 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: '#d0e5f7',
+    backgroundColor: '#eef5fb',
   },
   mobileFooter: {
     paddingHorizontal: 0,
@@ -262,12 +258,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
-  },
-  mobileCompleteButton: {
-    backgroundColor: '#4a7ca8',
-    borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
   },
   completeButtonLoading: {
     opacity: 0.7,

@@ -194,22 +194,23 @@ export default function NotifyScreen() {
               </View>
             )}
           </View>
-          <View style={[styles.footer, isCompactMobile && styles.footerCompact]}>
-            {loading ? (
-              <ActivityIndicator color="#4a7ca8" />
-            ) : (
-              <AppButton
-                label={
-                  sending
-                    ? 'Sending...'
-                    : `Send to ${contacts.length} participant${contacts.length !== 1 ? 's' : ''}`
-                }
-                onPress={handleSend}
-                disabled={!canSend}
-              />
-            )}
-          </View>
         </ScrollView>
+
+        <View style={styles.footer}>
+          {loading ? (
+            <ActivityIndicator color="#4a7ca8" />
+          ) : (
+            <AppButton
+              label={
+                sending
+                  ? 'Sending...'
+                  : `Send to ${contacts.length} participant${contacts.length !== 1 ? 's' : ''}`
+              }
+              onPress={handleSend}
+              disabled={!canSend}
+            />
+          )}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

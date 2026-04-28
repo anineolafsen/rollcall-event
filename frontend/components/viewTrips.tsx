@@ -18,7 +18,7 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
-import { useMobileTripStore } from '@/lib/mobile-trip-store';
+import { AppButton } from '@/components/ui/button';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -249,12 +249,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#eef5fb',
     paddingHorizontal: 22,
-    paddingTop: 40,
+    paddingTop: 64,
     paddingBottom: 2,
     
   },
   title: {
-    fontSize: 34,
+    fontSize: 28,
     lineHeight: 34,
     fontWeight: '700',
     color: '#090909',

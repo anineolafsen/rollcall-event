@@ -26,7 +26,8 @@ export function AppSidebar() {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const isActive = (href: string) => {
-    return pathname === href || pathname.includes(href.split('/')[1]);
+    const routeName = href.split('/').pop(); // "trips", "profile", etc.
+    return pathname.startsWith(`/${routeName}`);
   };
 
   return (
@@ -44,16 +45,17 @@ export function AppSidebar() {
                 style={({ hovered }) => [
                   styles.navItem,
                   active && styles.navItemActive,
-                  hovered && styles.navItemHovered,
-                ]}>
+                  hovered && !active && styles.navItemHovered,
+                ]}
+              >
                   {({ hovered }) => (
                     <>
                     <IconSymbol
                       size={18}                                         
                       name={item.icon}
-                      color={active || hovered ? '#ffffff' : 'rgba(255,255,255,0.45)'}  
+                      color={active ? '#76b6ee' : hovered ? '#ffffff' : 'rgba(255,255,255,0.45)'} 
                     />
-                    <Text style={[styles.navLabel, active && styles.navLabelActive, hovered && {color: '#ffffff' },]}>
+                    <Text style={[styles.navLabel, active && styles.navLabelActive,  hovered && !active && styles.navLabelHovered,]}>
                       {item.name}
                     </Text>
                   </>
@@ -82,6 +84,18 @@ const styles = StyleSheet.create({
     color: '#76b6ee',
     paddingHorizontal: 20,
     marginBottom: 1,
+  },
+  navLabelActive: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  navItemActive: {
+    backgroundColor: 'rgba(118, 182, 238, 0.15)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#76b6ee',
+    shadowColor: '#76b6ee',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   sidebarSubtitle: {
     fontSize: 15,
