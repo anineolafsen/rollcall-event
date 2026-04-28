@@ -12,6 +12,8 @@ import {
   Platform,
   TextInput,
   Modal,
+  useWindowDimensions,
+  Pressable,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
 import { AppButton } from '@/components/ui/button';

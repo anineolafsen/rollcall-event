@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { AppButton } from '@/components/ui/button';
+import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date-field';
 import { FormField } from '@/components/ui/form-field';
 
 type FormValues = {
@@ -25,6 +26,7 @@ type FormValues = {
 };
 
 type FormErrors = Partial<Record<'title' | 'destination' | 'dateFrom' | 'dateTo' | 'description', string>>;
+type DateFieldName = 'dateFrom' | 'dateTo';
 
 // Helper: Validate and parse date from DD.MM.YYYY format
 const parseDate = (dateStr: string): Date | null => {
@@ -80,9 +82,11 @@ export function CreateTripScreen() {
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTrip, setIsLoadingTrip] = useState(false);
   const showBackButton = Platform.OS === 'web' && width >= 900;
+  const minimumStartValue = formatDateValue(new Date());
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -93,18 +97,11 @@ export function CreateTripScreen() {
         const response = await fetch(`${apiUrl}/trips/${tripId}`);
         if (!response.ok) throw new Error('Failed to load trip');
         const data = await response.json();
-        const formatISOToDisplay = (isoDate: string): string => {
-          const date = new Date(isoDate);
-          const day = String(date.getDate()).padStart(2, '0');
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const year = date.getFullYear();
-          return `${day}.${month}.${year}`;
-        };
         setFormValues({
           title: data.name || '',
           destination: data.destination || '',
-          dateFrom: data.startDate ? formatISOToDisplay(data.startDate) : '',
-          dateTo: data.endDate ? formatISOToDisplay(data.endDate) : '',
+          dateFrom: data.startDate ? formatDateValue(parseDateValue(data.startDate)) : '',
+          dateTo: data.endDate ? formatDateValue(parseDateValue(data.endDate)) : '',
           description: data.description || '',
         });
       } catch (error) {
@@ -132,6 +129,66 @@ export function CreateTripScreen() {
     setSuccessMessage('');
   };
 
+  const getDateErrors = (values: Pick<FormValues, 'dateFrom' | 'dateTo'>) => {
+    const nextErrors: Pick<FormErrors, 'dateFrom' | 'dateTo'> = {};
+    const now = new Date();
+
+    if (values.dateFrom) {
+      const startDate = parseDateValue(values.dateFrom);
+
+      if (startDate < now) {
+        nextErrors.dateFrom = 'Start date cannot be in the past.';
+      }
+    }
+
+    if (values.dateFrom && values.dateTo) {
+      const startDate = parseDateValue(values.dateFrom);
+      const endDate = parseDateValue(values.dateTo);
+
+      if (endDate <= startDate) {
+        nextErrors.dateTo = 'End date must be after start date.';
+      }
+    }
+
+    return nextErrors;
+  };
+
+  const updateDateField = (field: DateFieldName, value: string) => {
+    setFormValues((currentValues) => {
+      const nextValues = {
+        ...currentValues,
+        [field]: value,
+      };
+
+      if (
+        field === 'dateFrom' &&
+        nextValues.dateTo &&
+        parseDateValue(nextValues.dateTo) <= parseDateValue(value)
+      ) {
+        nextValues.dateTo = '';
+      }
+
+      return nextValues;
+    });
+
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      dateFrom: undefined,
+      dateTo: undefined,
+      ...getDateErrors({
+        dateFrom: field === 'dateFrom' ? value : formValues.dateFrom,
+        dateTo:
+          field === 'dateTo'
+            ? value
+            : field === 'dateFrom' && formValues.dateTo && parseDateValue(formValues.dateTo) <= parseDateValue(value)
+              ? ''
+              : formValues.dateTo,
+      }),
+    }));
+
+    setSuccessMessage('');
+  };
+
   const validateForm = () => {
     const nextErrors: FormErrors = {};
 
@@ -145,29 +202,13 @@ export function CreateTripScreen() {
 
     if (!formValues.dateFrom.trim()) {
       nextErrors.dateFrom = 'Add a start date.';
-    } else {
-      const startDate = parseDate(formValues.dateFrom);
-      if (!startDate) {
-        nextErrors.dateFrom = 'Invalid date format. Use DD.MM.YYYY (e.g., 15.05.2026).';
-      }
     }
 
     if (!formValues.dateTo.trim()) {
       nextErrors.dateTo = 'Add an end date.';
-    } else {
-      const endDate = parseDate(formValues.dateTo);
-      if (!endDate) {
-        nextErrors.dateTo = 'Invalid date format. Use DD.MM.YYYY (e.g., 15.05.2026).';
-      }
     }
 
-    if (!nextErrors.dateFrom && !nextErrors.dateTo) {
-      const startDate = parseDate(formValues.dateFrom)!;
-      const endDate = parseDate(formValues.dateTo)!;
-      if (endDate <= startDate) {
-        nextErrors.dateTo = 'End date must be after start date.';
-      }
-    }
+    Object.assign(nextErrors, getDateErrors(formValues));
 
     if (!formValues.description.trim()) {
       nextErrors.description = 'Add a short description.';
@@ -299,21 +340,27 @@ export function CreateTripScreen() {
 
           <View style={styles.row}>
             <View style={styles.rowField}>
-              <FormField
+              <DateField
                 label="Date from"
-                placeholder="DD.MM.YYYY"
                 value={formValues.dateFrom}
-                onChangeText={(value) => updateField('dateFrom', value)}
+                minValue={minimumStartValue}
+                onToggle={() => setActiveDateField('dateFrom')}
+                onChange={(value) => updateDateField('dateFrom', value)}
+                onClose={() => setActiveDateField(null)}
+                isOpen={activeDateField === 'dateFrom'}
                 error={formErrors.dateFrom}
               />
             </View>
 
             <View style={styles.rowField}>
-              <FormField
+              <DateField
                 label="Date to"
-                placeholder="DD.MM.YYYY"
                 value={formValues.dateTo}
-                onChangeText={(value) => updateField('dateTo', value)}
+                minValue={formValues.dateFrom || minimumStartValue}
+                onToggle={() => setActiveDateField('dateTo')}
+                onChange={(value) => updateDateField('dateTo', value)}
+                onClose={() => setActiveDateField(null)}
+                isOpen={activeDateField === 'dateTo'}
                 error={formErrors.dateTo}
               />
             </View>
