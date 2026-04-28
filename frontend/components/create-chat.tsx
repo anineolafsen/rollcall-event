@@ -12,7 +12,7 @@ import {
   FlatList,
   Alert,
 } from 'react-native';
-import { useAuth } from '@clerk/expo';
+import { useAuth, useUser } from '@clerk/expo';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
@@ -29,7 +29,8 @@ interface ChatParticipant {
 }
 
 export default function CreateChatScreen() {
-  const { getToken, user: clerkUser } = useAuth();
+  const { getToken } = useAuth();
+  const { user: clerkUser } = useUser();
   const router = useRouter();
   const getTokenRef = React.useRef(getToken);
 
@@ -214,7 +215,7 @@ export default function CreateChatScreen() {
       let chat;
       try {
         chat = JSON.parse(responseText);
-      } catch (parseErr) {
+      } catch {
         throw new Error(`Failed to parse chat response: ${responseText}`);
       }
 

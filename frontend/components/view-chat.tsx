@@ -432,7 +432,7 @@ function ChatSidePanel({
     if (isOpen && chatsWithTrips.length === 0) {
       fetchAllChats();
     }
-  }, [isOpen]);
+  }, [isOpen, chatsWithTrips.length, fetchAllChats]);
 
   if (!mounted && !isOpen) return null;
 
@@ -600,7 +600,7 @@ export default function ChatScreen() {
         return () => clearInterval(interval);
       }
     }
-  }, [chatID]);
+  }, [chatID, getToken]);
 
   // Check if current user is the creator
   useEffect(() => {

@@ -234,7 +234,7 @@ export default function EmailInviteUploader({
       setErrorMessage(message);
       setState("error");
     }
-  }, [validEntries, onSubmit, tripId, apiUrl, getToken]);
+  }, [filteredEntries, onSubmit, tripId, apiUrl, getToken]);
 
   const handleSubmit = useCallback(async () => {
     if (filteredEntries.length === 0 && organizerFilteredCount === 0 && invalidEntries.length === 0) {

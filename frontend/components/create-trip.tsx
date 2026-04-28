@@ -126,7 +126,7 @@ export function CreateTripScreen() {
       }
     };
     fetchTrip();
-  }, [tripId, router]);
+  }, [tripId, router, getToken]);
 
   const updateField = <K extends keyof FormValues>(
     field: K,

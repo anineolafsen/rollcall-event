@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
-import { useAuth, useUser } from '@clerk/expo';
+import { useState } from 'react';
+import { useUser } from '@clerk/expo';
 import {
   KeyboardAvoidingView,
   Platform,
