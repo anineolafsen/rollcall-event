@@ -15,7 +15,10 @@ namespace MyApp.API.Services
 
     public List<Event> GetAllEvents(string? userId = null)
     {
-      var events = _context.Events.OrderBy(e => e.StartDate).ToList();
+      var events = _context.Events
+      .OrderByDescending(eventItem => eventItem.IsEmergency)
+      .ThenBy(eventItem => eventItem.StartDate)
+      .ToList();
       return EnrichEvents(events, userId);
     }
 
@@ -23,7 +26,8 @@ namespace MyApp.API.Services
     {
       var events = _context.Events
         .Where(e => e.TripId == tripId)
-        .OrderBy(e => e.StartDate)
+        .OrderByDescending(eventItem => eventItem.IsEmergency)
+        .ThenBy(eventItem => eventItem.StartDate)
         .ToList();
 
       return EnrichEvents(events, userId);
@@ -42,7 +46,8 @@ namespace MyApp.API.Services
           _context.Participants.Any(participant =>
             participant.TripId == eventItem.TripId &&
             participant.UserId == user.Id))
-        .OrderBy(eventItem => eventItem.StartDate)
+        .OrderByDescending(eventItem => eventItem.IsEmergency)
+        .ThenBy(eventItem => eventItem.StartDate)
         .ToList();
 
       return EnrichEvents(events, userId);
@@ -66,6 +71,14 @@ namespace MyApp.API.Services
 
     public Event CreateEvent(Event appEvent)
     {
+      if (appEvent.IsEmergency)
+      {
+        appEvent.AttendanceMode = "mandatory";
+        appEvent.HasUnlimitedCapacity = true;
+        appEvent.Capacity = null;
+        appEvent.Description = null;
+      }
+
       appEvent.Id = GenerateUniqueEventId();
       _context.Events.Add(appEvent);
       _context.SaveChanges();
@@ -88,6 +101,7 @@ namespace MyApp.API.Services
       existingEvent.Capacity = updatedEvent.Capacity;
       existingEvent.HasUnlimitedCapacity = updatedEvent.HasUnlimitedCapacity;
       existingEvent.AttendanceMode = updatedEvent.AttendanceMode;
+      existingEvent.IsEmergency = updatedEvent.IsEmergency;
       existingEvent.TripId = updatedEvent.TripId;
 
       _context.SaveChanges();
