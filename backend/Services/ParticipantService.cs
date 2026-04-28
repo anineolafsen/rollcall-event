@@ -79,6 +79,15 @@ namespace MyApp.API.Services
         .ToList();
     }
 
+    public string? GetOrganizerPhoneByTrip(int tripId)
+    {
+      return _context.Participants
+        .Include(p => p.User)
+        .Where(p => p.TripId == tripId && p.IsOrganizer && p.User != null && p.User.Phone != null && p.User.Phone != "")
+        .Select(p => p.User!.Phone)
+        .FirstOrDefault();
+    }
+
     public Participant? GetByTripAndUser(int tripId, int userId)
     {
       return _context.Participants

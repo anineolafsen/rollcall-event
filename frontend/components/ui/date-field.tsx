@@ -81,23 +81,6 @@ export function DateField({
   const webInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (Platform.OS === 'web' && isOpen) {
-      const input = webInputRef.current;
-
-      if (!input) {
-        return;
-      }
-
-      if (typeof input.showPicker === 'function') {
-        input.showPicker();
-      } else {
-        input.focus();
-        input.click();
-      }
-
-      return;
-    }
-
     if (Platform.OS === 'android' && isOpen) {
       const currentValue = parseDateValue(value);
 
@@ -134,6 +117,32 @@ export function DateField({
     }
   }, [isOpen, maxValue, minValue, onChange, onClose, value]);
 
+  const handlePress = () => {
+    if (Platform.OS !== 'web') {
+      onToggle();
+      return;
+    }
+
+    const input = webInputRef.current;
+
+    if (!input) {
+      onToggle();
+      return;
+    }
+
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+      } else {
+        input.focus();
+        input.click();
+      }
+      onToggle();
+    } catch {
+      input.focus();
+    }
+  };
+
   const handleIosChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
       onClose?.();
@@ -153,7 +162,7 @@ export function DateField({
         label={label}
         placeholder={placeholder}
         value={formatDisplayValue(value)}
-        onPress={onToggle}
+        onPress={handlePress}
         error={error}
         rightAdornment={<IconSymbol name="calendar" size={18} color="#5f84a3" />}
       />

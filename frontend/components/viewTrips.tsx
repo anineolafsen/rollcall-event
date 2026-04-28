@@ -47,7 +47,23 @@ export function ViewTripsScreen() {
         throw new Error(`Server responded with ${response.status}`);
       }
       const data: Trip[] = await response.json();
-      setTrips(data);
+      const sortedTrips = [...data].sort((a, b) => {
+        const aTime = new Date(a.startDate).getTime();
+        const bTime = new Date(b.startDate).getTime();
+
+        if (Number.isNaN(aTime) && Number.isNaN(bTime)) {
+          return 0;
+        }
+        if (Number.isNaN(aTime)) {
+          return 1;
+        }
+        if (Number.isNaN(bTime)) {
+          return -1;
+        }
+
+        return aTime - bTime;
+      });
+      setTrips(sortedTrips);
     } catch {
       setError('Could not load trips. Please try again.');
     } finally {
@@ -293,7 +309,7 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      marginBotton: 14,
+      marginBottom: 14,
     },
     separator: {
       height: 1,
