@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useUser, useAuth } from '@clerk/expo';
 import {
   Alert,
   View,
@@ -11,31 +12,35 @@ import {
   ScrollView,
   TextInput,
   FlatList,
+  Modal,
 } from 'react-native';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
 interface Chat {
-  chatID: number;
-  tripID: number;
+  id: number;
+  tripId: number;
   title: string;
-  creatorID: string;
+  creatorId: string;
   createdAt: string;
 }
 
 interface Trip {
-  tripID: number;
+  id: number;
   name: string;
 }
 
 interface Participant {
   email: string;
+  name: string;
   type: 'participant' | 'invitation';
 }
 
 export default function EditChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { user: clerkUser } = useUser();
+  const { getToken } = useAuth();
 
   const [chat, setChat] = useState<Chat | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -46,8 +51,11 @@ export default function EditChatScreen() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCreator, setIsCreator] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const chatID = id ? Number(id) : null;
+  const currentUserEmail = clerkUser?.primaryEmailAddress?.emailAddress;
 
   // Load chat data
   useEffect(() => {
@@ -61,47 +69,52 @@ export default function EditChatScreen() {
         setLoading(true);
         setError(null);
 
+        const token = await getToken({ template: 'RollCallAuth' });
+
         // Fetch chat
-        const chatRes = await fetch(`${API_BASE_URL}/api/chats/${chatID}`);
+        const chatRes = await fetch(`${API_BASE_URL}/api/chats/${chatID}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!chatRes.ok) throw new Error('Failed to load chat');
         const chatData: Chat = await chatRes.json();
         setChat(chatData);
         setTitle(chatData.title);
 
         // Fetch trip
-        const tripRes = await fetch(`${API_BASE_URL}/api/trips/${chatData.tripID}`);
+        const tripRes = await fetch(`${API_BASE_URL}/api/trips/${chatData.tripId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (tripRes.ok) {
           const tripData: Trip = await tripRes.json();
           setTrip(tripData);
         }
 
-        // Fetch current participants
-        const partRes = await fetch(`${API_BASE_URL}/api/chat-participants/chat/${chatID}`);
-        if (partRes.ok) {
-          const partData = await partRes.json();
-          const participantEmails = partData.map((p: any) => p.userEmail);
-          setSelectedParticipants(new Set(participantEmails));
-        }
+        // Fetch current chat participants
+        const partRes = await fetch(`${API_BASE_URL}/api/chat-participants/chat/${chatID}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const currentChatParticipants: any[] = partRes.ok ? await partRes.json() : [];
+        const participantEmails = currentChatParticipants.map((p: any) => p.userEmail);
+        setSelectedParticipants(new Set(participantEmails));
 
         // Fetch available participants from trip
         const tripPartRes = await fetch(
-          `${API_BASE_URL}/api/participants/trip/${chatData.tripID}`
+          `${API_BASE_URL}/api/participants/trip/${chatData.tripId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const tripPartData = tripPartRes.ok ? await tripPartRes.json() : [];
 
-        const invitRes = await fetch(`${API_BASE_URL}/api/invitations?tripId=${chatData.tripID}`);
-        const invitData = invitRes.ok ? await invitRes.json() : [];
-
         const participantMap = new Map<string, Participant>();
-        tripPartData.forEach((p: any) => {
-          if (p.userID && !participantMap.has(p.userID)) {
-            participantMap.set(p.userID, { email: p.userID, type: 'participant' });
-          }
-        });
 
-        invitData.forEach((inv: any) => {
-          if (!participantMap.has(inv.userEmail)) {
-            participantMap.set(inv.userEmail, { email: inv.userEmail, type: 'invitation' });
+        // Add participants (accepted) - use lowercase field names
+        tripPartData.forEach((p: any) => {
+          const email = p.email;
+          if (email && !participantMap.has(email)) {
+            participantMap.set(email, {
+              email,
+              name: p.name || email.split('@')[0],
+              type: 'participant',
+            });
           }
         });
 
@@ -115,7 +128,18 @@ export default function EditChatScreen() {
     };
 
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatID]);
+
+  // Check creator after chat is loaded and current user email is available
+  useEffect(() => {
+    if (chat && currentUserEmail) {
+      const isCreatorMatch = chat.creatorId.toLowerCase() === currentUserEmail.toLowerCase();
+      setIsCreator(isCreatorMatch);
+    } else {
+      setIsCreator(false);
+    }
+  }, [chat, currentUserEmail]);
 
   const toggleParticipant = useCallback((email: string) => {
     setSelectedParticipants((prev) => {
@@ -130,6 +154,11 @@ export default function EditChatScreen() {
   }, []);
 
   const handleSave = async () => {
+    if (!isCreator) {
+      Alert.alert('Permission Denied', 'Only the chat creator can edit this chat');
+      return;
+    }
+
     if (!title.trim()) {
       Alert.alert('Error', 'Please enter a chat title');
       return;
@@ -140,14 +169,20 @@ export default function EditChatScreen() {
     try {
       setSaving(true);
 
+      const token = await getToken({ template: 'RollCallAuth' });
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      };
+
       // Update chat title
       const updateRes = await fetch(`${API_BASE_URL}/api/chats/${chatID}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
-          tripID: chat.tripID,
+          tripId: chat.tripId,
           title: title.trim(),
-          creatorID: chat.creatorID,
+          creatorId: chat.creatorId,
           createdAt: chat.createdAt,
         }),
       });
@@ -155,7 +190,9 @@ export default function EditChatScreen() {
       if (!updateRes.ok) throw new Error('Failed to update chat');
 
       // Get current participants
-      const currentRes = await fetch(`${API_BASE_URL}/api/chat-participants/chat/${chatID}`);
+      const currentRes = await fetch(`${API_BASE_URL}/api/chat-participants/chat/${chatID}`, {
+        headers,
+      });
       const currentParticipants: { userEmail: string }[] = currentRes.ok ? await currentRes.json() : [];
       const currentEmails = new Set(currentParticipants.map((p) => p.userEmail));
 
@@ -164,6 +201,7 @@ export default function EditChatScreen() {
         if (!selectedParticipants.has(email)) {
           await fetch(`${API_BASE_URL}/api/chat-participants/${chatID}/${email}`, {
             method: 'DELETE',
+            headers,
           });
         }
       }
@@ -171,11 +209,11 @@ export default function EditChatScreen() {
       // Add new participants
       for (const email of selectedParticipants) {
         if (!currentEmails.has(email)) {
-          await fetch(`${API_BASE_URL}/api/chat-participants`, {
+          await fetch(`${API_BASE_URL}/api/chat-participants/by-email`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
-              chatID,
+              chatId: chatID,
               userEmail: email,
             }),
           });
@@ -193,32 +231,46 @@ export default function EditChatScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert('Delete Chat', 'Are you sure you want to delete this chat? This cannot be undone.', [
-      { text: 'Cancel', onPress: () => {} },
-      {
-        text: 'Delete',
-        onPress: async () => {
-          try {
-            setDeleting(true);
+    if (!isCreator) {
+      Alert.alert('Permission Denied', 'Only the chat creator can delete this chat');
+      return;
+    }
+    setShowDeleteConfirm(true);
+  };
 
-            const res = await fetch(`${API_BASE_URL}/api/chats/${chatID}`, {
-              method: 'DELETE',
-            });
+  const confirmDelete = async () => {
+    setShowDeleteConfirm(false);
+    
+    try {
+      setDeleting(true);
+      const token = await getToken({ template: 'RollCallAuth' });
+      const deleteUrl = `${API_BASE_URL}/api/chats/${chatID}`;
 
-            if (!res.ok) throw new Error('Failed to delete chat');
-
-            Alert.alert('Success', 'Chat deleted successfully');
-            router.back();
-          } catch (err) {
-            console.error('Failed to delete chat:', err);
-            Alert.alert('Error', 'Failed to delete chat');
-          } finally {
-            setDeleting(false);
-          }
+      const res = await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        style: 'destructive',
-      },
-    ]);
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to delete chat (HTTP ${res.status}): ${errorText}`);
+      }
+
+      setShowDeleteConfirm(false);
+      
+      // Small delay to ensure modal closes before navigation
+      setTimeout(() => {
+        router.replace('/(app)/(tabs)/chats');
+      }, 100);
+    } catch (err) {
+      console.error('Failed to delete chat:', err);
+      Alert.alert('Error', `Failed to delete chat: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -254,16 +306,25 @@ export default function EditChatScreen() {
         <Text style={styles.title}>Edit Chat</Text>
 
         {/* Chat Title */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Chat Title</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter chat title"
-            value={title}
-            onChangeText={setTitle}
-            editable={!saving}
-          />
-        </View>
+        {isCreator ? (
+          <View style={styles.section}>
+            <Text style={styles.label}>Chat Title</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter chat title"
+              value={title}
+              onChangeText={setTitle}
+              editable={!saving}
+            />
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.label}>Chat Title</Text>
+            <View style={[styles.input, styles.readOnlyInput]}>
+              <Text style={styles.readOnlyText}>{title}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Trip (Read-only) */}
         <View style={styles.section}>
@@ -274,78 +335,124 @@ export default function EditChatScreen() {
         </View>
 
         {/* Participants */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Participants ({selectedParticipants.size})</Text>
-          {participants.length === 0 ? (
-            <Text style={styles.emptyText}>No participants available</Text>
-          ) : (
-            <FlatList
-              scrollEnabled={false}
-              data={participants}
-              keyExtractor={(item) => item.email}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.participantItem}
-                  onPress={() => toggleParticipant(item.email)}
-                >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      selectedParticipants.has(item.email) && styles.checkboxChecked,
-                    ]}
+        {isCreator && (
+          <View style={styles.section}>
+            <Text style={styles.label}>Participants ({selectedParticipants.size})</Text>
+            {participants.length === 0 ? (
+              <Text style={styles.emptyText}>No participants available</Text>
+            ) : (
+              <FlatList
+                scrollEnabled={false}
+                data={participants}
+                keyExtractor={(item) => item.email}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.participantItem}
+                    onPress={() => toggleParticipant(item.email)}
                   >
-                    {selectedParticipants.has(item.email) && (
-                      <Text style={styles.checkboxMark}>✓</Text>
-                    )}
-                  </View>
-                  <View style={styles.participantInfo}>
-                    <Text style={styles.participantEmail}>{item.email}</Text>
-                    <Text style={styles.participantType}>
-                      {item.type === 'invitation' ? '(Invited)' : '(Member)'}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
-          )}
-        </View>
+                    <View
+                      style={[
+                        styles.checkbox,
+                        selectedParticipants.has(item.email) && styles.checkboxChecked,
+                      ]}
+                    >
+                      {selectedParticipants.has(item.email) && (
+                        <Text style={styles.checkboxMark}>✓</Text>
+                      )}
+                    </View>
+                    <View style={styles.participantInfo}>
+                      <Text style={styles.participantEmail}>{item.name}</Text>
+                      <Text style={styles.participantType}>
+                        {item.type === 'invitation' ? '(Invited)' : '(Participant)'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        )}
 
         {/* Action Buttons */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
-            onPress={() => router.back()}
-            disabled={saving || deleting}
-          >
-            <Text style={styles.buttonTextCancel}>Cancel</Text>
-          </TouchableOpacity>
+        {isCreator && (
+          <>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => router.back()}
+                disabled={saving || deleting}
+              >
+                <Text style={styles.buttonTextCancel}>Cancel</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.button, styles.saveButton, (saving || deleting) && styles.buttonDisabled]}
-            onPress={handleSave}
-            disabled={saving || deleting}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Text style={styles.buttonText}>Save</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                style={[styles.button, styles.saveButton, (saving || deleting) && styles.buttonDisabled]}
+                onPress={handleSave}
+                disabled={saving || deleting}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.buttonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
 
-        {/* Delete Button */}
-        <TouchableOpacity
-          style={[styles.deleteButton, deleting && styles.buttonDisabled]}
-          onPress={handleDelete}
-          disabled={deleting}
-        >
-          {deleting ? (
-            <ActivityIndicator size="small" color="#d32f2f" />
-          ) : (
-            <Text style={styles.deleteButtonText}>Delete Chat</Text>
-          )}
-        </TouchableOpacity>
+            {/* Delete Button */}
+            <TouchableOpacity
+              style={[styles.deleteButton, deleting && styles.buttonDisabled]}
+              onPress={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color="#d32f2f" />
+              ) : (
+                <Text style={styles.deleteButtonText}>Delete Chat</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowDeleteConfirm(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Delete Chat?</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to delete this chat? This action cannot be undone.
+            </Text>
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setShowDeleteConfirm(false);
+                }}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalDeleteButton]}
+                onPress={confirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.modalDeleteButtonText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -387,6 +494,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
     marginBottom: 8,
+  },
+  readOnlyWarning: {
+    fontSize: 12,
+    color: '#ff9800',
+    marginBottom: 8,
+    fontStyle: 'italic',
   },
   input: {
     backgroundColor: '#ffffff',
@@ -430,6 +543,10 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: '#4a7ca8',
     borderColor: '#4a7ca8',
+  },
+  checkboxDisabled: {
+    opacity: 0.5,
+    borderColor: '#b0bfd4',
   },
   checkboxMark: {
     color: '#ffffff',
@@ -507,5 +624,65 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#d32f2f',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 24,
+    width: '80%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#090909',
+    marginBottom: 12,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#565656',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#d9e8f5',
+  },
+  modalCancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4a7ca8',
+  },
+  modalDeleteButton: {
+    backgroundColor: '#d32f2f',
+  },
+  modalDeleteButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

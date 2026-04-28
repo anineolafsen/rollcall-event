@@ -17,7 +17,7 @@ import {
   Dimensions,
   FlatList,
 } from "react-native";
-import { useUser } from "@clerk/expo";
+import { useUser, useAuth } from "@clerk/expo";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 const API_BASE_URL =
@@ -28,30 +28,31 @@ const POLLING_INTERVAL_MS = 3000;
 const DRAWER_WIDTH = Dimensions.get("window").width * 0.3;
 
 type Message = {
-  messageID: number;
-  text: string;
+  id: number;
+  chatId: number;
   senderEmail: string;
+  content: string;
   timestamp: string;
 };
 
 interface ChatData {
-  chatID: number;
+  id: number;
   title: string;
-  tripID: number;
-  creatorID: string;
+  tripId: number;
+  creatorId: string;
 }
 
 interface Chat {
-  chatID: number;
-  tripID: number;
+  id: number;
+  tripId: number;
   title: string;
-  creatorID: string;
+  creatorId: string;
   createdAt: string;
 }
 
 // Format ISO timestamp to HH:MM
 interface Trip {
-  tripID: number;
+  id: number;
   name: string;
 }
 
@@ -132,11 +133,11 @@ function MessageBubble({
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(message.text);
+  const [editText, setEditText] = useState(message.content);
 
   const handleSaveEdit = async () => {
-    if (editText.trim() && editText !== message.text) {
-      await onEdit(message.messageID, editText.trim());
+    if (editText.trim() && editText !== message.content) {
+      await onEdit(message.id, editText.trim());
     }
     setIsEditing(false);
   };
@@ -181,7 +182,7 @@ function MessageBubble({
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => {
-                    onDelete(message.messageID);
+                    onDelete(message.id);
                     setShowMenu(false);
                   }}
                 >
@@ -210,7 +211,7 @@ function MessageBubble({
             />
           ) : (
             <Text style={[styles.bubbleText, isOwn && styles.bubbleTextUser]}>
-              {message.text}
+              {message.content}
             </Text>
           )}
         </View>
@@ -234,7 +235,7 @@ function MessageBubble({
           <TouchableOpacity
             style={[styles.editActionButton, styles.editCancelButton]}
             onPress={() => {
-              setEditText(message.text);
+              setEditText(message.content);
               setIsEditing(false);
             }}
           >
@@ -256,10 +257,12 @@ function HeaderBar({
   chatTitle,
   onMenuPress,
   onEditPress,
+  isCreator,
 }: {
   chatTitle: string;
   onMenuPress: () => void;
   onEditPress: () => void;
+  isCreator: boolean;
 }) {
   return (
     <View style={styles.header}>
@@ -277,13 +280,15 @@ function HeaderBar({
         </Text>
       </View>
 
-      <TouchableOpacity
-        onPress={onEditPress}
-        style={styles.editButton}
-        hitSlop={8}
-      >
-        <MaterialCommunityIcons name="pencil" size={20} color={C.sky} />
-      </TouchableOpacity>
+      {isCreator && (
+        <TouchableOpacity
+          onPress={onEditPress}
+          style={styles.editButton}
+          hitSlop={8}
+        >
+          <MaterialCommunityIcons name="pencil" size={20} color={C.sky} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -340,11 +345,13 @@ function ChatSidePanel({
   onClose,
   currentChatID,
   onSelectChat,
+  getToken,
 }: {
   isOpen: boolean;
   onClose: () => void;
   currentChatID: number | null;
   onSelectChat: (chatID: number) => void;
+  getToken: any;
 }) {
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -388,19 +395,25 @@ function ChatSidePanel({
   const fetchAllChats = useCallback(async () => {
     try {
       setError(null);
-      const tripsRes = await fetch(`${API_BASE_URL}/api/trips`);
+      const token = await getToken({ template: 'RollCallAuth' });
+      const tripsRes = await fetch(`${API_BASE_URL}/api/trips/my`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const trips: Trip[] = tripsRes.ok ? await tripsRes.json() : [];
 
+      // Fetch all chats in parallel instead of sequentially
       const allChats: ChatWithTrip[] = [];
-      for (const trip of trips) {
-        try {
-          const chatsRes = await fetch(
-            `${API_BASE_URL}/api/chats/trip/${trip.tripID}`,
-          );
-          const chats: Chat[] = chatsRes.ok ? await chatsRes.json() : [];
-          chats.forEach((chat) => allChats.push({ chat, trip }));
-        } catch {}
-      }
+      const chatPromises = trips.map(trip =>
+        fetch(`${API_BASE_URL}/api/chats/trip/${trip.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then(chatsRes => chatsRes.json())
+          .then(chats => chats.map((chat: Chat) => ({ chat, trip })))
+          .catch(() => [])
+      );
+
+      const chatResults = await Promise.all(chatPromises);
+      chatResults.forEach(chats => allChats.push(...chats));
 
       allChats.sort(
         (a, b) =>
@@ -413,22 +426,22 @@ function ChatSidePanel({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getToken]);
 
   useEffect(() => {
     if (isOpen && chatsWithTrips.length === 0) {
       fetchAllChats();
     }
-  }, [isOpen, chatsWithTrips.length, fetchAllChats]);
+  }, [isOpen]);
 
   if (!mounted && !isOpen) return null;
 
   const renderItem = ({ item }: { item: ChatWithTrip }) => {
-    const isActive = item.chat.chatID === currentChatID;
+    const isActive = item.chat.id === currentChatID;
     return (
       <TouchableOpacity
         onPress={() => {
-          if (!isActive) onSelectChat(item.chat.chatID);
+          if (!isActive) onSelectChat(item.chat.id);
           onClose();
         }}
         activeOpacity={0.75}
@@ -456,7 +469,7 @@ function ChatSidePanel({
             </Text>
           </View>
           <Text style={styles.panelCreatedBy}>
-            {item.chat.creatorID.split("@")[0]}
+            {item.chat.creatorId.split("@")[0]}
           </Text>
           {isActive && <View style={styles.activeIndicator} />}
         </View>
@@ -511,7 +524,7 @@ function ChatSidePanel({
           ) : (
             <FlatList
               data={chatsWithTrips}
-              keyExtractor={(item) => item.chat.chatID.toString()}
+              keyExtractor={(item) => item.chat.id.toString()}
               renderItem={renderItem}
               contentContainerStyle={styles.drawerList}
               showsVerticalScrollIndicator={false}
@@ -526,6 +539,7 @@ function ChatSidePanel({
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useUser();
+  const { getToken } = useAuth();
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
 
@@ -535,8 +549,10 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
 
   const chatID = id ? Number(id) : null;
+  const currentUserEmail = user?.primaryEmailAddress?.emailAddress;
 
   useEffect(() => {
     const fetchChatData = async () => {
@@ -544,21 +560,28 @@ export default function ChatScreen() {
         setError(null);
         if (!chatID) throw new Error("Chat ID is required");
 
-        const chatResponse = await fetch(`${API_BASE_URL}/api/chats/${chatID}`);
+        const token = await getToken({ template: 'RollCallAuth' });
+        const chatResponse = await fetch(`${API_BASE_URL}/api/chats/${chatID}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         if (!chatResponse.ok) throw new Error("Failed to load chat");
         const chat = await chatResponse.json();
         setChatData(chat);
 
         const messagesResponse = await fetch(
           `${API_BASE_URL}/api/chat-messages/chat/${chatID}`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
         );
         const messagesData = messagesResponse.ok
           ? await messagesResponse.json()
           : [];
 
         const transformedMessages: Message[] = messagesData.map((msg: any) => ({
-          messageID: msg.messageID,
-          text: msg.content,
+          id: msg.id,
+          chatId: msg.chatId,
+          content: msg.content,
           senderEmail: msg.senderEmail,
           timestamp: msg.timestamp,
         }));
@@ -579,20 +602,32 @@ export default function ChatScreen() {
     }
   }, [chatID]);
 
+  // Check if current user is the creator
+  useEffect(() => {
+    if (chatData && currentUserEmail) {
+      const isCreatorMatch = chatData.creatorId.toLowerCase() === currentUserEmail.toLowerCase();
+      setIsCreator(isCreatorMatch);
+    }
+  }, [chatData, currentUserEmail]);
+
   const handleSend = async () => {
     const text = draft.trim().replace(/[\n\r]+$/, "");
     if (!text || !user?.primaryEmailAddress?.emailAddress || !chatID) return;
 
     try {
       setSending(true);
+      const token = await getToken({ template: 'RollCallAuth' });
       const response = await fetch(`${API_BASE_URL}/api/chat-messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
-          chatID,
-          senderEmail: user.primaryEmailAddress.emailAddress,
-          content: text,
-          timestamp: new Date().toISOString(),
+          ChatId: chatID,
+          SenderEmail: user.primaryEmailAddress.emailAddress,
+          Content: text,
+          Timestamp: new Date().toISOString(),
         }),
       });
 
@@ -602,8 +637,9 @@ export default function ChatScreen() {
       setMessages((prev) => [
         ...prev,
         {
-          messageID: sentMessage.messageID,
-          text: sentMessage.content,
+          id: sentMessage.id,
+          chatId: sentMessage.chatId,
+          content: sentMessage.content,
           senderEmail: sentMessage.senderEmail,
           timestamp: sentMessage.timestamp,
         },
@@ -620,14 +656,27 @@ export default function ChatScreen() {
 
   const handleDeleteMessage = async (messageId: number) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/chat-messages/${messageId}`,
-        {
-          method: "DELETE",
-        },
-      );
-      if (!response.ok) throw new Error("Failed to delete message");
-      setMessages((prev) => prev.filter((m) => m.messageID !== messageId));
+      console.log('Deleting message:', messageId);
+      const token = await getToken({ template: 'RollCallAuth' });
+      console.log('Token obtained:', !!token);
+      const url = `${API_BASE_URL}/api/chat-messages/${messageId}`;
+      console.log('Delete URL:', url);
+      
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('Delete response status:', response.status);
+      console.log('Delete response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Delete error response:', errorText);
+        throw new Error("Failed to delete message");
+      }
+      
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
       Alert.alert("Success", "Message deleted");
     } catch (err) {
       console.error("Failed to delete message:", err);
@@ -637,26 +686,46 @@ export default function ChatScreen() {
 
   const handleEditMessage = async (messageId: number, newContent: string) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/chat-messages/${messageId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chatID,
-            senderEmail: user?.primaryEmailAddress?.emailAddress,
-            content: newContent,
-          }),
+      console.log('Editing message:', messageId, 'new content:', newContent);
+      const token = await getToken({ template: 'RollCallAuth' });
+      console.log('Token obtained:', !!token);
+      const url = `${API_BASE_URL}/api/chat-messages/${messageId}`;
+      console.log('Edit URL:', url);
+      
+      const body = {
+        ChatId: chatID,
+        SenderEmail: user?.primaryEmailAddress?.emailAddress,
+        Content: newContent,
+      };
+      console.log('Edit body:', body);
+      
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
-      );
-      if (!response.ok) throw new Error("Failed to update message");
+        body: JSON.stringify(body),
+      });
+      
+      console.log('Edit response status:', response.status);
+      console.log('Edit response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Edit error response:', errorText);
+        throw new Error("Failed to update message");
+      }
+      
       const updatedMessage = await response.json();
+      console.log('Updated message:', updatedMessage);
+      
       setMessages((prev) =>
         prev.map((m) =>
-          m.messageID === messageId
+          m.id === messageId
             ? {
                 ...m,
-                text: updatedMessage.content,
+                content: updatedMessage.content,
                 timestamp: updatedMessage.timestamp,
               }
             : m,
@@ -714,6 +783,7 @@ export default function ChatScreen() {
             chatTitle={chatData.title}
             onMenuPress={() => setPanelOpen(true)}
             onEditPress={() => router.push(`/(app)/(tabs)/chats/${chatID}/edit` as any)}
+            isCreator={isCreator}
           />
 
           <ScrollView
@@ -732,7 +802,7 @@ export default function ChatScreen() {
             ) : (
               messages.map((msg) => (
                 <MessageBubble
-                  key={msg.messageID}
+                  key={msg.id}
                   message={msg}
                   isOwn={
                     msg.senderEmail === user?.primaryEmailAddress?.emailAddress
@@ -764,6 +834,7 @@ export default function ChatScreen() {
           onClose={() => setPanelOpen(false)}
           currentChatID={chatID}
           onSelectChat={handleSelectChat}
+          getToken={getToken}
         />
       </View>
     </View>

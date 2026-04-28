@@ -66,14 +66,19 @@ namespace MyApp.API.Controllers
           return BadRequest("Title is required.");
         }
 
+        if (chat.TripId <= 0)
+        {
+          return BadRequest("Trip ID is required.");
+        }
+
         if (!_chatService.TripExists(chat.TripId))
         {
           return BadRequest("Trip not found.");
         }
 
-        // Set the creator to the authenticated user
+        // Set the creator to the authenticated user's email
         chat.CreatorId = user.Email;
-        
+
         var createdChat = _chatService.CreateChat(chat);
         return CreatedAtAction(nameof(GetChatById), new { id = createdChat.Id }, createdChat);
       }
@@ -90,25 +95,71 @@ namespace MyApp.API.Controllers
     [HttpPut("{id}")]
     public IActionResult UpdateChat(int id, [FromBody] Chat chat)
     {
-      var updatedChat = _chatService.UpdateChat(id, chat);
-      if (updatedChat == null)
+      try
       {
-        return NotFound();
-      }
+        var existingChat = _chatService.GetChatById(id);
+        if (existingChat == null)
+        {
+          return NotFound();
+        }
 
-      return Ok(updatedChat);
+        var user = GetAuthenticatedUser();
+        if (existingChat.CreatorId != user.Email)
+        {
+          return Forbid("Only the chat creator can edit this chat.");
+        }
+
+        var updatedChat = _chatService.UpdateChat(id, chat);
+        return Ok(updatedChat);
+      }
+      catch (UnauthorizedAccessException)
+      {
+        return Unauthorized();
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = ex.Message });
+      }
     }
 
     [HttpDelete("{id}")]
     public IActionResult DeleteChat(int id)
     {
-      var success = _chatService.DeleteChat(id);
-      if (!success)
+      try
       {
-        return NotFound();
-      }
+        var chat = _chatService.GetChatById(id);
+        if (chat == null)
+        {
+          return NotFound();
+        }
 
-      return NoContent();
+        var user = GetAuthenticatedUser();
+        
+        // Case-insensitive email comparison
+        if (!string.Equals(chat.CreatorId, user.Email, System.StringComparison.OrdinalIgnoreCase))
+        {
+          Console.WriteLine($"[ChatController.DeleteChat] Permission denied: chat creator '{chat.CreatorId}' != user email '{user.Email}'");
+          return Forbid("Only the chat creator can delete this chat.");
+        }
+
+        Console.WriteLine($"[ChatController.DeleteChat] User '{user.Email}' authorized to delete chat {id}");
+        var success = _chatService.DeleteChat(id);
+        if (!success)
+        {
+          return NotFound();
+        }
+
+        return NoContent();
+      }
+      catch (UnauthorizedAccessException)
+      {
+        return Unauthorized();
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"[ChatController.DeleteChat] Error: {ex.Message}");
+        return StatusCode(500, new { error = ex.Message });
+      }
     }
   }
 }

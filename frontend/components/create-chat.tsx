@@ -22,19 +22,26 @@ interface Trip {
 }
 
 interface ChatParticipant {
+  userId: number;
   email: string;
+  name: string;
   type: 'participant' | 'invitation';
 }
 
 export default function CreateChatScreen() {
-  const { getToken } = useAuth();
+  const { getToken, user: clerkUser } = useAuth();
   const router = useRouter();
+  const getTokenRef = React.useRef(getToken);
+
+  React.useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   const [title, setTitle] = useState('');
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null);
   const [participants, setParticipants] = useState<ChatParticipant[]>([]);
-  const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
+  const [selectedParticipants, setSelectedParticipants] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -48,7 +55,7 @@ export default function CreateChatScreen() {
         setLoading(true);
         setError(null);
 
-        const token = await getToken({ template: "RollCallAuth" });
+        const token = await getTokenRef.current({ template: "RollCallAuth" });
         const response = await fetch(`${API_BASE_URL}/api/trips/my`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -78,10 +85,16 @@ export default function CreateChatScreen() {
 
       try {
         setLoadingParticipants(true);
+        const token = await getTokenRef.current({ template: "RollCallAuth" });
 
-        // Fetch accepted participants
+        // Fetch accepted participants with email
         const participantsResponse = await fetch(
-          `${API_BASE_URL}/api/participants/trip/${selectedTripId}`
+          `${API_BASE_URL}/api/participants/trip/${selectedTripId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
         const participantsData = participantsResponse.ok
           ? await participantsResponse.json()
@@ -89,30 +102,41 @@ export default function CreateChatScreen() {
 
         // Fetch pending invitations
         const invitationsResponse = await fetch(
-          `${API_BASE_URL}/api/invitations?tripId=${selectedTripId}`
+          `${API_BASE_URL}/api/invitations?tripId=${selectedTripId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
         const invitationsData = invitationsResponse.ok
           ? await invitationsResponse.json()
           : [];
 
         // Combine participants and invitations
-        const participantMap = new Map<string, ChatParticipant>();
+        const participantMap = new Map<number, ChatParticipant>();
 
-        // Add participants (accepted)
+        // Add participants
         participantsData.forEach((p: any) => {
-          if (p.userID && !participantMap.has(p.userID)) {
-            participantMap.set(p.userID, {
-              email: p.userID,
+          if (p.userId && !participantMap.has(p.userId)) {
+            participantMap.set(p.userId, {
+              userId: p.userId,
+              email: p.email || '',
+              name: p.name || p.email || 'Unknown',
               type: 'participant',
             });
           }
         });
 
-        // Add invitations (pending)
+        // Add invitations
         invitationsData.forEach((inv: any) => {
-          if (!participantMap.has(inv.userEmail)) {
-            participantMap.set(inv.userEmail, {
-              email: inv.userEmail,
+          const email = inv.email || inv.userEmail;
+          const tempId = -Math.abs(email.charCodeAt(0)) - Math.random() * 1000;
+          if (!participantMap.has(tempId)) {
+            participantMap.set(tempId, {
+              userId: tempId,
+              email: email,
+              name: email.split('@')[0],
               type: 'invitation',
             });
           }
@@ -130,13 +154,13 @@ export default function CreateChatScreen() {
     fetchParticipants();
   }, [selectedTripId]);
 
-  const toggleParticipant = useCallback((email: string) => {
+  const toggleParticipant = useCallback((userId: number) => {
     setSelectedParticipants((prev) => {
       const updated = new Set(prev);
-      if (updated.has(email)) {
-        updated.delete(email);
+      if (updated.has(userId)) {
+        updated.delete(userId);
       } else {
-        updated.add(email);
+        updated.add(userId);
       }
       return updated;
     });
@@ -160,51 +184,88 @@ export default function CreateChatScreen() {
 
     try {
       setCreating(true);
-      const token = await getToken({ template: "RollCallAuth" });
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
 
       // Create chat
+      const chatPayload = {
+        tripId: selectedTripId,
+        title: title.trim(),
+      };
+      
+      console.log('Creating chat with payload:', chatPayload);
+
       const chatResponse = await fetch(`${API_BASE_URL}/api/chats`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          tripId: selectedTripId,
-          title: title.trim(),
-        }),
+        body: JSON.stringify(chatPayload),
       });
 
+      const responseText = await chatResponse.text();
+      console.log('Chat response status:', chatResponse.status);
+      console.log('Chat response body:', responseText);
+
       if (!chatResponse.ok) {
-        throw new Error('Failed to create chat');
+        throw new Error(`Failed to create chat: ${chatResponse.status} - ${responseText}`);
       }
 
-      const chat = await chatResponse.json();
+      let chat;
+      try {
+        chat = JSON.parse(responseText);
+      } catch (parseErr) {
+        throw new Error(`Failed to parse chat response: ${responseText}`);
+      }
 
-      // Add participants to chat
-      for (const email of selectedParticipants) {
-        try {
-          await fetch(`${API_BASE_URL}/api/chat-participants`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              chatId: chat.id,
-              userEmail: email,
-            }),
-          });
-        } catch (err) {
-          console.error(`Failed to add participant ${email}:`, err);
+      // Get the creator's userId from the participants list
+      const creatorEmail = clerkUser?.primaryEmailAddress?.emailAddress;
+      let creatorUserId: number | null = null;
+
+      if (creatorEmail && participants.length > 0) {
+        const creatorParticipant = participants.find(
+          p => p.email.toLowerCase() === creatorEmail.toLowerCase()
+        );
+        if (creatorParticipant) {
+          creatorUserId = creatorParticipant.userId;
+        }
+      }
+
+      // Add participants to chat using userId
+      const userIdsToAdd = Array.from(selectedParticipants);
+      
+      // Ensure creator is added as a participant (if they have a valid userId)
+      if (creatorUserId && creatorUserId > 0 && !userIdsToAdd.includes(creatorUserId)) {
+        userIdsToAdd.push(creatorUserId);
+      }
+
+      for (const userId of userIdsToAdd) {
+        // Skip negative IDs (pending invitations)
+        if (userId > 0) {
+          try {
+            await fetch(`${API_BASE_URL}/api/chat-participants`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                chatId: chat.id,
+                userId: userId,
+              }),
+            });
+          } catch (err) {
+            console.error(`Failed to add participant ${userId}:`, err);
+          }
         }
       }
 
       Alert.alert('Success', 'Chat created successfully');
-      router.back();
+      router.replace("/(app)/(tabs)/chats");
     } catch (err) {
-      console.error('Failed to create chat:', err);
-      Alert.alert('Error', 'Failed to create chat');
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error('Failed to create chat:', errorMessage);
+      Alert.alert('Error', errorMessage);
     } finally {
       setCreating(false);
     }
@@ -311,25 +372,25 @@ export default function CreateChatScreen() {
               <FlatList
                 scrollEnabled={false}
                 data={participants}
-                keyExtractor={(item) => item.email}
+                keyExtractor={(item) => item.userId.toString()}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.participantItem}
-                    onPress={() => toggleParticipant(item.email)}
+                    onPress={() => toggleParticipant(item.userId)}
                     disabled={creating}
                   >
                     <View
                       style={[
                         styles.checkbox,
-                        selectedParticipants.has(item.email) && styles.checkboxChecked,
+                        selectedParticipants.has(item.userId) && styles.checkboxChecked,
                       ]}
                     >
-                      {selectedParticipants.has(item.email) && (
+                      {selectedParticipants.has(item.userId) && (
                         <Text style={styles.checkboxMark}>✓</Text>
                       )}
                     </View>
                     <View style={styles.participantInfo}>
-                      <Text style={styles.participantEmail}>{item.email}</Text>
+                      <Text style={styles.participantEmail}>{item.name}</Text>
                       <Text style={styles.participantType}>
                         {item.type === 'participant' ? '✓ Accepted' : '◐ Invited'}
                       </Text>

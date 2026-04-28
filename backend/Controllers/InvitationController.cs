@@ -52,6 +52,12 @@ namespace MyApp.API.Controllers
                 return Forbid();
             }
 
+            // SECURITY: Organizer cannot invite themselves
+            if (invitation.Email.Equals(user.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { error = "You cannot invite yourself to this trip. You are already a participant as the organizer." });
+            }
+
             return Ok(_invitationService.AddInvitation(invitation));
         }
 

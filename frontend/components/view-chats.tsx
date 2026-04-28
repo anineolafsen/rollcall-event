@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@clerk/expo';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -18,15 +20,15 @@ const CACHE_TTL = 60 * 1000; // Cache for 60 seconds
 const REFRESH_DEBOUNCE = 2 * 1000; // Prevent refreshes within 2 seconds
 
 interface Chat {
-  chatID: number;
-  tripID: number;
+  id: number;
+  tripId: number;
   title: string;
-  creatorID: string;
+  creatorId: string;
   createdAt: string;
 }
 
 interface Trip {
-  tripID: number;
+  id: number;
   name: string;
 }
 
@@ -42,6 +44,7 @@ interface CacheData {
 
 export function ViewChatsScreen() {
   const router = useRouter();
+  const { getToken } = useAuth();
   const [chatsWithTrips, setChatsWithTrips] = useState<ChatWithTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,51 +60,75 @@ export function ViewChatsScreen() {
     return age < CACHE_TTL;
   };
 
+  const showToast = (message: string) => {
+    // Only show toast on native platforms, not web
+    if (typeof ToastAndroid !== 'undefined' && ToastAndroid.show) {
+      ToastAndroid.show(message, ToastAndroid.SHORT);
+    }
+  };
+
   const fetchChats = useCallback(async (forceRefresh = false) => {
     try {
       const now = Date.now();
       
+      console.log('🔄 fetchChats called with forceRefresh:', forceRefresh);
+      
       // Check cache and debounce
       if (!forceRefresh && isCacheValid() && (now - lastRefreshRef.current) < REFRESH_DEBOUNCE) {
-        // Use cache - show toast to user
+        console.log('⚡ Using cached data (debounced)');
         setChatsWithTrips(cacheRef.current!.data);
-        ToastAndroid.show('Using cached data (updated 60s ago)', ToastAndroid.SHORT);
+        showToast('Using cached data (updated 60s ago)');
         return;
       }
 
       // Use cache if valid and not force refreshing
       if (!forceRefresh && isCacheValid()) {
+        console.log('⚡ Using valid cached data');
         setChatsWithTrips(cacheRef.current!.data);
         setLastUpdated(cacheRef.current!.timestamp);
-        ToastAndroid.show('Using recent data', ToastAndroid.SHORT);
+        showToast('Using recent data');
         return;
       }
+
+      console.log('🌐 Fetching fresh data from server...');
 
       setError(null);
       lastRefreshRef.current = now;
 
+      // Get authentication token
+      const token = await getToken({ template: 'RollCallAuth' });
+      console.log('🔐 Token acquired for API calls');
+
       // Fetch all trips first
-      const tripsResponse = await fetch(`${API_BASE_URL}/api/trips`);
+      const tripsResponse = await fetch(`${API_BASE_URL}/api/trips/my`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const trips: Trip[] = tripsResponse.ok ? await tripsResponse.json() : [];
+      console.log('✅ Fetched trips:', trips);
 
-      // For each trip, fetch its chats
+      // Fetch all chats in parallel instead of sequentially
       const allChats: ChatWithTrip[] = [];
+      
+      const chatPromises = trips.map(trip =>
+        fetch(`${API_BASE_URL}/api/chats/trip/${trip.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then(chatsResponse => chatsResponse.text())
+          .then(chatsText => {
+            console.log(`📌 Chats for trip ${trip.id} (${trip.name}):`, chatsText);
+            const chats: Chat[] = chatsText ? JSON.parse(chatsText) : [];
+            return chats.map(chat => ({ chat, trip }));
+          })
+          .catch(err => {
+            console.error(`❌ Failed to fetch chats for trip ${trip.id}:`, err);
+            return [];
+          })
+      );
 
-      for (const trip of trips) {
-        try {
-          const chatsResponse = await fetch(`${API_BASE_URL}/api/chats/trip/${trip.tripID}`);
-          const chats: Chat[] = chatsResponse.ok ? await chatsResponse.json() : [];
+      const chatResults = await Promise.all(chatPromises);
+      chatResults.forEach(chats => allChats.push(...chats));
 
-          chats.forEach((chat) => {
-            allChats.push({
-              chat,
-              trip,
-            });
-          });
-        } catch (err) {
-          console.error(`Failed to fetch chats for trip ${trip.tripID}:`, err);
-        }
-      }
+      console.log('📊 Total chats collected:', allChats.length);
 
       // Sort by creation date (newest first)
       allChats.sort((a, b) => {
@@ -116,16 +143,19 @@ export function ViewChatsScreen() {
         timestamp: now,
       };
 
+      console.log('💾 Updated cache with', allChats.length, 'chats');
+      console.log('📋 Chat list:', allChats.map(c => ({ id: c.chat.id, title: c.chat.title, trip: c.trip?.name })));
+
       setChatsWithTrips(allChats);
       setLastUpdated(now);
     } catch (err) {
-      console.error('Failed to fetch chats:', err);
+      console.error('❌ Failed to fetch chats:', err);
       
       // If we have cached data, use it even if expired
       if (cacheRef.current) {
         setChatsWithTrips(cacheRef.current.data);
         setError('Network error. Showing cached data.');
-        ToastAndroid.show('Network error. Showing cached data.', ToastAndroid.LONG);
+        showToast('Network error. Showing cached data.');
       } else {
         setError('Could not load chats. Please try again.');
       }
@@ -133,11 +163,27 @@ export function ViewChatsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [getToken]);
 
   useEffect(() => {
     fetchChats(false);
   }, [fetchChats]);
+
+  // Refetch chats when screen comes into focus (after creating a chat)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('📱 Screen focused - checking if cache needs refresh');
+      // Only force refresh if cache is expired, otherwise use cached data
+      const now = Date.now();
+      if (cacheRef.current && (now - cacheRef.current.timestamp) < CACHE_TTL) {
+        console.log('⚡ Cache still valid, skipping refresh');
+        return () => {};
+      }
+      console.log('🔄 Cache expired or missing, fetching fresh data');
+      fetchChats(true); // Only force refresh if cache is stale
+      return () => {}; // Cleanup function
+    }, [fetchChats])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -184,7 +230,7 @@ export function ViewChatsScreen() {
   };
 
   const renderChat = ({ item }: { item: ChatWithTrip }) => (
-    <TouchableOpacity onPress={() => router.push(`/(app)/(tabs)/chats/${item.chat.chatID}` as any)}>
+    <TouchableOpacity onPress={() => router.push(`/(app)/(tabs)/chats/${item.chat.id}` as any)}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.chatInfo}>
@@ -200,7 +246,7 @@ export function ViewChatsScreen() {
 
         <View style={styles.cardMeta}>
           <Text style={styles.createdBy}>
-            Created by {item.chat.creatorID.split('@')[0]}
+            Created by {item.chat.creatorId.split('@')[0]}
           </Text>
         </View>
       </View>
@@ -237,7 +283,7 @@ export function ViewChatsScreen() {
         ) : (
           <FlatList
             data={chatsWithTrips}
-            keyExtractor={(item) => item.chat.chatID.toString()}
+            keyExtractor={(item) => item.chat.id.toString()}
             renderItem={renderChat}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}

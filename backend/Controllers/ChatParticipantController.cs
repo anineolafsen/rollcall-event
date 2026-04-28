@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace MyApp.API.Controllers
 {
+  public record AddChatParticipantRequest(int ChatId, int UserId);
+  public record AddChatParticipantByEmailRequest(int ChatId, string UserEmail);
+
   [ApiController]
   [Route("api/chat-participants")]
   [Authorize]
@@ -12,11 +15,13 @@ namespace MyApp.API.Controllers
   {
     private readonly ChatParticipantService _participantService;
     private readonly ChatService _chatService;
+    private readonly UserService _userService;
 
-    public ChatParticipantController(ChatParticipantService participantService, ChatService chatService)
+    public ChatParticipantController(ChatParticipantService participantService, ChatService chatService, UserService userService)
     {
       _participantService = participantService;
       _chatService = chatService;
+      _userService = userService;
     }
 
     [HttpGet("chat/{chatId}")]
@@ -33,7 +38,37 @@ namespace MyApp.API.Controllers
     }
 
     [HttpPost]
-    public IActionResult AddParticipant([FromBody] ChatParticipant request)
+    public IActionResult AddParticipant([FromBody] AddChatParticipantRequest request)
+    {
+      try
+      {
+        if (request.UserId <= 0)
+        {
+          return BadRequest("UserId is required.");
+        }
+
+        var chat = _chatService.GetChatById(request.ChatId);
+        if (chat == null)
+        {
+          return BadRequest("Chat not found.");
+        }
+
+        if (_participantService.ParticipantExistsByUserId(request.ChatId, request.UserId))
+        {
+          return BadRequest("User is already a participant in this chat.");
+        }
+
+        var participant = _participantService.AddParticipantByUserId(request.ChatId, request.UserId);
+        return CreatedAtAction(nameof(GetParticipantsByChat), new { chatId = request.ChatId }, participant);
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = ex.Message });
+      }
+    }
+
+    [HttpPost("by-email")]
+    public IActionResult AddParticipantByEmail([FromBody] AddChatParticipantByEmailRequest request)
     {
       try
       {
@@ -48,12 +83,19 @@ namespace MyApp.API.Controllers
           return BadRequest("Chat not found.");
         }
 
-        if (_participantService.ParticipantExists(request.ChatId, request.UserEmail))
+        // Look up user by email
+        var user = _userService.GetByEmail(request.UserEmail);
+        if (user == null)
+        {
+          return BadRequest("User not found.");
+        }
+
+        if (_participantService.ParticipantExistsByUserId(request.ChatId, user.Id))
         {
           return BadRequest("User is already a participant in this chat.");
         }
 
-        var participant = _participantService.AddParticipant(request.ChatId, request.UserEmail);
+        var participant = _participantService.AddParticipantByUserId(request.ChatId, user.Id);
         return CreatedAtAction(nameof(GetParticipantsByChat), new { chatId = request.ChatId }, participant);
       }
       catch (Exception ex)

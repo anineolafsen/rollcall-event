@@ -32,9 +32,27 @@ namespace MyApp.API.Services
 
     public Chat CreateChat(Chat chat)
     {
-      _context.Chats.Add(chat);
-      _context.SaveChanges();
-      return chat;
+      try
+      {
+        if (chat == null)
+          throw new ArgumentNullException(nameof(chat));
+        
+        if (string.IsNullOrWhiteSpace(chat.Title))
+          throw new ArgumentException("Chat title cannot be empty.");
+        
+        if (chat.TripId <= 0)
+          throw new ArgumentException("Invalid trip ID.");
+
+        _context.Chats.Add(chat);
+        _context.SaveChanges();
+        return chat;
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"[ChatService.CreateChat] Error: {ex.Message}");
+        Console.WriteLine($"[ChatService.CreateChat] Stack trace: {ex.StackTrace}");
+        throw;
+      }
     }
 
     public Chat? UpdateChat(int chatId, Chat updatedChat)
@@ -52,15 +70,27 @@ namespace MyApp.API.Services
 
     public bool DeleteChat(int chatId)
     {
-      var chat = _context.Chats.FirstOrDefault(c => c.Id == chatId);
-      if (chat == null)
+      try
       {
-        return false;
-      }
+        var chat = _context.Chats.FirstOrDefault(c => c.Id == chatId);
+        if (chat == null)
+        {
+          Console.WriteLine($"[ChatService.DeleteChat] Chat {chatId} not found");
+          return false;
+        }
 
-      _context.Chats.Remove(chat);
-      _context.SaveChanges();
-      return true;
+        Console.WriteLine($"[ChatService.DeleteChat] Deleting chat {chatId}: {chat.Title}");
+        _context.Chats.Remove(chat);
+        _context.SaveChanges();
+        Console.WriteLine($"[ChatService.DeleteChat] Successfully deleted chat {chatId}");
+        return true;
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"[ChatService.DeleteChat] Error deleting chat {chatId}: {ex.Message}");
+        Console.WriteLine($"[ChatService.DeleteChat] Stack trace: {ex.StackTrace}");
+        throw;
+      }
     }
   }
 }

@@ -19,5 +19,8 @@ namespace MyApp.API.Models
 
     [JsonIgnore]
     public ICollection<Participant> Participants { get; set; } = new List<Participant>();
+
+    [JsonIgnore]
+    public ICollection<Chat> Chats { get; set; } = new List<Chat>();
   }
 }

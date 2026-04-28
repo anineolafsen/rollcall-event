@@ -1,5 +1,6 @@
 using MyApp.API.Data;
 using MyApp.API.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace MyApp.API.Services
 {
@@ -40,6 +41,17 @@ namespace MyApp.API.Services
       return participant;
     }
 
+    public ChatParticipant? AddParticipantByUserId(int chatId, int userId)
+    {
+      var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+      if (user == null)
+      {
+        throw new InvalidOperationException("User not found.");
+      }
+
+      return AddParticipant(chatId, user.Email);
+    }
+
     public bool RemoveParticipant(int chatId, string userEmail)
     {
       var participant = _context.ChatParticipants
@@ -59,6 +71,17 @@ namespace MyApp.API.Services
     {
       return _context.ChatParticipants
         .Any(cp => cp.ChatId == chatId && cp.UserEmail == userEmail);
+    }
+
+    public bool ParticipantExistsByUserId(int chatId, int userId)
+    {
+      var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+      if (user == null)
+      {
+        return false;
+      }
+
+      return ParticipantExists(chatId, user.Email);
     }
   }
 }

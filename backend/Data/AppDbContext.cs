@@ -96,6 +96,22 @@ namespace MyApp.API.Data
 
       modelBuilder.Entity<EventCheckinSession>()
         .HasIndex(session => new { session.EventID, session.SessionType, session.IsActive });
+
+      // Chat relationships
+      modelBuilder.Entity<Chat>()
+        .HasOne<Trip>()
+        .WithMany(t => t.Chats)
+        .HasForeignKey(c => c.TripId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      // ChatMessage relationships
+      modelBuilder.Entity<ChatMessage>()
+        .HasOne<Chat>()
+        .WithMany()
+        .HasForeignKey(cm => cm.ChatId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      // ChatParticipant already has HasKey configured above
     }
   }
 }

@@ -13,10 +13,9 @@ namespace MyApp.API.Models
         public int TripId { get; set; }
         
         [Required]
-        public string CreatorId { get; set; } = string.Empty;
-        
-        [Required]
         public string Title { get; set; } = string.Empty;
+
+        public string CreatorId { get; set; } = string.Empty;
         
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

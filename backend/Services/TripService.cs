@@ -26,6 +26,26 @@ namespace MyApp.API.Services
         .ToList();
     }
 
+    public List<object> GetTripsWithOrganizerStatusByUser(int userId)
+    {
+      // Single query: fetch trips with organizer status in one go
+      return _context.Trips
+        .Where(t => t.Participants.Any(p => p.UserId == userId))
+        .Select(t => new {
+          t.Id,
+          t.Name,
+          t.StartDate,
+          t.EndDate,
+          t.Destination,
+          t.Description,
+          IsOrganizer = t.Participants
+            .Where(p => p.UserId == userId && p.IsOrganizer)
+            .Any()
+        })
+        .Cast<object>()
+        .ToList();
+    }
+
     public bool UserHasAccessToTrip(int tripId, int userId)
     {
       // Check if the user is a participant of that specific trip
