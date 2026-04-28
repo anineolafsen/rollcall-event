@@ -37,6 +37,7 @@ export default function Home() {
   const { getToken } = useAuth();
   const { width } = useWindowDimensions();
   const selectedTripId = useMobileTripStore((state) => state.selectedTripId);
+  const selectedTripName = useMobileTripStore((state) => state.selectedTripName);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
   const showMobileHeaderDivider = !isDesktopWeb;
   const showMobileOrganizerTabs = !isDesktopWeb;
@@ -80,7 +81,11 @@ export default function Home() {
       return null;
     }
 
-    return trips.find((trip) => trip.id === selectedTripId) ?? trips[0];
+    if (selectedTripId == null) {
+      return trips[0];
+    }
+
+    return trips.find((trip) => trip.id === selectedTripId) ?? null;
   }, [selectedTripId, trips]);
 
   const organizerTabs = useMemo(() => {
@@ -169,7 +174,7 @@ export default function Home() {
         <View style={styles.mainContent}>
           <View style={styles.titleSection}>
             <Text style={styles.title}>
-              {activeTrip ? activeTrip.name : 'Trip description'}
+              {activeTrip?.name ?? selectedTripName ?? 'Trip description'}
             </Text>
             {showMobileHeaderDivider ? <View style={styles.titleDivider} /> : null}
           </View>

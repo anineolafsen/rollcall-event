@@ -51,7 +51,7 @@ export default function TripDetails() {
 
         const data: Trip = await response.json();
         setTrip(data);
-        setSelectedTrip({ id: data.id, isOrganizer: data.isOrganizer });
+        setSelectedTrip({ id: data.id, name: data.name, isOrganizer: data.isOrganizer });
       } catch {
         setError('Could not load trip details.');
       } finally {

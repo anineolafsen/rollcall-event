@@ -122,7 +122,7 @@ export function ViewTripsScreen() {
   const renderTrip = ({ item }: { item: Trip }) => (
     <Pressable
       onPress={() => {
-        setSelectedTrip({ id: item.id, isOrganizer: Boolean(item.isOrganizer) });
+        setSelectedTrip({ id: item.id, name: item.name, isOrganizer: Boolean(item.isOrganizer) });
         if (isDesktopWeb) {
           router.push(`/trips/${item.id}`);
           return;
