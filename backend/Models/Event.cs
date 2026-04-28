@@ -16,6 +16,7 @@ namespace MyApp.API.Models
     public int? Capacity { get; set; }
     public bool HasUnlimitedCapacity { get; set; }
     public required string AttendanceMode { get; set; }
+    public bool IsEmergency { get; set; } = false;
     public int TripId { get; set; }
 
     [JsonIgnore]

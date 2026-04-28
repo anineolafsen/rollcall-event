@@ -21,6 +21,7 @@ export function EventCard({
   actionVariant = 'join',
 }: EventCardProps) {
   const isStartingSoon = isEventWithinNext24Hours(event);
+  const isEmergency = Boolean(event.isEmergency);
 
   const tripTotal = event.tripParticipantCount ?? 0;
   const joinedCount = event.participantCount ?? 0;
@@ -40,20 +41,41 @@ export function EventCard({
   })();
 
   return (
-    <View style={[styles.card, isStartingSoon && styles.cardSoon]}>
+    <View
+      style={[
+        styles.card,
+        isEmergency
+          ? styles.cardEmergency
+          : isStartingSoon && styles.cardSoon,
+      ]}
+    >
       <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
         <View style={styles.cardHeader}>
           <View style={styles.headingBlock}>
+            {isEmergency ? (
+              <View style={styles.emergencyBadge}>
+                <Text style={styles.emergencyBadgeText}>EMERGENCY</Text>
+              </View>
+            ) : null}
+
             <Text style={styles.eventName}>{event.name}</Text>
           </View>
-          {isStartingSoon ? (
+
+          {isStartingSoon && !isEmergency ? (
             <View style={styles.soonBadge}>
               <Text style={styles.soonBadgeText}>Within 24h</Text>
             </View>
           ) : null}
         </View>
 
-        <View style={[styles.cardDivider, isStartingSoon && styles.cardDividerSoon]} />
+        <View
+          style={[
+            styles.cardDivider,
+            isEmergency
+              ? styles.cardDividerEmergency
+              : isStartingSoon && styles.cardDividerSoon,
+          ]}
+        />
 
         <View style={styles.metaBlock}>
           <View style={styles.metaRow}>
@@ -84,6 +106,7 @@ export function EventCard({
             actionVariant === 'leave' && styles.actionButtonLeave,
             actionVariant === 'mandatory' && styles.actionButtonMandatory,
             actionVariant === 'updating' && styles.actionButtonUpdating,
+            isEmergency && styles.actionButtonEmergency,
             actionDisabled && styles.actionButtonDisabled,
           ]}
           onPress={onActionPress}
@@ -127,6 +150,10 @@ const styles = StyleSheet.create({
     },
     elevation: 3,
   },
+  cardEmergency: {
+    backgroundColor: '#fde8e8',
+    borderColor: '#e03131',
+  },
   cardHeader: {
     marginBottom: 8,
     flexDirection: 'row',
@@ -136,6 +163,19 @@ const styles = StyleSheet.create({
   },
   headingBlock: {
     flex: 1,
+  },
+  emergencyBadge: {
+    backgroundColor: '#e03131',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  emergencyBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
   },
   eventName: {
     fontSize: 18,
@@ -164,6 +204,9 @@ const styles = StyleSheet.create({
   },
   cardDividerSoon: {
     backgroundColor: '#c78300',
+  },
+  cardDividerEmergency: {
+    backgroundColor: '#e03131',
   },
   metaBlock: {
     gap: 10,
@@ -236,6 +279,9 @@ const styles = StyleSheet.create({
   actionButtonUpdating: {
     backgroundColor: '#a9b7c4',
     borderColor: '#7e8d9a',
+  },
+  actionButtonEmergency: {
+    borderColor: '#e03131',
   },
   actionButtonDisabled: {
     opacity: 0.6,

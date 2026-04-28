@@ -12,6 +12,7 @@ import {
   Platform,
   Modal,
   TextInput,
+  Image,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
 
@@ -460,13 +461,28 @@ export function UpcomingEventsScreen({
 
         {/* SECURITY: Only show Create button if user is an organizer */}
         {tripId && isOrganizer ? (
-          <AppButton
-            variant="create"
-            style={styles.createButtonTop}
-            textStyle={styles.createButtonText}
-            label="Create event +"
-            onPress={() => router.push(`/events/create?tripId=${tripId}`)}
-          />
+          <View style={styles.createRow}>
+            <AppButton
+              variant="create"
+              style={styles.createButtonTop}
+              textStyle={styles.createButtonText}
+              label="Create event +"
+              onPress={() => router.push(`/events/create?tripId=${tripId}`)}
+            />
+
+            <TouchableOpacity
+              style={styles.emergencyButton}
+              onPress={() =>
+                router.push(`/events/create?tripId=${tripId}&emergency=true`)
+              }
+            >
+              <Image
+                source={require('@/assets/images/siren.png')}
+                style={{ width: '100%', height: '100%', borderRadius: 10 }}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+          </View>
         ) : null}
 
         <View style={styles.timelineSection}>
@@ -686,5 +702,23 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     color: '#7a9ab8',
     fontSize: 13,
-  },  
+  }, 
+  createRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+
+  emergencyButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+
+  emergencyIcon: {
+    fontSize: 26,
+  }, 
 });
