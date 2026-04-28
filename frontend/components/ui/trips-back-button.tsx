@@ -1,24 +1,41 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { usePathname, useRouter } from 'expo-router';
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { Platform, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 export function TripsBackButton() {
   const pathname = usePathname();
   const router = useRouter();
+  const { tripId } = useLocalSearchParams<{ tripId?: string }>();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
+  const isEventDetailsRoute = Boolean(pathname?.match(/^\/events\/[^/]+$/));
 
   if (!pathname || pathname === '/trips' || isDesktopWeb) {
     return null;
   }
 
+  const handleBack = () => {
+    if (isEventDetailsRoute) {
+      if (tripId) {
+        setSelectedTrip({ id: Number(tripId) });
+      }
+      router.replace('/events');
+      return;
+    }
+
+    router.replace('/trips');
+  };
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Back to trips"
-      onPress={() => router.replace('/trips')}
+      onPress={handleBack}
       style={[
         styles.button,
         {

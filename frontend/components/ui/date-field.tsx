@@ -81,23 +81,6 @@ export function DateField({
   const webInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (Platform.OS === 'web' && isOpen) {
-      const input = webInputRef.current;
-
-      if (!input) {
-        return;
-      }
-
-      if (typeof input.showPicker === 'function') {
-        input.showPicker();
-      } else {
-        input.focus();
-        input.click();
-      }
-
-      return;
-    }
-
     if (Platform.OS === 'android' && isOpen) {
       const currentValue = parseDateValue(value);
 
@@ -147,13 +130,39 @@ export function DateField({
     onChange(formatDateValue(selectedDate));
   };
 
+  const handlePress = () => {
+    if (Platform.OS === 'web') {
+      const input = webInputRef.current;
+
+      if (!input) {
+        return;
+      }
+
+      input.focus();
+
+      try {
+        if (typeof input.showPicker === 'function') {
+          input.showPicker();
+          return;
+        }
+      } catch {
+        // Fall back to click for browsers that restrict showPicker.
+      }
+
+      input.click();
+      return;
+    }
+
+    onToggle();
+  };
+
   return (
     <View style={styles.container}>
       <FormField
         label={label}
         placeholder={placeholder}
         value={formatDisplayValue(value)}
-        onPress={onToggle}
+        onPress={handlePress}
         error={error}
         rightAdornment={<IconSymbol name="calendar" size={18} color="#5f84a3" />}
       />
