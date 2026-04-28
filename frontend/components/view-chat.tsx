@@ -35,6 +35,13 @@ type Message = {
   timestamp: string;
 };
 
+type UserInfo = {
+  id: number;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+};
+
 interface ChatData {
   id: number;
   title: string;
@@ -100,22 +107,18 @@ function formatDate(dateStr: string): string {
   }
 }
 
-// Derive two-letter initials from an email address
-function getInitials(email: string): string {
-  return email
-    .split("@")[0]
-    .split(/[._]/)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+// Generate two-letter initials from first and last name
+function getInitialsFromName(firstName: string | null, lastName: string | null): string {
+  const first = (firstName || "").trim().charAt(0).toUpperCase();
+  const last = (lastName || "").trim().charAt(0).toUpperCase();
+  return (first + last).slice(0, 2) || "?";
 }
 
 // Circular avatar showing initials
-function Avatar({ email, isOwn }: { email: string; isOwn: boolean }) {
+function Avatar({ firstName, lastName, isOwn }: { firstName: string | null; lastName: string | null; isOwn: boolean }) {
   return (
     <View style={[styles.avatar, isOwn && styles.avatarOwn]}>
-      <Text style={styles.avatarText}>{getInitials(email)}</Text>
+      <Text style={styles.avatarText}>{getInitialsFromName(firstName, lastName)}</Text>
     </View>
   );
 }
@@ -125,11 +128,13 @@ function MessageBubble({
   isOwn,
   onDelete,
   onEdit,
+  userInfo,
 }: {
   message: Message;
   isOwn: boolean;
   onDelete: (messageId: number) => void;
   onEdit: (messageId: number, newText: string) => void;
+  userInfo: UserInfo | null;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -142,6 +147,8 @@ function MessageBubble({
     setIsEditing(false);
   };
 
+  const displayName = userInfo ? `${userInfo.firstName || ""} ${userInfo.lastName || ""}`.trim() : message.senderEmail.split("@")[0];
+
   return (
     <View>
       {/* Message row: avatar + bubble + timestamp (+ menu for own messages) */}
@@ -149,9 +156,9 @@ function MessageBubble({
         {/* Other user: avatar on the left */}
         {!isOwn && (
           <View style={styles.senderColumn}>
-            <Avatar email={message.senderEmail} isOwn={false} />
+            <Avatar firstName={userInfo?.firstName || null} lastName={userInfo?.lastName || null} isOwn={false} />
             <Text style={styles.avatarName}>
-              {message.senderEmail.split("@")[0]}
+              {displayName}
             </Text>
           </View>
         )}
@@ -222,7 +229,7 @@ function MessageBubble({
 
         {isOwn && (
           <View style={styles.senderColumn}>
-            <Avatar email={message.senderEmail} isOwn={true} />
+            <Avatar firstName={userInfo?.firstName || null} lastName={userInfo?.lastName || null} isOwn={true} />
             <Text style={[styles.avatarName, styles.avatarNameOwn]}>You</Text>
           </View>
         )}
@@ -550,9 +557,53 @@ export default function ChatScreen() {
   const [error, setError] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
+  const [userCache, setUserCache] = useState<Record<string, UserInfo>>({});
 
   const chatID = id ? Number(id) : null;
   const currentUserEmail = user?.primaryEmailAddress?.emailAddress;
+  const userCacheRef = useRef<Record<string, UserInfo>>({});
+  const fetchingRef = useRef<Set<string>>(new Set());
+
+  // Update ref when cache changes
+  useEffect(() => {
+    userCacheRef.current = userCache;
+  }, [userCache]);
+
+  // Fetch user details by email
+  const fetchUserByEmail = useCallback(async (email: string) => {
+    if (userCacheRef.current[email]) {
+      return userCacheRef.current[email];
+    }
+
+    // Prevent duplicate fetch requests
+    if (fetchingRef.current.has(email)) {
+      return null;
+    }
+
+    fetchingRef.current.add(email);
+
+    try {
+      const token = await getToken({ template: 'RollCallAuth' });
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const users: UserInfo[] = await response.json();
+        const userByEmail = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (userByEmail) {
+          setUserCache(prev => ({ ...prev, [email]: userByEmail }));
+          return userByEmail;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch user:", err);
+    } finally {
+      fetchingRef.current.delete(email);
+    }
+    
+    return null;
+  }, [getToken]);
 
   useEffect(() => {
     const fetchChatData = async () => {
@@ -600,7 +651,7 @@ export default function ChatScreen() {
         return () => clearInterval(interval);
       }
     }
-  }, [chatID, getToken]);
+  }, [chatID]);
 
   // Check if current user is the creator
   useEffect(() => {
@@ -609,6 +660,16 @@ export default function ChatScreen() {
       setIsCreator(isCreatorMatch);
     }
   }, [chatData, currentUserEmail]);
+
+  // Fetch user data for all message senders
+  useEffect(() => {
+    const uniqueEmails = new Set(messages.map(m => m.senderEmail));
+    uniqueEmails.forEach(email => {
+      if (!userCacheRef.current[email]) {
+        fetchUserByEmail(email);
+      }
+    });
+  }, [messages, fetchUserByEmail]);
 
   const handleSend = async () => {
     const text = draft.trim().replace(/[\n\r]+$/, "");
@@ -800,17 +861,21 @@ export default function ChatScreen() {
                 <Text style={styles.emptyStateText}>No messages yet</Text>
               </View>
             ) : (
-              messages.map((msg) => (
-                <MessageBubble
-                  key={msg.id}
-                  message={msg}
-                  isOwn={
-                    msg.senderEmail === user?.primaryEmailAddress?.emailAddress
-                  }
-                  onDelete={handleDeleteMessage}
-                  onEdit={handleEditMessage}
-                />
-              ))
+              messages.map((msg) => {
+                const senderInfo = userCache[msg.senderEmail] || null;
+                return (
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    isOwn={
+                      msg.senderEmail === user?.primaryEmailAddress?.emailAddress
+                    }
+                    onDelete={handleDeleteMessage}
+                    onEdit={handleEditMessage}
+                    userInfo={senderInfo}
+                  />
+                );
+              })
             )}
           </ScrollView>
 
