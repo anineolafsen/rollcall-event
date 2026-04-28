@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
-import { useAuth } from "@clerk/expo";
+import { useAuth } from '@clerk/expo';
 
 import { NotifyButton } from '@/components/NotifyButton';
 import { TripActionButton } from '@/components/ui/trip-action-button';
@@ -21,17 +21,18 @@ export default function TripDetails() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const {getToken} = useAuth();
+  const { getToken } = useAuth();
 
   useEffect(() => {
     const fetchTrip = async () => {
       try {
-        const token = await getToken({ template: "RollCallAuth" });
+        const token = await getToken({ template: 'RollCallAuth' });
         const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+
         if (!response.ok) {
           throw new Error(`Server responded with ${response.status}`);
         }
@@ -46,7 +47,7 @@ export default function TripDetails() {
     };
 
     if (id) {
-      fetchTrip();
+      void fetchTrip();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]); // getToken is stable
@@ -65,7 +66,7 @@ export default function TripDetails() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.screen}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.push("/trips")}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.push('/trips')}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
           <View style={styles.centered}>
@@ -82,117 +83,56 @@ export default function TripDetails() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
-        <Text style={styles.tripTitle}>{trip.name}</Text>
-        
-        {/* Only show management buttons if the user is an Organizer */}
-        {trip.isOrganizer && (
+      </View>
+
+      <UpcomingEventsScreen
+        tripId={trip.id}
+        title={trip.name}
+        showBackButton={false}
+        isOrganizer={trip.isOrganizer}
+        actionsBelowHeader={
+          trip.isOrganizer ? (
             <View style={styles.buttonRow}>
-            <TripActionButton
+              <TripActionButton
                 label="+ Manage Invitations"
                 onPress={() =>
-                router.push({
+                  router.push({
                     pathname: '/trips/[id]/manage-invitations',
                     params: { id: String(trip.id), tripId: trip.id, tripName: trip.name },
-                })
+                  })
                 }
-            />
-            <TripActionButton
+              />
+              <TripActionButton
                 label="View Needs"
                 backgroundColor="#d9e8f5"
                 textColor="#1a3d5c"
                 onPress={() =>
-                router.push({
+                  router.push({
                     pathname: '/trips/[id]/participant-needs',
                     params: { id: String(trip.id), tripName: trip.name },
-                })
+                  })
                 }
-            />
-            <TripActionButton
+              />
+              <TripActionButton
                 label="✎ Edit"
                 backgroundColor="#76b6ee"
                 onPress={() =>
-                router.push({
+                  router.push({
                     pathname: '/trips/create',
                     params: { id: trip.id },
-                })
+                  })
                 }
-            />
-            <NotifyButton tripId={trip.id} tripName={trip.name} />
-            </View>
-        )}
-      </View>
-      <UpcomingEventsScreen 
-        tripId={trip.id} 
-        title={trip.name} 
-        showBackButton={false} 
-        isOrganizer={trip.isOrganizer} 
-        actionsBelowHeader={trip.isOrganizer ? (
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={styles.inviteButton}
-              onPress={() =>
-                router.push({
-                  pathname: '/trips/[id]/manage-invitations',
-                  params: { id: String(trip.id), tripId: trip.id, tripName: trip.name },
-                })
-              }
-            >
-              <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.needsButton}
-              onPress={() =>
-                }
-            />
-            <TripActionButton
-                label="View Needs"
-                backgroundColor="#d9e8f5"
+              />
+              <NotifyButton tripId={trip.id} tripName={trip.name} />
+              <TripActionButton
+                label="+ Create event"
+                backgroundColor="#ffffff"
                 textColor="#1a3d5c"
-                onPress={() =>
-                router.push({
-                  pathname: '/trips/[id]/participant-needs',
-                  params: { id: String(trip.id), tripName: trip.name },
-                })
-              }
-            >
-              <Text style={styles.needsButtonText}>View Needs</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() =>
-                }
-            />
-            <TripActionButton
-                label="✎ Edit"
-                backgroundColor="#76b6ee"
-                onPress={() =>
-                router.push({
-                  pathname: '/trips/create',
-                  params: { id: trip.id },
-                })
-              }
-            >
-              <Text style={styles.editButtonText}>✎ Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.createEventButton}
-              onPress={() => router.push(`/events/create?tripId=${trip.id}`)}
-            >
-              <Text style={styles.createEventButtonText}>+ Create event</Text>
-            </TouchableOpacity>
-          </View>
-        ) : undefined}
-                }
-            />
-            <NotifyButton tripId={trip.id} tripName={trip.name} />
+                onPress={() => router.push(`/events/create?tripId=${trip.id}`)}
+              />
             </View>
-        )}
-      </View>
-      <UpcomingEventsScreen 
-        tripId={trip.id} 
-        title={trip.name} 
-        showBackButton={false} 
-        isOrganizer={trip.isOrganizer} 
+          ) : undefined
+        }
       />
     </SafeAreaView>
   );
@@ -208,7 +148,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 0,
-    
   },
   backButton: {
     marginBottom: 12,
@@ -219,31 +158,12 @@ const styles = StyleSheet.create({
     color: '#4a7ca8',
     fontWeight: '600',
   },
-  tripTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#090909',
-    marginBottom: 12,
-  },
   buttonRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  createEventButton: {
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#4a7ca8',
-  },
-  createEventButtonText: {
-    color: '#1a3d5c',
-    fontWeight: '600',
-    fontSize: 14,
   },
   centered: {
     flex: 1,

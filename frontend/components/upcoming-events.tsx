@@ -486,6 +486,7 @@ export function UpcomingEventsScreen({
         <View
           style={[
             styles.titleDivider,
+            actionsBelowHeader ? styles.titleDividerWithActions : null,
             typeof titleDividerTopMargin === 'number'
               ? { marginTop: titleDividerTopMargin }
               : null,
@@ -713,6 +714,9 @@ titleDivider: {
   marginBottom: 28,
   marginHorizontal: 28,
   
+},
+titleDividerWithActions: {
+  marginBottom: 12,
 },
 actionsBelowHeader: {
   alignItems: 'center',

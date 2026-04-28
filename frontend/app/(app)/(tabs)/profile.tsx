@@ -205,6 +205,7 @@ export default function ProfileScreen() {
             )}
             <View style={{ flex: 1 }}>
               <AppButton
+                variant="edit"
                 label={isEditingProfile ? (isSavingProfile ? 'Saving...' : 'Save') : 'Edit profile'}
                 onPress={handleEditProfile}
                 disabled={isSavingProfile}
@@ -247,7 +248,7 @@ export default function ProfileScreen() {
                         />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <AppButton label="Save" onPress={() => saveNeeds(item.tripId)} />
+                        <AppButton variant="edit" label="Save" onPress={() => saveNeeds(item.tripId)} />
                       </View>
                     </View>
                   </View>

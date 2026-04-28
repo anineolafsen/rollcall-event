@@ -148,13 +148,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef5fb',
   },
   header: {
-    paddingHorizontal: 22,
-    paddingTop: 64,
+    paddingHorizontal: 24,
+    paddingTop: 16,
     paddingBottom: 0,
     backgroundColor: '#eef5fb',
   },
   backButton: {
-    marginBottom: 24,
+    marginBottom: 12,
     alignSelf: 'flex-start',
   },
   backButtonText: {

@@ -175,6 +175,7 @@ export default function NotifyScreen() {
             <ActivityIndicator color="#4a7ca8" />
           ) : (
             <AppButton
+              variant="edit"
               label={
                 sending
                   ? 'Sending...'

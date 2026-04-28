@@ -8,10 +8,10 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
 
+import { AppButton } from '@/components/ui/button';
 import EmailInviteUploader, { type UploadState } from '@/components/invitationsFileUpload';
 
 export default function InvitationsView() {
@@ -47,6 +47,7 @@ export default function InvitationsView() {
       style={styles.screen}
     >
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -70,17 +71,13 @@ export default function InvitationsView() {
         </View>
 
         <View style={styles.footer}>
-          <TouchableOpacity 
-            style={[styles.completeButton, isLoading && styles.completeButtonLoading]}
+          <AppButton
+            variant="edit"
+            style={styles.completeButton}
+            label={isLoading ? 'Sending...' : 'Done'}
             onPress={handleComplete}
             disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.completeButtonText}>Done</Text>
-            )}
-          </TouchableOpacity>
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -90,19 +87,22 @@ export default function InvitationsView() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#eef5fb',
+  },
+  scroll: {
+    backgroundColor: '#eef5fb',
   },
   scrollContent: {
     flexGrow: 1,
   },
   header: {
-    paddingHorizontal: 22,
-    paddingTop: 64,
+    paddingHorizontal: 24,
+    paddingTop: 16,
     paddingBottom: 0,
     backgroundColor: '#eef5fb',
   },
   backButton: {
-    marginBottom: 24,
+    marginBottom: 12,
     alignSelf: 'flex-start',
   },
   backButtonText: {
@@ -138,28 +138,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 20,
+    backgroundColor: '#eef5fb',
   },
   footer: {
     paddingHorizontal: 22,
     paddingBottom: 40,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: '#d0e5f7',
+    backgroundColor: '#eef5fb',
   },
   completeButton: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  completeButtonLoading: {
-    opacity: 0.7,
-  },
-  completeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    minHeight: 52,
   },
   centered: {
     flex: 1,
