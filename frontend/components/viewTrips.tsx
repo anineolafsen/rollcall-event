@@ -151,7 +151,7 @@ export function ViewTripsScreen() {
           <Text style={styles.dateValue}>{item.endDate ? formatDate(item.endDate) : '-'}</Text>
         </View>
       </View>
-      {item.description ? (
+      {isDesktopWeb && item.description ? (
         <Text style={styles.description}>{item.description}</Text>
       ) : null}
     </Pressable>

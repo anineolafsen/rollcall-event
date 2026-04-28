@@ -69,6 +69,7 @@ export function UpcomingEventsScreen({
   const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
   const showMobileHeaderDivider = !showDesktopBackButton;
   const showMobileHeaderActions = Boolean(tripId && isOrganizer && !showDesktopBackButton);
+  const showEventLocation = showDesktopBackButton;
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -469,6 +470,7 @@ export function UpcomingEventsScreen({
     return (
       <EventCard
         event={item}
+        showLocation={showEventLocation}
         onPress={() =>
           router.push({
             pathname: '/events/[id]',
