@@ -4,6 +4,9 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import ParticipantNeedsScreen from '@/app/(app)/(tabs)/trips/[id]/participant-needs';
+import InvitationsView from '@/components/invitationsView';
+import TripDescriptionEditor from '@/components/trip-description-editor';
 import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -11,6 +14,8 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 type Trip = {
   id: number;
   name: string;
+  startDate: string;
+  endDate: string;
   isOrganizer?: boolean;
   destination?: string;
   description?: string;
@@ -88,77 +93,52 @@ export default function Home() {
         key: 'manage',
         label: 'Manage invitations',
         render: () => (
-          <View style={styles.mobilePanelCard}>
-            <Text style={styles.mobilePanelTitle}>Manage invitations</Text>
-            <Text style={styles.mobilePanelText}>
-              Add, review, and resend trip invitations from one place.
-            </Text>
-            <Pressable
-              style={styles.mobilePanelPrimaryButton}
-              onPress={() =>
-                router.push({
-                  pathname: '/trips/[id]/manage-invitations',
-                  params: {
-                    id: String(activeTrip.id),
-                    tripId: activeTrip.id,
-                    tripName: activeTrip.name,
-                  },
-                })
-              }
-            >
-              <Text style={styles.mobilePanelPrimaryButtonText}>Open invitations</Text>
-            </Pressable>
-          </View>
+          <InvitationsView
+            embedded
+            tripId={activeTrip.id}
+            tripName={activeTrip.name}
+          />
         ),
       },
       {
         key: 'needs',
         label: 'View needs',
         render: () => (
-          <View style={styles.mobilePanelCard}>
-            <Text style={styles.mobilePanelTitle}>Participant needs</Text>
-            <Text style={styles.mobilePanelText}>
-              Review allergies, accessibility requests, and other participant notes.
-            </Text>
-            <Pressable
-              style={styles.mobilePanelSecondaryButton}
-              onPress={() =>
-                router.push({
-                  pathname: '/trips/[id]/participant-needs',
-                  params: { id: String(activeTrip.id), tripName: activeTrip.name },
-                })
-              }
-            >
-              <Text style={styles.mobilePanelSecondaryButtonText}>Open needs</Text>
-            </Pressable>
-          </View>
+          <ParticipantNeedsScreen
+            embedded
+            tripId={activeTrip.id}
+            tripName={activeTrip.name}
+          />
         ),
       },
       {
         key: 'edit',
         label: 'Edit',
         render: () => (
-          <View style={styles.mobilePanelCard}>
-            <Text style={styles.mobilePanelTitle}>Edit trip</Text>
-            <Text style={styles.mobilePanelText}>
-              Update trip details and keep the home screen information current.
-            </Text>
-            <Pressable
-              style={styles.mobilePanelAccentButton}
-              onPress={() =>
-                router.push({
-                  pathname: '/trips/create',
-                  params: { id: activeTrip.id },
-                })
-              }
-            >
-              <Text style={styles.mobilePanelAccentButtonText}>Open editor</Text>
-            </Pressable>
-          </View>
+          <TripDescriptionEditor
+            trip={{
+              id: activeTrip.id,
+              name: activeTrip.name,
+              destination: activeTrip.destination ?? '',
+              startDate: activeTrip.startDate,
+              endDate: activeTrip.endDate,
+              description: activeTrip.description ?? '',
+            }}
+            onSaved={(description) => {
+              setTrips((currentTrips) => currentTrips.map((trip) => (
+                trip.id === activeTrip.id
+                  ? {
+                      ...trip,
+                      description,
+                    }
+                  : trip
+              )));
+            }}
+          />
         ),
       },
     ];
-  }, [activeTrip, router]);
+  }, [activeTrip]);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -416,7 +396,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   mobileActivePanel: {
-    minHeight: 240,
+    minHeight: 0,
   },
   mobilePanelCard: {
     backgroundColor: '#ffffff',

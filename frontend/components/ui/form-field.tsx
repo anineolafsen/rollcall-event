@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle } from 'react-native';
 
 type FormFieldProps = {
   label: string;
@@ -12,6 +12,7 @@ type FormFieldProps = {
   editable?: boolean;
   onPress?: () => void;
   rightAdornment?: ReactNode;
+  inputStyle?: StyleProp<TextStyle>;
 };
 
 export function FormField({
@@ -25,6 +26,7 @@ export function FormField({
   editable = true,
   onPress,
   rightAdornment,
+  inputStyle,
 }: FormFieldProps) {
   const isPressable = typeof onPress === 'function';
 
@@ -44,6 +46,7 @@ export function FormField({
           !editable ? styles.inputDisabled : undefined,
           rightAdornment ? styles.inputWithAdornment : undefined,
           error ? styles.inputError : undefined,
+          inputStyle,
         ]}
         value={value}
       />

@@ -15,18 +15,29 @@ import {
 
 import EmailInviteUploader, { type UploadState } from '@/components/invitationsFileUpload';
 
-export default function InvitationsView() {
+type InvitationsViewProps = {
+  embedded?: boolean;
+  tripId?: number | null;
+  tripName?: string | null;
+};
+
+export default function InvitationsView({
+  embedded = false,
+  tripId: tripIdProp,
+  tripName: tripNameProp,
+}: InvitationsViewProps) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const searchParams = useLocalSearchParams();
-  const tripId = searchParams.tripId ? Number(searchParams.tripId) : null;
-  const tripName = searchParams.tripName as string;
+  const tripId = tripIdProp ?? (searchParams.tripId ? Number(searchParams.tripId) : null);
+  const tripName = tripNameProp ?? (searchParams.tripName as string | undefined) ?? null;
   const [uploadState, setUploadState] = useState<UploadState>('idle');
-  const showBackButton = Platform.OS === 'web' && width >= 900;
+  const showBackButton = !embedded && Platform.OS === 'web' && width >= 900;
+  const isLoading = uploadState === 'submitting';
 
   if (!tripId || !tripName) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={embedded ? styles.embeddedScreen : styles.screen}>
         <View style={styles.centered}>
           <Text style={styles.errorText}>Invalid trip information</Text>
         </View>
@@ -47,7 +58,19 @@ export default function InvitationsView() {
     router.replace('/trips');
   };
 
-  const isLoading = uploadState === 'submitting';
+  if (embedded) {
+    return (
+      <View style={styles.embeddedCard}>
+        <View style={styles.embeddedContent}>
+          <EmailInviteUploader
+            tripId={tripId}
+            apiUrl={process.env.EXPO_PUBLIC_API_URL ? `${process.env.EXPO_PUBLIC_API_URL}/api` : 'http://localhost:5118/api'}
+            onStateChange={setUploadState}
+          />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -101,6 +124,19 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  embeddedScreen: {
+    backgroundColor: 'transparent',
+  },
+  embeddedCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+    overflow: 'hidden',
+  },
+  embeddedContent: {
+    paddingVertical: 12,
   },
   scrollContent: {
     flexGrow: 1,
