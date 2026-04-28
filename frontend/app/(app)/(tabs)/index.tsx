@@ -23,11 +23,13 @@ export default function Home() {
   const selectedTripId = useMobileTripStore((state) => state.selectedTripId);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
   const showMobileHeaderDivider = !isDesktopWeb;
+  const showMobileOrganizerTabs = !isDesktopWeb;
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeMobileTab, setActiveMobileTab] = useState(0);
 
   const fetchTrips = useCallback(async () => {
     try {
@@ -65,6 +67,99 @@ export default function Home() {
     return trips.find((trip) => trip.id === selectedTripId) ?? trips[0];
   }, [selectedTripId, trips]);
 
+  const organizerTabs = useMemo(() => {
+    if (!activeTrip) {
+      return [];
+    }
+
+    return [
+      {
+        key: 'info',
+        label: 'Info',
+        render: () => (
+          <View style={styles.card}>
+            <Text style={styles.description}>
+              {activeTrip.description?.trim() || 'No trip description added yet.'}
+            </Text>
+          </View>
+        ),
+      },
+      {
+        key: 'manage',
+        label: 'Manage invitations',
+        render: () => (
+          <View style={styles.mobilePanelCard}>
+            <Text style={styles.mobilePanelTitle}>Manage invitations</Text>
+            <Text style={styles.mobilePanelText}>
+              Add, review, and resend trip invitations from one place.
+            </Text>
+            <Pressable
+              style={styles.mobilePanelPrimaryButton}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/[id]/manage-invitations',
+                  params: {
+                    id: String(activeTrip.id),
+                    tripId: activeTrip.id,
+                    tripName: activeTrip.name,
+                  },
+                })
+              }
+            >
+              <Text style={styles.mobilePanelPrimaryButtonText}>Open invitations</Text>
+            </Pressable>
+          </View>
+        ),
+      },
+      {
+        key: 'needs',
+        label: 'View needs',
+        render: () => (
+          <View style={styles.mobilePanelCard}>
+            <Text style={styles.mobilePanelTitle}>Participant needs</Text>
+            <Text style={styles.mobilePanelText}>
+              Review allergies, accessibility requests, and other participant notes.
+            </Text>
+            <Pressable
+              style={styles.mobilePanelSecondaryButton}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/[id]/participant-needs',
+                  params: { id: String(activeTrip.id), tripName: activeTrip.name },
+                })
+              }
+            >
+              <Text style={styles.mobilePanelSecondaryButtonText}>Open needs</Text>
+            </Pressable>
+          </View>
+        ),
+      },
+      {
+        key: 'edit',
+        label: 'Edit',
+        render: () => (
+          <View style={styles.mobilePanelCard}>
+            <Text style={styles.mobilePanelTitle}>Edit trip</Text>
+            <Text style={styles.mobilePanelText}>
+              Update trip details and keep the home screen information current.
+            </Text>
+            <Pressable
+              style={styles.mobilePanelAccentButton}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/create',
+                  params: { id: activeTrip.id },
+                })
+              }
+            >
+              <Text style={styles.mobilePanelAccentButtonText}>Open editor</Text>
+            </Pressable>
+          </View>
+        ),
+      },
+    ];
+  }, [activeTrip, router]);
+
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView
@@ -98,12 +193,43 @@ export default function Home() {
             <Text style={styles.feedbackText}>No trips found yet.</Text>
           ) : (
             <>
-              <View style={styles.card}>
-                <Text style={styles.description}>
-                  {activeTrip.description?.trim() || 'No trip description added yet.'}
-                </Text>
-              </View>
-              {activeTrip.isOrganizer ? (
+              {activeTrip.isOrganizer && showMobileOrganizerTabs ? (
+                <View style={styles.mobileTabsSection}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.mobileTabList}
+                    style={styles.mobileTabScroll}
+                  >
+                    {organizerTabs.map((tab, index) => {
+                      const isActive = index === activeMobileTab;
+
+                      return (
+                        <Pressable
+                          key={tab.key}
+                          style={[styles.mobileTab, isActive && styles.mobileTabActive]}
+                          onPress={() => setActiveMobileTab(index)}
+                        >
+                          <Text style={[styles.mobileTabText, isActive && styles.mobileTabTextActive]}>
+                            {tab.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+
+                  <View style={styles.mobileActivePanel}>
+                    {organizerTabs[activeMobileTab]?.render()}
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.card}>
+                  <Text style={styles.description}>
+                    {activeTrip.description?.trim() || 'No trip description added yet.'}
+                  </Text>
+                </View>
+              )}
+              {activeTrip.isOrganizer && !showMobileOrganizerTabs ? (
                 <View style={styles.buttonRow}>
                   <Pressable
                     style={styles.inviteButton}
@@ -261,6 +387,93 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 28,
     color: '#1a3d5c',
+  },
+  mobileTabsSection: {
+    gap: 16,
+  },
+  mobileTabScroll: {
+    marginHorizontal: -4,
+  },
+  mobileTabList: {
+    gap: 10,
+    paddingHorizontal: 4,
+  },
+  mobileTab: {
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#dfeaf5',
+  },
+  mobileTabActive: {
+    backgroundColor: '#76b6ee',
+  },
+  mobileTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4d647b',
+  },
+  mobileTabTextActive: {
+    color: '#ffffff',
+  },
+  mobileActivePanel: {
+    minHeight: 240,
+  },
+  mobilePanelCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+    minHeight: 180,
+    justifyContent: 'space-between',
+    gap: 14,
+  },
+  mobilePanelTitle: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '700',
+    color: '#090909',
+  },
+  mobilePanelText: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: '#5d7288',
+  },
+  mobilePanelPrimaryButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#4a7ca8',
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+  },
+  mobilePanelPrimaryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  mobilePanelSecondaryButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#d9e8f5',
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+  },
+  mobilePanelAccentButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#76b6ee',
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+  },
+  mobilePanelSecondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a3d5c',
+  },
+  mobilePanelAccentButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
   },
   centered: {
     flex: 1,
