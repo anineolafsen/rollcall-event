@@ -12,15 +12,21 @@ export default function CheckinScreen() {
   }>();
   const { getToken } = useAuth();
   const [token, setToken] = useState<string | null>(null);
+  const [tokenLoaded, setTokenLoaded] = useState(false);
 
   useEffect(() => {
     const loadToken = async () => {
       const nextToken = await getToken({ template: "RollCallAuth" });
       setToken(nextToken);
+      setTokenLoaded(true);
     };
 
     void loadToken();
   }, [getToken]);
+
+  if (!tokenLoaded || !token) {
+    return <View style={styles.container} />;
+  }
 
   return (
     <View style={styles.container}>
