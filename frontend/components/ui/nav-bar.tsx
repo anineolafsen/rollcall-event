@@ -1,19 +1,14 @@
 import React from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Tabs, usePathname } from 'expo-router';
+import type { ViewStyle } from 'react-native';
+import { usePathname, useRouter } from 'expo-router';
 import { PlatformPressable } from '@react-navigation/elements';
 import { CalendarDays, House, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const hiddenTabOptions = {
-  href: null,
-  tabBarItemStyle: {
-    display: 'none' as const,
-  },
-};
-
 export function AppNavbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isCalendarActive = pathname === '/events' || pathname.startsWith('/trips');
@@ -23,146 +18,105 @@ export function AppNavbar() {
   const isTablet = width >= 768;
   const navHeight = 68 + insets.bottom;
 
+  if (shouldHideNavbar) {
+    return null;
+  }
+
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: '#0b0b0b',
-        tabBarInactiveTintColor: '#ffffff',
-        tabBarShowLabel: false,
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: {
-          display: shouldHideNavbar ? 'none' : 'flex',
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: navHeight,
-          backgroundColor: '#79b9ee',
-          borderTopColor: 'transparent',
-          paddingTop: 8,
-          paddingBottom: Math.max(insets.bottom, 8),
-          paddingHorizontal: isTablet ? 28 : 18,
-          shadowColor: '#000000',
-          shadowOpacity: 0.28,
-          shadowRadius: 18,
-          shadowOffset: {
-            width: 0,
-            height: 10,
+    <View pointerEvents="box-none" style={styles.container}>
+      <View
+        style={[
+          styles.navbar,
+          {
+            height: navHeight,
+            paddingBottom: Math.max(insets.bottom, 8),
+            paddingHorizontal: isTablet ? 28 : 18,
           },
-          elevation: 10,
-        },
-        tabBarButton: (props) => (
-          <PlatformPressable
-            {...props}
-            style={[
-              styles.tabButton,
-              props.style,
-              props.accessibilityState?.selected && styles.tabButtonActive,
-            ]}
-          >
-            {props.children}
-          </PlatformPressable>
-        ),
-        headerShown: false,
-      }}>
-      <Tabs.Screen
-        name="events"
-        options={{
-          title: 'Calendar',
-          tabBarIcon: () => (
-            <View style={styles.iconScaleUp}>
-              <CalendarDays
-                size={isTablet ? 46 : 35}
-                strokeWidth={2.4}
-                color={isCalendarActive ? '#0b0b0b' : '#ffffff'}
-              />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: () => (
-            <View style={styles.iconScaleUp}>
-              <House
-                size={isTablet ? 54 : 40}
-                strokeWidth={2.6}
-                color={isHomeActive ? '#0b0b0b' : '#ffffff'}
-              />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="trips"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="my-invitations"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="invite"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="trips/create"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="trips/[id]"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="trips/[id]/edit"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="trips/[id]/manage-invitations"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="trips/[id]/participant-needs"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="trips/[id]/notify"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="events/create"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="events/[id]"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="events/[id]/edit"
-        options={hiddenTabOptions}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: () => (
-            <View style={styles.iconScaleUp}>
-              <User
-                size={isTablet ? 52 : 40}
-                strokeWidth={2.4}
-                color={isProfileActive ? '#0b0b0b' : '#ffffff'}
-              />
-            </View>
-          ),
-        }}
-      />
-    </Tabs>
+        ]}
+      >
+        <PlatformPressable
+          accessibilityRole="tab"
+          accessibilityLabel="Calendar"
+          accessibilityState={{ selected: isCalendarActive }}
+          onPress={() => router.navigate('/events')}
+          style={[styles.tabButton, isCalendarActive && styles.tabButtonActive]}
+        >
+          <View style={styles.iconScaleUp}>
+            <CalendarDays
+              size={isTablet ? 46 : 35}
+              strokeWidth={2.4}
+              color={isCalendarActive ? '#0b0b0b' : '#ffffff'}
+            />
+          </View>
+        </PlatformPressable>
+        <PlatformPressable
+          accessibilityRole="tab"
+          accessibilityLabel="Home"
+          accessibilityState={{ selected: isHomeActive }}
+          onPress={() => router.navigate('/')}
+          style={[styles.tabButton, isHomeActive && styles.tabButtonActive]}
+        >
+          <View style={styles.iconScaleUp}>
+            <House
+              size={isTablet ? 54 : 40}
+              strokeWidth={2.6}
+              color={isHomeActive ? '#0b0b0b' : '#ffffff'}
+            />
+          </View>
+        </PlatformPressable>
+        <PlatformPressable
+          accessibilityRole="tab"
+          accessibilityLabel="Profile"
+          accessibilityState={{ selected: isProfileActive }}
+          onPress={() => router.navigate('/profile')}
+          style={[styles.tabButton, isProfileActive && styles.tabButtonActive]}
+        >
+          <View style={styles.iconScaleUp}>
+            <User
+              size={isTablet ? 52 : 40}
+              strokeWidth={2.4}
+              color={isProfileActive ? '#0b0b0b' : '#ffffff'}
+            />
+          </View>
+        </PlatformPressable>
+      </View>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<{
+  container: ViewStyle;
+  navbar: ViewStyle;
+  tabButton: ViewStyle;
+  tabButtonActive: ViewStyle;
+  iconScaleUp: ViewStyle;
+}>({
+  container: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    justifyContent: 'flex-end',
+  },
+  navbar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    backgroundColor: '#79b9ee',
+    borderTopColor: 'transparent',
+    paddingTop: 8,
+    shadowColor: '#000000',
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    elevation: 10,
+  },
   tabButton: {
     flex: 1,
     alignItems: 'center',
