@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type NavItem = {
   name: string;
@@ -19,11 +17,8 @@ const navItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
   const pathname = usePathname();
-  const tintColor = Colors[colorScheme ?? 'light'].tint;
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const isActive = (href: string) => {
     const routeName = href.split('/').pop(); // "trips", "profile", etc.
