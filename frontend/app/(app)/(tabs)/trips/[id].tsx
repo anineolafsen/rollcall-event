@@ -80,51 +80,55 @@ export default function TripDetails() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
-        
-        {/* Only show management buttons if the user is an Organizer */}
-        {trip.isOrganizer && (
-            <View style={styles.buttonRow}>
-            <TouchableOpacity
-                style={styles.inviteButton}
-                onPress={() =>
-                router.push({
-                    pathname: '/trips/[id]/manage-invitations',
-                    params: { id: String(trip.id), tripId: trip.id, tripName: trip.name },
-                })
-                }
-            >
-                <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.needsButton}
-                onPress={() =>
-                router.push({
-                    pathname: '/trips/[id]/participant-needs',
-                    params: { id: String(trip.id), tripName: trip.name },
-                })
-                }
-            >
-                <Text style={styles.needsButtonText}>View Needs</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={styles.editButton}
-                onPress={() =>
-                router.push({
-                    pathname: '/trips/create',
-                    params: { id: trip.id },
-                })
-                }
-            >
-                <Text style={styles.editButtonText}>✎ Edit</Text>
-            </TouchableOpacity>
-            </View>
-        )}
       </View>
       <UpcomingEventsScreen 
         tripId={trip.id} 
         title={trip.name} 
         showBackButton={false} 
         isOrganizer={trip.isOrganizer} 
+        actionsBelowHeader={trip.isOrganizer ? (
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.inviteButton}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/[id]/manage-invitations',
+                  params: { id: String(trip.id), tripId: trip.id, tripName: trip.name },
+                })
+              }
+            >
+              <Text style={styles.inviteButtonText}>+ Manage Invitations</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.needsButton}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/[id]/participant-needs',
+                  params: { id: String(trip.id), tripName: trip.name },
+                })
+              }
+            >
+              <Text style={styles.needsButtonText}>View Needs</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/create',
+                  params: { id: trip.id },
+                })
+              }
+            >
+              <Text style={styles.editButtonText}>✎ Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.createEventButton}
+              onPress={() => router.push(`/events/create?tripId=${trip.id}`)}
+            >
+              <Text style={styles.createEventButtonText}>+ Create event</Text>
+            </TouchableOpacity>
+          </View>
+        ) : undefined}
       />
     </SafeAreaView>
   );
@@ -139,7 +143,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef5fb',
     paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: 0,
     
   },
   backButton: {
@@ -162,6 +166,20 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createEventButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#4a7ca8',
+  },
+  createEventButtonText: {
+    color: '#1a3d5c',
+    fontWeight: '600',
+    fontSize: 14,
   },
   inviteButton: {
     backgroundColor: '#4a7ca8',

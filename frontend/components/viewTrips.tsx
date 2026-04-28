@@ -14,8 +14,6 @@ import {
   RefreshControl,
   Pressable,
 } from 'react-native';
-import { AppButton } from '@/components/ui/button';
-
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 interface Trip {
@@ -172,12 +170,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#eef5fb',
     paddingHorizontal: 22,
-    paddingTop: 40,
+    paddingTop: 64,
     paddingBottom: 2,
     
   },
   title: {
-    fontSize: 34,
+    fontSize: 28,
     lineHeight: 34,
     fontWeight: '700',
     color: '#090909',

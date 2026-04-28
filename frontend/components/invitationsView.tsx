@@ -97,12 +97,12 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 22,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 64,
+    paddingBottom: 0,
     backgroundColor: '#eef5fb',
   },
   backButton: {
-    marginBottom: 16,
+    marginBottom: 24,
     alignSelf: 'flex-start',
   },
   backButtonText: {
@@ -115,18 +115,23 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     fontWeight: '700',
     color: '#090909',
+    textAlign: 'center',
     marginBottom: 4,
   },
   tripName: {
     fontSize: 16,
     color: '#6B7280',
-    marginBottom: 12,
+    marginBottom: 0,
     fontWeight: '500',
+    textAlign: 'center',
   },
   divider: {
-    height: 2,
+    height: 3,
     backgroundColor: '#76b6ee',
     borderRadius: 999,
+    marginTop: 14,
+    marginBottom: 28,
+    marginHorizontal: 28,
   },
   content: {
     flex: 1,

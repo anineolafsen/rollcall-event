@@ -29,6 +29,10 @@ type UpcomingEventsScreenProps = {
   title?: string;
   showBackButton?: boolean;
   isOrganizer?: boolean;
+  actionsBelowHeader?: React.ReactNode;
+  titleTopOffset?: number;
+  titleDividerHorizontalMargin?: number;
+  titleDividerTopMargin?: number;
 };
 
 export function UpcomingEventsScreen({
@@ -36,6 +40,10 @@ export function UpcomingEventsScreen({
   title = 'Upcoming Events',
   showBackButton = false,
   isOrganizer = false,
+  actionsBelowHeader,
+  titleTopOffset,
+  titleDividerHorizontalMargin,
+  titleDividerTopMargin,
 }: UpcomingEventsScreenProps) {
   const POLL_BACKOFF_MS = 60000;
   const ACTIVE_POLL_MS = 5000;
@@ -459,9 +467,9 @@ export function UpcomingEventsScreen({
 
         
         <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, typeof titleTopOffset === 'number' ? { marginTop: titleTopOffset } : null]}>{title}</Text>
           {/* SECURITY: Only show Create button if user is an organizer */}
-          {tripId && isOrganizer ? (
+          {tripId && isOrganizer && !actionsBelowHeader ? (
             <Pressable
               onPress={() => router.push(`/events/create?tripId=${tripId}`)}
               style={({ pressed, hovered }) => [
@@ -475,6 +483,18 @@ export function UpcomingEventsScreen({
             </Pressable>
           ) :null}
         </View>
+        <View
+          style={[
+            styles.titleDivider,
+            typeof titleDividerTopMargin === 'number'
+              ? { marginTop: titleDividerTopMargin }
+              : null,
+            typeof titleDividerHorizontalMargin === 'number'
+              ? { marginHorizontal: titleDividerHorizontalMargin }
+              : null,
+          ]}
+        />
+        {actionsBelowHeader ? <View style={styles.actionsBelowHeader}>{actionsBelowHeader}</View> : null}
 
         <View style={styles.timelineSection}>
           <View style={styles.timelineRail} />
@@ -684,6 +704,19 @@ title: {
   fontWeight: '700',
   textAlign: 'center',
   color: '#090909',
+},
+titleDivider: {
+  height: 3,
+  backgroundColor: '#76b6ee',
+  borderRadius: 999,
+  marginTop: 14,
+  marginBottom: 28,
+  marginHorizontal: 28,
+  
+},
+actionsBelowHeader: {
+  alignItems: 'center',
+  marginBottom: 18,
 },
 createButton: {
   position: 'absolute',

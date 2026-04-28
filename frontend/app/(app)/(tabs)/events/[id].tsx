@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     // flex: 1, -- (forslag) jeg kommenterte ut så man kan scrolle helt ned, men bare å ta bort igjen
     backgroundColor: '#eef5fb',
     paddingHorizontal: 22,
-    paddingTop: 80,
+    paddingTop: 64,
     paddingBottom: 80,
   },
   backButton: {
@@ -487,10 +487,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
-    fontSize: 32,
-    lineHeight: 40,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '700',
     color: '#090909',
+    textAlign: 'center',
   },
   titleDivider: {
     height: 3,

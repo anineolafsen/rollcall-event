@@ -149,14 +149,12 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 22,
-    paddingTop: 16,
-    paddingBottom: 20,
+    paddingTop: 64,
+    paddingBottom: 0,
     backgroundColor: '#eef5fb',
-    borderBottomWidth: 1,
-    borderBottomColor: '#d9e8f5',
   },
   backButton: {
-    marginBottom: 12,
+    marginBottom: 24,
     alignSelf: 'flex-start',
   },
   backButtonText: {
@@ -165,25 +163,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
-    fontSize: 22,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '700',
     color: '#090909',
+    textAlign: 'center',
     marginBottom: 2,
   },
   tripName: {
     fontSize: 14,
     color: '#6b7280',
     fontWeight: '500',
-    marginBottom: 14,
+    textAlign: 'center',
+    marginBottom: 0,
   },
   divider: {
-    height: 2,
+    height: 3,
     backgroundColor: '#76b6ee',
     borderRadius: 999,
+    marginTop: 14,
+    marginBottom: 28,
+    marginHorizontal: 28,
   },
   listContent: {
     paddingHorizontal: 22,
-    paddingTop: 20,
+    paddingTop: 0,
     paddingBottom: 40,
   },
   summaryRow: {

@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 22,
-    paddingTop: 80,
+    paddingTop: 64,
     paddingBottom: 80,
   },
   title: {
