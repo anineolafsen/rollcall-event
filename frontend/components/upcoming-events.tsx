@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   View,
@@ -22,6 +22,7 @@ import { EventCard } from '@/components/event-card';
 import { AppButton } from '@/components/ui/button';
 import { CheckInMethodModal } from '@/components/ui/checkin/Checkin-method-modal';
 import { getUpcomingEvents } from '@/lib/event-format';
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
 import { checkinService } from '@/services/checkinService';
 import { getEvents, joinEvent, leaveEvent, type EventRecord } from '@/lib/events';
 
@@ -55,9 +56,16 @@ export function UpcomingEventsScreen({
   const { getToken, userId } = useAuth();
   const { user } = useUser();
   const getTokenRef = useRef(getToken);
+  const eventsByTrip = useMobileTripStore((state) => state.eventsByTrip);
+  const setTripEvents = useMobileTripStore((state) => state.setTripEvents);
+  const tripCacheKey = tripId == null ? null : String(tripId);
+  const cachedEvents = useMemo(
+    () => (tripCacheKey ? eventsByTrip[tripCacheKey] ?? [] : []),
+    [eventsByTrip, tripCacheKey]
+  );
 
-  const [events, setEvents] = useState<EventRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState<EventRecord[]>(cachedEvents);
+  const [loading, setLoading] = useState(cachedEvents.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingEventId, setIsUpdatingEventId] = useState<number | null>(null);
@@ -121,8 +129,8 @@ export function UpcomingEventsScreen({
   useEffect(() => {
     activeRequestIdRef.current += 1;
     isFetchingEventsRef.current = false;
-    setEvents([]);
-    setLoading(true);
+    setEvents(cachedEvents);
+    setLoading(cachedEvents.length === 0);
     setRefreshing(false);
     setError(null);
     setCheckedInEventIds([]);
@@ -133,7 +141,7 @@ export function UpcomingEventsScreen({
     setShowLeaveModal(false);
     setLeaveReason('');
     setEventToLeave(null);
-  }, [isOrganizer, tripId]);
+  }, [cachedEvents, isOrganizer, tripId]);
 
   const isAuthOrNetworkError = useCallback((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
@@ -263,6 +271,9 @@ export function UpcomingEventsScreen({
       }
 
       setEvents(upcoming);
+      if (tripCacheKey) {
+        setTripEvents(tripCacheKey, upcoming);
+      }
       if (!isOrganizer && userId) {
         const activeLookup = await checkinService.getActiveSessionsForUser(userId, token);
         const activeIdsInView = activeLookup.eventIds.filter((eventId) => upcoming.some((eventItem) => eventItem.id === eventId));
@@ -286,7 +297,7 @@ export function UpcomingEventsScreen({
         setRefreshing(false);
       }
     }
-  }, [clearPollBackoff, isOrganizer, isPageVisible, recordPollFailure, refreshParticipantCheckins, shouldPausePolling, tripId, userId]);
+  }, [clearPollBackoff, isOrganizer, isPageVisible, recordPollFailure, refreshParticipantCheckins, setTripEvents, shouldPausePolling, tripCacheKey, tripId, userId]);
 
   useFocusEffect(
     useCallback(() => {

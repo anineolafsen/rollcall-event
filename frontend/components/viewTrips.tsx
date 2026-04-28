@@ -18,20 +18,9 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
-import { useMobileTripStore } from '@/lib/mobile-trip-store';
-import { AppButton } from '@/components/ui/button';
+import { useMobileTripStore, type MobileTrip } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
-
-interface Trip {
-  id: number;
-  name: string;
-  startDate: string;
-  endDate: string;
-  isOrganizer?: boolean;
-  destination?: string;
-  description?: string;
-}
 
 export function ViewTripsScreen() {
   const router = useRouter();
@@ -39,13 +28,25 @@ export function ViewTripsScreen() {
   const { signOut } = useClerk();
   const { width } = useWindowDimensions();
   const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
+  const cachedTrips = useMobileTripStore((state) => state.trips);
+  const tripsLoaded = useMobileTripStore((state) => state.tripsLoaded);
+  const setTripsCache = useMobileTripStore((state) => state.setTrips);
+  const clearTrips = useMobileTripStore((state) => state.clearTrips);
+  const clearTripEvents = useMobileTripStore((state) => state.clearTripEvents);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
 
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [trips, setTrips] = useState<MobileTrip[]>(cachedTrips);
+  const [loading, setLoading] = useState(!tripsLoaded);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  useEffect(() => {
+    setTrips(cachedTrips);
+    if (cachedTrips.length > 0 || tripsLoaded) {
+      setLoading(false);
+    }
+  }, [cachedTrips, tripsLoaded]);
 
   const fetchTrips = useCallback(async () => {
     if (isSigningOut) {
@@ -63,20 +64,22 @@ export function ViewTripsScreen() {
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}`);
       }
-      const data: Trip[] = await response.json();
+      const data: MobileTrip[] = await response.json();
       setTrips(data);
+      setTripsCache(data);
     } catch {
       setError('Could not load trips. Please try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getToken, isSigningOut]); // getToken is stable
+  }, [getToken, isSigningOut, setTripsCache]); // getToken is stable
 
   useEffect(() => {
-    void fetchTrips();
-  }, [fetchTrips]);
+    if (!tripsLoaded) {
+      void fetchTrips();
+    }
+  }, [fetchTrips, tripsLoaded]);
 
   const onRefresh = () => {
     if (isSigningOut) {
@@ -90,8 +93,10 @@ export function ViewTripsScreen() {
   const performSignOut = useCallback(async () => {
     setIsSigningOut(true);
     setSelectedTrip({ id: null });
+    clearTrips();
+    clearTripEvents();
     await signOut();
-  }, [setSelectedTrip, signOut]);
+  }, [clearTripEvents, clearTrips, setSelectedTrip, signOut]);
 
   const handleSignOut = useCallback(() => {
     if (Platform.OS === 'web') {
@@ -120,7 +125,7 @@ export function ViewTripsScreen() {
     });
   };
 
-  const renderTrip = ({ item }: { item: Trip }) => (
+  const renderTrip = ({ item }: { item: MobileTrip }) => (
     <Pressable
       onPress={() => {
         setSelectedTrip({ id: item.id, name: item.name, isOrganizer: Boolean(item.isOrganizer) });

@@ -18,19 +18,9 @@ import {
 import ParticipantNeedsScreen from '@/app/(app)/(tabs)/trips/[id]/participant-needs';
 import InvitationsView from '@/components/invitationsView';
 import TripDescriptionEditor from '@/components/trip-description-editor';
-import { useMobileTripStore } from '@/lib/mobile-trip-store';
+import { useMobileTripStore, type MobileTrip } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
-
-type Trip = {
-  id: number;
-  name: string;
-  startDate: string;
-  endDate: string;
-  isOrganizer?: boolean;
-  destination?: string;
-  description?: string;
-};
 
 export default function Home() {
   const router = useRouter();
@@ -38,15 +28,25 @@ export default function Home() {
   const { width } = useWindowDimensions();
   const selectedTripId = useMobileTripStore((state) => state.selectedTripId);
   const selectedTripName = useMobileTripStore((state) => state.selectedTripName);
+  const cachedTrips = useMobileTripStore((state) => state.trips);
+  const tripsLoaded = useMobileTripStore((state) => state.tripsLoaded);
+  const setTripsCache = useMobileTripStore((state) => state.setTrips);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
   const showMobileHeaderDivider = !isDesktopWeb;
   const showMobileOrganizerTabs = !isDesktopWeb;
 
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [trips, setTrips] = useState<MobileTrip[]>(cachedTrips);
+  const [loading, setLoading] = useState(!tripsLoaded);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState(0);
+
+  useEffect(() => {
+    setTrips(cachedTrips);
+    if (cachedTrips.length > 0 || tripsLoaded) {
+      setLoading(false);
+    }
+  }, [cachedTrips, tripsLoaded]);
 
   const fetchTrips = useCallback(async () => {
     try {
@@ -62,19 +62,22 @@ export default function Home() {
         throw new Error(`Server responded with ${response.status}`);
       }
 
-      const data: Trip[] = await response.json();
+      const data: MobileTrip[] = await response.json();
       setTrips(data);
+      setTripsCache(data);
     } catch {
       setError('Could not load trip information.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [getToken]);
+  }, [getToken, setTripsCache]);
 
   useEffect(() => {
-    void fetchTrips();
-  }, [fetchTrips]);
+    if (!tripsLoaded) {
+      void fetchTrips();
+    }
+  }, [fetchTrips, tripsLoaded]);
 
   const activeTrip = useMemo(() => {
     if (trips.length === 0) {
