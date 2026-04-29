@@ -14,6 +14,8 @@ import * as DocumentPicker from "expo-document-picker";
 import { read, utils } from "xlsx";
 import { useAuth } from "@clerk/expo";
 
+import { AppButton } from '@/components/ui/button';
+
 export type EmailEntry = {
   email: string;
   valid: boolean;
@@ -326,14 +328,16 @@ export default function EmailInviteUploader({
               editable={!isSubmitting}
             />
             <TouchableOpacity
-              style={[
-                styles.addButton,
-                !manualEmail.trim() && styles.addButtonDisabled,
-              ]}
-              onPress={handleAddManualEmail}
-              disabled={!manualEmail.trim() || isSubmitting}
+              style={styles.addButtonWrap}
+              disabled={isSubmitting}
             >
-              <Text style={styles.addButtonText}>Add</Text>
+              <AppButton
+                variant="edit"
+                style={styles.addButton}
+                label="Add"
+                onPress={handleAddManualEmail}
+                disabled={!manualEmail.trim() || isSubmitting}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -342,12 +346,12 @@ export default function EmailInviteUploader({
       {/* Upload button*/}
       {(state === "idle" || state === "error" || state === "ready") && (
         <>
-          <TouchableOpacity
+          <AppButton
+            variant="edit"
             style={styles.uploadButton}
+            label="Select spreadsheet"
             onPress={handlePickFile}
-          >
-            <Text style={styles.uploadButtonText}>Select spreadsheet</Text>
-          </TouchableOpacity>
+          />
           {state === "error" && errorMessage && (
             <View style={styles.errorBanner}>
               <Text style={styles.errorText}>{errorMessage}</Text>
@@ -428,25 +432,18 @@ export default function EmailInviteUploader({
             ))}
           </ScrollView>
           <View style={styles.actionRow}>
-            <TouchableOpacity
+            <AppButton
               style={styles.secondaryButton}
+              label="Cancel"
               onPress={handleReset}
-            >
-              <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                validEntries.length === 0 && styles.primaryButtonDisabled,
-              ]}
+            />
+            <AppButton
+              variant="edit"
+              style={styles.primaryButton}
+              label={`Send ${validEntries.length} invitation${validEntries.length !== 1 ? "s" : ""}`}
               onPress={handleSubmit}
               disabled={validEntries.length === 0 || state === "submitting"}
-            >
-              <Text style={styles.primaryButtonText}>
-                Send {validEntries.length} invitation
-                {validEntries.length !== 1 ? "s" : ""}
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
         </View>
       )}
@@ -491,9 +488,12 @@ export default function EmailInviteUploader({
             </>
           )}
 
-          <TouchableOpacity style={styles.uploadButton} onPress={handleReset}>
-            <Text style={styles.uploadButtonText}>Add more emails</Text>
-          </TouchableOpacity>
+          <AppButton
+            variant="edit"
+            style={styles.uploadButton}
+            label="Add more emails"
+            onPress={handleReset}
+          />
         </View>
       )}
     </View>
@@ -503,7 +503,7 @@ export default function EmailInviteUploader({
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#eef5fb",
   },
   title: {
     fontSize: 18,
@@ -525,42 +525,30 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "center",
   },
+  addButtonWrap: {
+    minWidth: 84,
+  },
   emailInput: {
     flex: 1,
     borderWidth: 1,
     borderColor: "#D1D5DB",
     borderRadius: 8,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     color: "#111827",
   },
   addButton: {
-    backgroundColor: "#4F46E5",
-    borderRadius: 8,
+    minHeight: 52,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  addButtonDisabled: {
-    backgroundColor: "#A5B4FC",
-  },
-  addButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
   },
   uploadButton: {
-    backgroundColor: "#4F46E5",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
+    backgroundColor: "#4a7ca8",
+    borderColor: "#4a7ca8",
+    minHeight: 52,
+    paddingHorizontal: 18,
     marginBottom: 12,
-  },
-  uploadButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
   },
   loadingContainer: {
     alignItems: "center",
@@ -678,31 +666,13 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     flex: 1,
-    backgroundColor: "#4F46E5",
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  primaryButtonDisabled: {
-    backgroundColor: "#A5B4FC",
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "600",
+    minHeight: 52,
+    paddingHorizontal: 18,
   },
   secondaryButton: {
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-  },
-  secondaryButtonText: {
-    color: "#374151",
-    fontSize: 13,
-    fontWeight: "500",
+    minWidth: 110,
+    paddingHorizontal: 16,
+    minHeight: 52,
   },
   successContainer: {
     alignItems: "center",

@@ -311,8 +311,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 22,
-    paddingTop: 20,
-    paddingBottom: 20,
+    paddingTop: 64,
+    paddingBottom: 0,
   },
   title: {
     fontSize: 28,
@@ -326,12 +326,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#76b6ee',
     borderRadius: 999,
     marginTop: 14,
+    marginBottom: 28,
     marginHorizontal: 28,
   },
   listContent: {
     gap: 14,
     paddingHorizontal: 22,
-    paddingTop: 20,
+    paddingTop: 0,
     paddingBottom: 20,
   },
   card: {

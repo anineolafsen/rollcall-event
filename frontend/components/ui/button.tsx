@@ -21,12 +21,13 @@ export function AppButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [
+      style={({ hovered, pressed }) => [
         styles.button,
         variant === 'create' ? styles.createButton : undefined,
         variant === 'edit' ? styles.editButton : undefined,
         variant === 'delete' ? styles.deleteButton : undefined,
-        disabled ? styles.buttonDisabled : (pressed ? styles.buttonPressed : undefined),
+        disabled ? styles.buttonDisabled : (hovered ? styles.buttonHovered : undefined),
+        disabled ? undefined : (pressed ? styles.buttonPressed : undefined),
         style,
       ]}>
       <Text
@@ -52,6 +53,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   createButton: {
     borderRadius: 18,
@@ -74,6 +77,15 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.85,
+  },
+  buttonHovered: {
+    borderColor: 'rgba(74, 124, 168, 0.45)',
+    shadowColor: '#2a4f73',
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    transform: [{ translateY: -1 }],
   },
   buttonDisabled: {
     opacity: 0.5,

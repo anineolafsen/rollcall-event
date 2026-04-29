@@ -1,4 +1,4 @@
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet, Pressable } from 'react-native';
 
 import { formatEventDate, formatEventTime, isEventWithinNext24Hours } from '@/lib/event-format';
 import type { EventRecord } from '@/lib/events';
@@ -42,7 +42,7 @@ export function EventCard({
   return (
     <View style={[styles.card, isStartingSoon && styles.cardSoon]}>
       <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
-        <View style={styles.cardHeader}>
+        <View style={[styles.cardHeader, isStartingSoon && styles.cardHeaderSoon]}>
           <View style={styles.headingBlock}>
             <Text style={styles.eventName}>{event.name}</Text>
           </View>
@@ -52,30 +52,34 @@ export function EventCard({
             </View>
           ) : null}
         </View>
-
-        <View style={[styles.cardDivider, isStartingSoon && styles.cardDividerSoon]} />
+        <View style={styles.headerDivider} />
 
         <View style={styles.metaBlock}>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Date:</Text>
-            <Text style={styles.metaValue}>{formatEventDate(event.startDate)}</Text>
+          <View style={styles.metaGrid}>
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Date & time</Text>
+              <Text style={styles.metaValue}>
+                {formatEventDate(event.startDate)} · {formatEventTime(event.startDate)}
+              </Text>
+            </View>
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Participants</Text>
+              <Text style={styles.metaValue}>{participantCounter}</Text>
+            </View>
           </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Time:</Text>
-            <Text style={styles.metaValue}>{formatEventTime(event.startDate)}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Participants:</Text>
-            <Text style={styles.metaValue}>{participantCounter}</Text>
-          </View>
+          {event.location ? (
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Location</Text>
+              <Text style={styles.metaValue}>{event.location}</Text>
+            </View>
+          ) : null}
         </View>
 
-        {event.location ? <Text style={styles.location}>Location: {event.location}</Text> : null}
       </TouchableOpacity>
 
       {actionLabel && onActionPress ? (
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({ hovered, pressed }) => [
             styles.actionButton,
             actionVariant === 'start' && styles.actionButtonStart,
             actionVariant === 'active' && styles.actionButtonActive,
@@ -83,12 +87,12 @@ export function EventCard({
             actionVariant === 'join' && styles.actionButtonJoin,
             actionVariant === 'leave' && styles.actionButtonLeave,
             actionVariant === 'mandatory' && styles.actionButtonMandatory,
-            actionVariant === 'updating' && styles.actionButtonUpdating,
+            !actionDisabled && hovered && styles.actionButtonHovered,
+            !actionDisabled && pressed && styles.actionButtonPressed,
             actionDisabled && styles.actionButtonDisabled,
           ]}
           onPress={onActionPress}
           disabled={actionDisabled}
-          activeOpacity={0.85}
         >
           <Text
             style={[
@@ -99,7 +103,7 @@ export function EventCard({
           >
             {actionLabel}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -107,149 +111,157 @@ export function EventCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#c7e2f8',
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    borderWidth: 4,
-    borderColor: '#75baf0',
-    gap: 10,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#d0e5f7',
+    overflow: 'hidden',
   },
   cardSoon: {
-    backgroundColor: '#fff2c7',
     borderColor: '#f0b429',
-    shadowColor: '#f0b429',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    elevation: 3,
   },
   cardHeader: {
-    marginBottom: 8,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 12,
   },
+  cardHeaderSoon: {
+    backgroundColor: '#fff8e8',
+  },
   headingBlock: {
     flex: 1,
   },
   eventName: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#090909',
+    color: '#1a3d5c',
   },
   soonBadge: {
     backgroundColor: '#f0b429',
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   soonBadgeText: {
-    fontSize: 12,
-    lineHeight: 14,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
     color: '#3f2a00',
     textTransform: 'uppercase',
   },
   cardDivider: {
-    height: 4,
-    width: '72%',
-    backgroundColor: '#3b3b3b',
-    marginBottom: 18,
-  },
-  cardDividerSoon: {
-    backgroundColor: '#c78300',
-  },
-  metaBlock: {
-    gap: 10,
+    display: 'none' as any,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
+  metaBlock: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 4,
+    gap: 10,
+  },
+  metaGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  metaCell: {
+    flex: 1,
+    gap: 3,
+  },
   metaLabel: {
-    fontSize: 14,
+    fontSize: 12,
     lineHeight: 20,
-    color: '#6e7c89',
-    marginRight: 6,
+    color: '#7a9ab8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   metaValue: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#090909',
-    fontWeight: '700',
-  },
-  location: {
-    marginTop: 16,
-    fontSize: 13,
-    lineHeight: 19,
-    color: '#23425f',
+    fontSize: 16,
+    color: '#1a3d5c',
     fontWeight: '600',
   },
+  location: {
+    paddingTop: 10,
+    fontSize: 16,
+    color: '#4a7ca8',
+    fontWeight: '500',
+    paddingHorizontal: 18,
+  },
   actionButton: {
-    marginTop: 2,
+    marginTop: 12,
     alignSelf: 'flex-end',
-    borderRadius: 999,
-    paddingVertical: 3,
-    paddingHorizontal: 14,
+    marginHorizontal: 18,
+    marginBottom: 14,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    shadowColor: '#000000',
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    elevation: 2,
+    borderWidth: 1,
+    shadowColor: '#2a4f73',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
   actionButtonStart: {
-    backgroundColor: '#77c88a',
+    backgroundColor: '#eaf7ec',
     borderColor: '#4c915f',
   },
   actionButtonActive: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f0f6fc',
     borderColor: '#7e8d9a',
   },
   actionButtonCheckedIn: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f0f6fc',
     borderColor: '#7e8d9a',
   },
   actionButtonJoin: {
-    backgroundColor: '#77c88a',
+    backgroundColor: '#eaf7ec',
     borderColor: '#4c915f',
   },
   actionButtonLeave: {
-    backgroundColor: '#ff6f80',
+    backgroundColor: '#fff0f1',
     borderColor: '#d45162',
   },
   actionButtonMandatory: {
-    backgroundColor: '#d9dd8a',
+    backgroundColor: '#fafadc',
     borderColor: '#a9ac5f',
   },
-  actionButtonUpdating: {
-    backgroundColor: '#a9b7c4',
-    borderColor: '#7e8d9a',
-  },
   actionButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
+  },
+  actionButtonHovered: {
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    transform: [{ translateY: -1 }],
+  },
+  actionButtonPressed: {
+    opacity: 0.88,
+    transform: [{ translateY: 0 }],
   },
   actionButtonText: {
-    color: '#111111',
+    color: '#1a3d1a',
     fontSize: 20,
     fontWeight: '700',
-    lineHeight: 24,
   },
   actionButtonTextLeave: {
-    color: '#111111',
+    color: '#b0192a',
   },
   actionButtonTextMandatory: {
-    color: '#111111',
+    color: '#5a5a00',
   },
+  headerDivider: {
+  height: 2,
+  backgroundColor: '#d0e5f7',
+  marginHorizontal: 18,
+  marginBottom: 4,
+},
 });

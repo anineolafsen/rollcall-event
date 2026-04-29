@@ -326,6 +326,7 @@ export function CreateTripScreen() {
           {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
 
           <AppButton
+            variant="edit"
             label={
               isLoading
                 ? isEditing
@@ -354,8 +355,8 @@ const styles = StyleSheet.create({
   },
   content: {
     backgroundColor: '#eef5fb',
-    paddingHorizontal: 22,
-    paddingTop: 80,
+    paddingHorizontal: 24,
+    paddingTop: 16,
     paddingBottom: 80,
   },
   title: {
@@ -374,7 +375,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 28,
   },
   backButton: {
-    marginBottom: 24,
+    marginBottom: 12,
     alignSelf: 'flex-start',
   },
   backButtonText: {

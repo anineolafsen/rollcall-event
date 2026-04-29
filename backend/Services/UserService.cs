@@ -24,13 +24,25 @@ namespace MyApp.API.Services
 
       if (user == null)
       {
-        user = new User
+        // Reuse existing email record when available to avoid duplicate users
+        // that can break participant/user links.
+        user = GetByEmail(email);
+
+        if (user != null)
         {
-          ClerkId = clerkId,
-          Email = email
-        };
-        _context.Users.Add(user);
-        _context.SaveChanges();
+          user.ClerkId = clerkId;
+          _context.SaveChanges();
+        }
+        else
+        {
+          user = new User
+          {
+            ClerkId = clerkId,
+            Email = email
+          };
+          _context.Users.Add(user);
+          _context.SaveChanges();
+        }
       }
       else if (user.Email != email)
       {

@@ -25,7 +25,7 @@ export default function SignInPage() {
 
   // Redirect away if already signed in
   if (authLoaded && isSignedIn) {
-    return <Redirect href="/" />;
+    return <Redirect href="/trips" />;
   }
 
   const onSignInPress = async () => {
@@ -54,7 +54,7 @@ export default function SignInPage() {
 
       await signIn.finalize();
 
-      router.replace("/"); // go to app root
+      router.replace("/trips");
     } catch (err: any) {
       console.log("Sign in error:", JSON.stringify(err, null, 2));
       const message = getErrorMessage(err, "Something went wrong during sign in.");
