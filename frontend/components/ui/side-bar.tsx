@@ -86,8 +86,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   sidebarTitle: {
-    fontSize: 20,
-    fontWeight: '500',
+    fontSize: 25,
+    fontWeight: '800',
     color: '#76b6ee',
     paddingHorizontal: 20,
     marginBottom: 1,
