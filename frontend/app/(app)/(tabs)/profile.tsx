@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, useClerk } from '@clerk/expo';
+import { Pencil } from 'lucide-react-native';
 
 import { AppButton } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
@@ -113,6 +114,11 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleCancelProfileEditing = () => {
+    setIsEditingProfile(false);
+    void fetchData();
+  };
+
   const startEditing = (item: TripNeeds) => {
     setEditingTripId(item.tripId);
     setDraftAllergies(item.allergies ?? '');
@@ -193,7 +199,20 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>My Profile</Text>
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>My Profile</Text>
+            {!isEditingProfile ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Edit profile"
+                activeOpacity={0.8}
+                onPress={() => setIsEditingProfile(true)}
+                style={styles.editIconButton}
+              >
+                <Pencil size={20} color="#4a7ca8" strokeWidth={2.2} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
           <View style={styles.titleDivider} />
 
           <FormField
@@ -221,29 +240,26 @@ export default function ProfileScreen() {
             editable={isEditingProfile}
           />
 
-          <View style={styles.buttonRow}>
-            {isEditingProfile && (
+          {isEditingProfile ? (
+            <View style={styles.buttonRow}>
               <View style={{ flex: 1 }}>
                 <AppButton
                   label="Cancel"
-                  onPress={() => {
-                      setIsEditingProfile(false);
-                    void fetchData();
-                  }}
+                  onPress={handleCancelProfileEditing}
                   style={styles.cancelButton}
                   textStyle={styles.cancelButtonText}
                 />
               </View>
-            )}
-            <View style={{ flex: 1 }}>
-              <AppButton
-                variant="edit"
-                label={isEditingProfile ? (isSavingProfile ? 'Saving...' : 'Save') : 'Edit profile'}
-                onPress={handleEditProfile}
-                disabled={isSavingProfile}
-              />
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  variant="edit"
+                  label={isSavingProfile ? 'Saving...' : 'Save'}
+                  onPress={handleEditProfile}
+                  disabled={isSavingProfile}
+                />
+              </View>
             </View>
-          </View>
+          ) : null}
 
           {tripNeeds.length > 0 && (
             <>
@@ -360,12 +376,27 @@ const styles = StyleSheet.create({
     paddingTop: 64,
     paddingBottom: 80,
   },
+  titleSection: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
   title: {
     fontSize: 28,
     lineHeight: 34,
     fontWeight: '700',
     textAlign: 'center',
     color: '#090909',
+  },
+  editIconButton: {
+    position: 'absolute',
+    top: 2,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ddeaf7',
   },
   titleDivider: {
     height: 3,
