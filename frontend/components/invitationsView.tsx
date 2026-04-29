@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import EmailInviteUploader from '@/components/invitationsFileUpload';
+import { AppButton } from '@/components/ui/button';
 
 type InvitationsViewProps = {
   embedded?: boolean;
@@ -40,6 +41,11 @@ export default function InvitationsView({
         <View style={styles.centered}>
           <Text style={styles.errorText}>Invalid trip information</Text>
         </View>
+        <AppButton
+          label="Done"
+          style={{ marginTop: 24 }}
+          onPress={() => router.push(`/trips/${tripId}`)}
+        />
       </SafeAreaView>
     );
   }
@@ -112,6 +118,14 @@ export default function InvitationsView({
           </View>
         </View>
       </ScrollView>
+      <View style={{ padding: 24 }}>
+        <AppButton
+          label="Done"
+          variant="edit"
+          style={{ minWidth: '100%', minHeight: 56, borderRadius: 14 }}
+          onPress={() => router.push(`/trips/${tripId}`)}
+        />
+      </View>
     </KeyboardAvoidingView>
   );
 }
