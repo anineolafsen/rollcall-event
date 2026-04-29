@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth, useClerk } from '@clerk/expo';
+import { useAuth, useClerk, useUser } from '@clerk/expo';
 import { Pencil } from 'lucide-react-native';
 
 import { AppButton } from '@/components/ui/button';
@@ -30,12 +30,14 @@ type TripNeeds = {
 export default function ProfileScreen() {
   const { getToken } = useAuth();
   const { signOut } = useClerk();
+  const { user } = useUser();
   const router = useRouter();
   const getTokenRef = useRef(getToken);
   const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
   const clearTrips = useMobileTripStore((state) => state.clearTrips);
   const clearTripEvents = useMobileTripStore((state) => state.clearTripEvents);
 
+  const [userId, setUserId] = useState<number | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
@@ -44,6 +46,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const [editingTripId, setEditingTripId] = useState<number | null>(null);
   const [draftAllergies, setDraftAllergies] = useState('');
@@ -64,6 +67,7 @@ export default function ProfileScreen() {
       ]);
 
       const userData = await userRes.json();
+      setUserId(userData.id ?? null);
       setFirstName(userData.firstName ?? '');
       setLastName(userData.lastName ?? '');
       setPhone(userData.phone ?? '');
@@ -162,6 +166,12 @@ export default function ProfileScreen() {
     await signOut();
   }, [clearTripEvents, clearTrips, setSelectedTrip, signOut]);
 
+  const clearLocalUserState = useCallback(() => {
+    setSelectedTrip({ id: null });
+    clearTrips();
+    clearTripEvents();
+  }, [clearTripEvents, clearTrips, setSelectedTrip]);
+
   const handleSignOut = useCallback(() => {
     if (Platform.OS === 'web') {
       void performSignOut();
@@ -179,6 +189,73 @@ export default function ProfileScreen() {
       },
     ]);
   }, [performSignOut]);
+
+  const performDeleteAccount = useCallback(async () => {
+    if (!userId) {
+      Alert.alert('Could not delete account', 'User information is missing. Please try again.');
+      return;
+    }
+
+    if (!user) {
+      Alert.alert('Could not delete account', 'Clerk user session is missing. Please sign in again.');
+      return;
+    }
+
+    try {
+      setIsDeletingAccount(true);
+      const token = await getToken({ template: 'RollCallAuth' });
+
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to delete app user (${response.status})`);
+      }
+
+      const deletableUser = user as typeof user & { delete?: () => Promise<void> };
+      if (typeof deletableUser?.delete !== 'function') {
+        throw new Error('Current Clerk user cannot be deleted from this client.');
+      }
+
+      await deletableUser.delete();
+      clearLocalUserState();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      Alert.alert('Could not delete account', 'Please try again.');
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  }, [clearLocalUserState, getToken, user, userId]);
+
+  const handleDeleteAccount = useCallback(() => {
+    const title = 'Delete account';
+    const message = 'This permanently deletes your account and removes your data. This action cannot be undone.';
+
+    if (Platform.OS === 'web') {
+      const confirmed =
+        typeof window !== 'undefined' ? window.confirm(`${title}\n\n${message}`) : true;
+      if (confirmed) {
+        void performDeleteAccount();
+      }
+      return;
+    }
+
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await performDeleteAccount();
+        },
+      },
+    ]);
+  }, [performDeleteAccount]);
 
   if (loading) {
     return (
@@ -343,12 +420,25 @@ export default function ProfileScreen() {
           )}
 
           <View style={styles.signOutSection}>
-            <AppButton
-              label={isSigningOut ? 'Signing out...' : 'Sign out'}
-              onPress={handleSignOut}
-              disabled={isSigningOut}
-              style={styles.signOutButton}
-            />
+            <View style={styles.signOutActionsRow}>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label={isDeletingAccount ? 'Deleting...' : 'Delete account'}
+                  onPress={handleDeleteAccount}
+                  disabled={isSigningOut || isDeletingAccount}
+                  variant="delete"
+                  style={styles.deleteAccountButton}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label={isSigningOut ? 'Signing out...' : 'Sign out'}
+                  onPress={handleSignOut}
+                  disabled={isSigningOut || isDeletingAccount}
+                  style={styles.signOutButton}
+                />
+              </View>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -480,6 +570,14 @@ const styles = StyleSheet.create({
   },
   signOutSection: {
     marginTop: 28,
+  },
+  signOutActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  deleteAccountButton: {
+    minHeight: 56,
+    borderRadius: 14,
   },
   signOutButton: {
     backgroundColor: '#4a7ca8',
