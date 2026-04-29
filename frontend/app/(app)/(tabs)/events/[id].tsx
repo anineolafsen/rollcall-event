@@ -587,6 +587,8 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    borderRadius: 8,
+    minHeight: 48,
   },
   startCheckinButton: {
     backgroundColor: '#eaf7ec',

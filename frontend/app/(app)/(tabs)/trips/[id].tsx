@@ -1,11 +1,16 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useAuth } from '@clerk/expo';
 
-import { NotifyButton } from '@/components/NotifyButton';
 import { TripActionButton } from '@/components/ui/trip-action-button';
-import { UpcomingEventsScreen } from '@/components/upcoming-events';
 import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
@@ -14,17 +19,39 @@ interface Trip {
   id: number;
   name: string;
   isOrganizer: boolean;
+  startDate?: string | null;
+  endDate?: string | null;
+  destination?: string | null;
+  description?: string | null;
+  organizerPhone?: string | null;
 }
 
-export default function TripDetails() {
-  const { id } = useLocalSearchParams();
+export default function TripHomeScreen() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const { getToken } = useAuth();
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
+
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const {getToken} = useAuth();
-  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
+
+  const formatDateValue = (value?: string | null) => {
+    if (!value) {
+      return null;
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -54,7 +81,7 @@ export default function TripDetails() {
       void fetchTrip();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, setSelectedTrip]); // getToken is stable
+  }, [id, setSelectedTrip]);
 
   if (loading) {
     return (
@@ -70,7 +97,7 @@ export default function TripDetails() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.screen}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.push("/trips")}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.push('/trips')}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
           <View style={styles.centered}>
@@ -81,16 +108,26 @@ export default function TripDetails() {
     );
   }
 
+  const formattedStartDate = formatDateValue(trip.startDate);
+  const formattedEndDate = formatDateValue(trip.endDate);
+  const dateRangeText =
+    formattedStartDate && formattedEndDate
+      ? `${formattedStartDate} - ${formattedEndDate}`
+      : 'Not added';
+
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
-        
-        {/* Only show management buttons if the user is an Organizer */}
-        {trip.isOrganizer && (
-            <View style={styles.buttonRow}>
+
+        <Text style={styles.title}>{trip.name}</Text>
+        <View style={styles.titleDivider} />
+
+        <View style={styles.buttonRow}>
+          {trip.isOrganizer ? (
+            <>
               <TripActionButton
                 label="+ Manage Invitations"
                 onPress={() =>
@@ -121,22 +158,59 @@ export default function TripDetails() {
                   })
                 }
               />
-              <NotifyButton tripId={trip.id} tripName={trip.name} />
-              <TripActionButton
-                label="+ Create event"
-                backgroundColor="#ffffff"
-                textColor="#1a3d5c"
-                onPress={() => router.push(`/events/create?tripId=${trip.id}`)}
-              />
-            </View>
-        )}
+            </>
+          ) : null}
+          <TripActionButton
+            label="Events"
+            backgroundColor="#eaf7ec"
+            textColor="#1a3d1a"
+            onPress={() =>
+              router.push({
+                pathname: '/trips/[id]/events',
+                params: { id: String(trip.id), tripName: trip.name },
+              })
+            }
+          />
+        </View>
       </View>
-      <UpcomingEventsScreen 
-        tripId={trip.id} 
-        title={trip.name} 
-        showBackButton={false} 
-        isOrganizer={trip.isOrganizer} 
-      />
+
+      <View style={styles.content}>
+        <View style={styles.overviewCard}>
+          <View style={styles.topInfoRow}>
+            <View style={styles.leftInfoGroup}>
+              <View>
+                <Text style={styles.infoLabel}>Location</Text>
+                <View style={styles.locationPill}>
+                  <Text style={styles.locationPillText}>
+                    {trip.destination?.trim() ? trip.destination : 'Not added'}
+                  </Text>
+                </View>
+              </View>
+
+              <View>
+                <Text style={styles.infoLabel}>Date</Text>
+                <View style={styles.datePill}>
+                  <Text style={styles.datePillText}>{dateRangeText}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.organizerInlineSection}>
+              <Text style={styles.infoLabel}>Organizer phone</Text>
+              <Text style={styles.organizerPhoneValue}>
+                {trip.organizerPhone?.trim() ? trip.organizerPhone : 'Not added'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.descriptionSection}>
+            <Text style={styles.infoLabel}>Description</Text>
+            <Text style={styles.infoValue}>
+              {trip.description?.trim() ? trip.description : 'Not added'}
+            </Text>
+          </View>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -161,12 +235,110 @@ const styles = StyleSheet.create({
     color: '#4a7ca8',
     fontWeight: '600',
   },
+  title: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#090909',
+  },
+  titleDivider: {
+    height: 3,
+    backgroundColor: '#76b6ee',
+    borderRadius: 999,
+    marginTop: 14,
+    marginBottom: 12,
+    marginHorizontal: 28,
+  },
   buttonRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     gap: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 18,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingBottom: 28,
+  },
+  overviewCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#d0e5f7',
+    padding: 18,
+  },
+  topInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  leftInfoGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 1,
+  },
+  locationPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#dff0ff',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#8ebfe8',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  locationPillText: {
+    fontSize: 15,
+    color: '#164a75',
+    fontWeight: '700',
+  },
+  datePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0f6fc',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#b6cede',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  datePillText: {
+    fontSize: 15,
+    color: '#2a4a68',
+    fontWeight: '700',
+  },
+  organizerInlineSection: {
+    alignItems: 'flex-end',
+    marginLeft: 10,
+    maxWidth: '38%',
+  },
+  organizerPhoneValue: {
+    fontSize: 16,
+    color: '#1a3d5c',
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  descriptionSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#e4eef8',
+    paddingTop: 14,
+  },
+  infoLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7a9ab8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  infoValue: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#1a3d5c',
+    fontWeight: '500',
   },
   centered: {
     flex: 1,
