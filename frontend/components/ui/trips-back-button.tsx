@@ -13,11 +13,12 @@ export function TripsBackButton() {
   const { width } = useWindowDimensions();
   const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
+  const isEventsRoute = pathname === '/events';
   const isEventDetailsRoute = Boolean(pathname?.match(/^\/events\/[^/]+$/));
   const isCheckInRoute = pathname === '/checkIn';
   const isProfileRoute = pathname === '/profile';
 
-  if (!pathname || pathname === '/trips' || isDesktopWeb || isCheckInRoute || isProfileRoute) {
+  if (!pathname || pathname === '/trips' || isEventsRoute || isDesktopWeb || isCheckInRoute || isProfileRoute) {
     return null;
   }
 

@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -31,7 +32,7 @@ export default function InvitationsView({
   const searchParams = useLocalSearchParams();
   const tripId = tripIdProp ?? (searchParams.tripId ? Number(searchParams.tripId) : null);
   const tripName = tripNameProp ?? (searchParams.tripName as string | undefined) ?? null;
-  const showBackButton = !embedded && isDesktopWeb;
+  const showDesktopBackButton = !embedded && isDesktopWeb;
 
   if (!tripId || !tripName) {
     return (
@@ -76,11 +77,20 @@ export default function InvitationsView({
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.header, isMobileStandalone && styles.mobileHeader]}>
-          {showBackButton ? (
+          {showDesktopBackButton ? (
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Text style={styles.backButtonText}>← Go back</Text>
             </TouchableOpacity>
-          ) : null}
+          ) : (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              style={styles.mobileBackButton}
+              onPress={handleBack}
+            >
+              <MaterialIcons name="arrow-back" size={20} color="#1a3d5c" />
+            </TouchableOpacity>
+          )}
 
           <Text style={[styles.title, isMobileStandalone && styles.mobileTitle]}>
             Invite Participants
@@ -143,15 +153,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef5fb',
   },
   mobileHeader: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 24,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
+    position: 'relative',
+    paddingHorizontal: 20,
+    paddingTop: 34,
+    paddingBottom: 0,
   },
   backButton: {
     marginBottom: 12,
     alignSelf: 'flex-start',
+  },
+  mobileBackButton: {
+    position: 'absolute',
+    left: 20,
+    top: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+    shadowColor: '#0b2540',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    elevation: 3,
   },
   backButtonText: {
     fontSize: 15,
@@ -164,13 +194,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#090909',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   mobileTitle: {
+    fontSize: 23,
+    lineHeight: 26,
     textAlign: 'center',
+    paddingHorizontal: 48,
+    marginTop: 30,
   },
   tripName: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6B7280',
     marginBottom: 0,
     fontWeight: '500',
@@ -189,9 +223,9 @@ const styles = StyleSheet.create({
   },
   mobileDivider: {
     height: 3,
-    alignSelf: 'stretch',
     marginHorizontal: 28,
-    marginTop: 10,
+    marginTop: 14,
+    marginBottom: 28,
   },
   content: {
     flex: 1,
@@ -201,7 +235,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef5fb',
   },
   mobileContent: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 16,
     paddingTop: 0,
     paddingBottom: 24,
   },

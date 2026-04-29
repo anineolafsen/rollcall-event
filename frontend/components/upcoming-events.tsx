@@ -542,9 +542,9 @@ export function UpcomingEventsScreen({
     <SafeAreaView style={styles.screen}>
       <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
         <View style={styles.headerBlock}>
-          {showBackButton ? (
+          {showBackButton && !isMobileLayout ? (
             <TouchableOpacity
-              style={[styles.backButton, isMobileLayout && styles.mobileBackButton]}
+              style={styles.backButton}
               onPress={() => {
                 if (tripId != null) {
                   router.replace({
@@ -723,9 +723,6 @@ const styles = StyleSheet.create({
   backButton: {
     marginBottom: 12,
     alignSelf: 'flex-start',
-  },
-  mobileBackButton: {
-    marginBottom: 16,
   },
   backButtonText: {
     fontSize: 15,
