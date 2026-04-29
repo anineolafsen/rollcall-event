@@ -80,7 +80,8 @@ export function CreateTripScreen() {
   const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTrip, setIsLoadingTrip] = useState(false);
-  const showBackButton = Platform.OS === 'web' && width >= 900;
+  const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
+  const isMobileLayout = !showDesktopBackButton;
   const minimumStartValue = formatDateValue(new Date());
   const loadedTripIdRef = useRef<string | null>(null);
 
@@ -315,8 +316,8 @@ export function CreateTripScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          {showBackButton ? (
+        <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
+          {showDesktopBackButton ? (
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
               <Text style={styles.backButtonText}>← Go back</Text>
             </TouchableOpacity>
@@ -414,6 +415,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 80,
+  },
+  mobileContent: {
+    paddingHorizontal: 22,
+    paddingTop: 64,
   },
   title: {
     fontSize: 28,

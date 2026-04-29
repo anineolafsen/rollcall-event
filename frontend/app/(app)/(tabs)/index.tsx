@@ -290,19 +290,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 80,
+    paddingHorizontal: 22,
+    paddingTop: 64,
     paddingBottom: 128,
   },
   mainContent: {
     flex: 1,
   },
-  titleSection: {
-    marginBottom: 24,
-  },
   title: {
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '700',
     color: '#090909',
     textAlign: 'center',
@@ -312,6 +309,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#76b6ee',
     borderRadius: 999,
     marginTop: 14,
+    marginBottom: 28,
     marginHorizontal: 28,
   },
   buttonRow: {

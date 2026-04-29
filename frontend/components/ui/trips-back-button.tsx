@@ -14,8 +14,9 @@ export function TripsBackButton() {
   const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
   const isEventDetailsRoute = Boolean(pathname?.match(/^\/events\/[^/]+$/));
+  const isCheckInRoute = pathname === '/checkIn';
 
-  if (!pathname || pathname === '/trips' || isDesktopWeb) {
+  if (!pathname || pathname === '/trips' || isDesktopWeb || isCheckInRoute) {
     return null;
   }
 

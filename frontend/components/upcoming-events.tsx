@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   View,
@@ -33,9 +34,6 @@ type UpcomingEventsScreenProps = {
   showBackButton?: boolean;
   isOrganizer?: boolean;
   actionsBelowHeader?: React.ReactNode;
-  titleTopOffset?: number;
-  titleDividerHorizontalMargin?: number;
-  titleDividerTopMargin?: number;
 };
 
 export function UpcomingEventsScreen({
@@ -45,9 +43,6 @@ export function UpcomingEventsScreen({
   showBackButton = false,
   isOrganizer = false,
   actionsBelowHeader,
-  titleTopOffset,
-  titleDividerHorizontalMargin,
-  titleDividerTopMargin,
 }: UpcomingEventsScreenProps) {
   const POLL_BACKOFF_MS = 60000;
   const ACTIVE_POLL_MS = 5000;
@@ -86,6 +81,7 @@ export function UpcomingEventsScreen({
   const [leaveReason, setLeaveReason] = useState('');
   const [eventToLeave, setEventToLeave] = useState<EventRecord | null>(null);
   const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
+  const isMobileLayout = !showDesktopBackButton;
   const showEventLocation = showDesktopBackButton;
 
   useEffect(() => {
@@ -544,11 +540,11 @@ export function UpcomingEventsScreen({
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.content}>
+      <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
         <View style={styles.headerBlock}>
-          {showBackButton && showDesktopBackButton ? (
+          {showBackButton ? (
             <TouchableOpacity
-              style={styles.backButton}
+              style={[styles.backButton, isMobileLayout && styles.mobileBackButton]}
               onPress={() => {
                 if (tripId != null) {
                   router.replace({
@@ -568,7 +564,7 @@ export function UpcomingEventsScreen({
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             {tripName ? <Text style={styles.tripName}>{tripName}</Text> : null}
-            {tripId && isOrganizer && !actionsBelowHeader ? (
+            {tripId && isOrganizer && !actionsBelowHeader && !isMobileLayout ? (
               <Pressable
                 onPress={() => router.push(`/events/create?tripId=${tripId}`)}
                 style={({ pressed, hovered }) => [
@@ -582,22 +578,42 @@ export function UpcomingEventsScreen({
               </Pressable>
             ) : null}
           </View>
-          <View
-            style={[
-              styles.divider,
-              titleTopOffset != null ? { marginTop: titleTopOffset } : null,
-              titleDividerTopMargin != null ? { marginTop: titleDividerTopMargin } : null,
-              titleDividerHorizontalMargin != null
-                ? {
-                    marginHorizontal: titleDividerHorizontalMargin,
-                  }
-                : null,
-            ]}
-          />
+          <View style={styles.divider} />
+          {tripId && isOrganizer && !actionsBelowHeader && isMobileLayout ? (
+            <View style={styles.mobileCreateButtonRow}>
+              <Pressable
+                onPress={handleOpenNotify}
+                style={({ pressed, hovered }) => [
+                  styles.mobileCreateButton,
+                  hovered && styles.createButtonHovered,
+                  pressed && { opacity: 0.8 },
+                ]}>
+                {({ hovered }) => (
+                  <MaterialIcons
+                    name="notifications"
+                    size={18}
+                    color={hovered ? '#ffffff' : '#4a7ca8'}
+                  />
+                )}
+              </Pressable>
+              <Pressable
+                onPress={() => router.push(`/events/create?tripId=${tripId}`)}
+                style={({ pressed, hovered }) => [
+                  styles.mobileCreateButton,
+                  hovered && styles.createButtonHovered,
+                  pressed && { opacity: 0.8 },
+                ]}>
+                {({ hovered }) => (
+                  <>
+                    <Plus size={16} color={hovered ? '#ffffff' : '#4a7ca8'} />
+                  </>
+                )}
+              </Pressable>
+            </View>
+          ) : null}
         </View>
         {actionsBelowHeader ? <View style={styles.actionsRow}>{actionsBelowHeader}</View> : null}
         <View style={styles.timelineSection}>
-          <View style={styles.timelineRail} />
           <View style={styles.timelineContent}>
             {loading && !refreshing ? (
               <View style={styles.centered}>
@@ -697,12 +713,19 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 36,
   },
+  mobileContent: {
+    paddingHorizontal: 22,
+    paddingTop: 64,
+  },
   headerBlock: {
     backgroundColor: '#edf4fa',
   },
   backButton: {
     marginBottom: 12,
     alignSelf: 'flex-start',
+  },
+  mobileBackButton: {
+    marginBottom: 16,
   },
   backButtonText: {
     fontSize: 15,
@@ -712,16 +735,16 @@ const styles = StyleSheet.create({
   actionsRow: {
     marginBottom: 20,
   },
+  mobileCreateButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: -12,
+    marginBottom: 8,
+  },
   timelineSection: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'stretch',
-  },
-  timelineRail: {
-    width: 16,
-    backgroundColor: '#75baf0',
-    marginRight: 22,
-    marginBottom: -36,
   },
   timelineContent: {
     flex: 1,
@@ -841,6 +864,33 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  mobileCreateButton: {
+    minWidth: 40,
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#4a7ca8',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    shadowColor: '#4a7ca8',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  mobileCreateButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4a7ca8',
+  },
+  mobileCreateButtonTextHovered: {
+    color: '#ffffff',
   },
   createButtonHovered: {
     backgroundColor: '#4a7ca8',

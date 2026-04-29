@@ -63,7 +63,8 @@ export function CreateEventScreen() {
   const [eventTripId, setEventTripId] = useState<number | null>(tripId ? Number(tripId) : null);
   const minimumStartValue = formatDateValue(new Date());
   const isEditing = Boolean(id);
-  const showBackButton = Platform.OS === 'web' && width >= 900;
+  const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
+  const isMobileLayout = !showDesktopBackButton;
 
   const capacityHint = formValues.hasUnlimitedCapacity
     ? 'No participant limit is set for this event.'
@@ -274,7 +275,7 @@ export function CreateEventScreen() {
       setFormErrors({});
       setActiveDateField(null);
       Alert.alert('Success', isEditing ? 'Event updated successfully!' : 'Event created successfully!');
-      if (showBackButton) {
+      if (showDesktopBackButton) {
         router.replace(`/trips/${eventTripId}`);
         return;
       }
@@ -305,8 +306,8 @@ export function CreateEventScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          {showBackButton ? (
+        <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
+          {showDesktopBackButton ? (
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
               <Text style={styles.backButtonText}>← Go back</Text>
             </TouchableOpacity>
@@ -443,6 +444,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 80,
+  },
+  mobileContent: {
+    paddingHorizontal: 22,
+    paddingTop: 64,
   },
   title: {
     fontSize: 28,

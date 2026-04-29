@@ -57,7 +57,8 @@ export default function EventDetailsScreen() {
 
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [leaveReason, setLeaveReason] = useState('');
-  const showBackButton = Platform.OS === 'web' && width >= 900;
+  const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
+  const isMobileLayout = !showDesktopBackButton;
   const resolvedTripName =
     tripNameParam ??
     (event?.tripId != null && selectedTripId === event.tripId ? selectedTripName : null);
@@ -191,10 +192,12 @@ export default function EventDetailsScreen() {
   if (error || !event) {
     return (
       <SafeAreaView style={styles.screen}>
-        <View style={styles.content}>
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
+        <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
+          {showDesktopBackButton ? (
+            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error || 'Event not found'}</Text>
           </View>
@@ -321,8 +324,8 @@ export default function EventDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        {showBackButton ? (
+      <View style={[styles.header, isMobileLayout && styles.mobileHeader]}>
+        {showDesktopBackButton ? (
           <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
@@ -511,9 +514,17 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     backgroundColor: '#eef5fb',
   },
+  mobileHeader: {
+    paddingHorizontal: 22,
+    paddingTop: 64,
+  },
   content: {
     backgroundColor: '#eef5fb',
     flex: 1,
+  },
+  mobileContent: {
+    paddingHorizontal: 22,
+    paddingTop: 64,
   },
   contentContainer: {
     paddingHorizontal: 22,
