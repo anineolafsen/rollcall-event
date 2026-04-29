@@ -47,6 +47,7 @@ builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<ParticipantService>();
 builder.Services.AddScoped<EventService>();
 builder.Services.AddScoped<CheckinService>();
+builder.Services.AddScoped<MessageService>();
 
 var app = builder.Build();
 

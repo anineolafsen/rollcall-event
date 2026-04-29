@@ -17,6 +17,7 @@ namespace MyApp.API.Data
     public DbSet<EventParticipant> EventParticipants { get; set; }
     public DbSet<Checkin> Checkins { get; set; }
     public DbSet<EventCheckinSession> EventCheckinSessions { get; set; }
+    public DbSet<Message> Messages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -90,6 +91,15 @@ namespace MyApp.API.Data
 
       modelBuilder.Entity<EventCheckinSession>()
         .HasIndex(session => new { session.EventID, session.SessionType, session.IsActive });
+
+      modelBuilder.Entity<Message>()
+        .HasOne<Event>()
+        .WithMany()
+        .HasForeignKey(m => m.EventId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      modelBuilder.Entity<Message>()
+        .HasIndex(m => m.EventId);
     }
   }
 }
