@@ -37,7 +37,16 @@ export function ParticipantItem({ participant, isOrganizer, onToggle }: Omit<Par
         onPress={() => setPhoneModalVisible(true)}
         activeOpacity={0.7}
       >
-        <Text style={styles.name}>{participant.name}</Text>
+        <View style={styles.nameBlock}>
+          <Text style={styles.name}>{participant.name}</Text>
+          {!isCheckedIn && participant.message ? (
+            <Text style={styles.messagePreview} numberOfLines={1}>
+              {participant.message.length > 60
+                ? participant.message.slice(0, 60) + '…'
+                : participant.message}
+            </Text>
+          ) : null}
+        </View>
         <TouchableOpacity
           onPress={canToggle ? handleCheckboxPress : undefined}
           style={[styles.checkbox, isCheckedIn && styles.checkboxChecked, !canToggle && { opacity: 0.5 }]}
@@ -131,7 +140,7 @@ export function ParticipantItem({ participant, isOrganizer, onToggle }: Omit<Par
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginHorizontal: 16,
     marginVertical: 4,
@@ -141,10 +150,20 @@ const styles = StyleSheet.create({
   },
   rowGreen: { backgroundColor: '#d4edda' },
   rowRed:   { backgroundColor: '#f5c6cb' },
+  nameBlock: {
+    flex: 1,
+    marginRight: 8,
+  },
   name: {
     fontSize: 15,
     fontWeight: '500',
     color: '#222',
+  },
+  messagePreview: {
+    fontSize: 12,
+    color: '#888',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   checkbox: {
     width: 24,

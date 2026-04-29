@@ -2,6 +2,7 @@ import type { Participant } from "@/types/participantType";
 import { useCallback, useEffect, useState } from "react";
 import { checkinService } from "@/services/checkinService";
 import { getEventById } from "@/lib/events";
+import { messageService } from "@/services/messageService";
 
 const EMPTY_EVENT = {
   id: '',
@@ -24,10 +25,17 @@ export function useCheckins(eventId: string, token?: string | null, tripId?: str
 
     try {
       setLoading(true);
-      const [eventDetails, data] = await Promise.all([
+      const [eventDetails, data, messages] = await Promise.all([
         getEventById(eventId, token),
         checkinService.getEventParticipants(eventId, token),
+        messageService.getByEvent(eventId, token).catch(() => []),
       ]);
+
+      const latestMessage = new Map<number, string>();
+      for (const msg of messages) {
+        latestMessage.set(msg.senderParticipantId, msg.body);
+      }
+
       const mapped: Participant[] = data.map((participant) => ({
         id: participant.participantID,
         userId: participant.userID,
@@ -36,6 +44,7 @@ export function useCheckins(eventId: string, token?: string | null, tripId?: str
         checkedIn: participant.isCheckedIn,
         checkedInAt: participant.checkedInAt ?? null,
         phone: participant.phone ?? null,
+        message: latestMessage.get(participant.participantID) ?? null,
       }));
 
       setParticipants(mapped);
