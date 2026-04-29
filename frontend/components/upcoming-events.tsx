@@ -63,6 +63,7 @@ export function UpcomingEventsScreen({
     () => (tripCacheKey ? eventsByTrip[tripCacheKey] ?? [] : []),
     [eventsByTrip, tripCacheKey]
   );
+  const cachedEventsRef = useRef(cachedEvents);
 
   const [events, setEvents] = useState<EventRecord[]>(cachedEvents);
   const [loading, setLoading] = useState(cachedEvents.length === 0);
@@ -90,6 +91,10 @@ export function UpcomingEventsScreen({
   useEffect(() => {
     getTokenRef.current = getToken;
   }, [getToken]);
+
+  useEffect(() => {
+    cachedEventsRef.current = cachedEvents;
+  }, [cachedEvents]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -129,8 +134,8 @@ export function UpcomingEventsScreen({
   useEffect(() => {
     activeRequestIdRef.current += 1;
     isFetchingEventsRef.current = false;
-    setEvents(cachedEvents);
-    setLoading(cachedEvents.length === 0);
+    setEvents(cachedEventsRef.current);
+    setLoading(cachedEventsRef.current.length === 0);
     setRefreshing(false);
     setError(null);
     setCheckedInEventIds([]);
@@ -141,7 +146,25 @@ export function UpcomingEventsScreen({
     setShowLeaveModal(false);
     setLeaveReason('');
     setEventToLeave(null);
-  }, [cachedEvents, isOrganizer, tripId]);
+  }, [isOrganizer, tripCacheKey]);
+
+  useEffect(() => {
+    if (tripCacheKey == null) {
+      return;
+    }
+
+    setEvents((currentEvents) => {
+      if (currentEvents === cachedEvents || cachedEvents.length === 0) {
+        return currentEvents;
+      }
+
+      return currentEvents.length === 0 ? cachedEvents : currentEvents;
+    });
+
+    if (cachedEvents.length > 0) {
+      setLoading(false);
+    }
+  }, [cachedEvents, tripCacheKey]);
 
   const isAuthOrNetworkError = useCallback((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);

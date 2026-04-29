@@ -105,10 +105,10 @@ const styles = StyleSheet.create<{
     right: 0,
     bottom: 0,
     flexDirection: 'row',
-    backgroundColor: '#79b9ee',
+    backgroundColor: '#rgba(74, 124, 168, 1.00)',
     borderTopColor: 'transparent',
     paddingTop: 8,
-    shadowColor: '#000000',
+    shadowColor: '#ffffffff',
     shadowOpacity: 0.28,
     shadowRadius: 18,
     shadowOffset: {
