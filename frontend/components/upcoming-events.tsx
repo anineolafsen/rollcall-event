@@ -519,6 +519,7 @@ export function UpcomingEventsScreen({
             params: {
               id: String(item.id),
               tripId: String(item.tripId),
+              tripName: tripName ?? '',
             },
           })
         }
@@ -546,7 +547,20 @@ export function UpcomingEventsScreen({
       <View style={styles.content}>
         <View style={styles.headerBlock}>
           {showBackButton && showDesktopBackButton ? (
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => {
+                if (tripId != null) {
+                  router.replace({
+                    pathname: '/trips/[id]',
+                    params: { id: String(tripId) },
+                  });
+                  return;
+                }
+
+                router.back();
+              }}
+            >
               <Text style={styles.backButtonText}>← Go back</Text>
             </TouchableOpacity>
           ) : null}

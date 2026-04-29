@@ -97,7 +97,7 @@ export default function TripHomeScreen() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.screen}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.push('/trips')}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/trips')}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
           <View style={styles.centered}>
@@ -118,7 +118,7 @@ export default function TripHomeScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/trips')}>
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
 
