@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 8,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 36, // wider button
     borderWidth: 1,
     borderColor: 'rgba(26, 61, 92, 0.18)',
   },

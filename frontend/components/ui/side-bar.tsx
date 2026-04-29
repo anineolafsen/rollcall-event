@@ -59,6 +59,18 @@ export function AppSidebar() {
           );
         })}
       </View>
+      <View pointerEvents="none" style={styles.mountainScene}>
+        {/* Large back triangle */}
+        <View style={[styles.triangle, styles.triangleBack]} />
+        {/* Mid triangle left */}
+        <View style={[styles.triangle, styles.triangleMidLeft]} />
+        {/* Mid triangle right */}
+        <View style={[styles.triangle, styles.triangleMidRight]} />
+        {/* Small front triangle */}
+        <View style={[styles.triangle, styles.triangleFront]} />
+        {/* Right-side triangle mountain */}
+        <View style={[styles.triangle, styles.triangleRight]} />
+      </View>
     </View>
   );
 }
@@ -125,5 +137,75 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderLeftWidth: 3,
     borderLeftColor: '#76b6ee',
-},
+  },
+  mountainScene: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 110,
+    zIndex: 1,
+  },
+  triangle: {
+    position: 'absolute',
+    bottom: 0,
+    width: 0,
+    height: 0,
+    borderStyle: 'solid',
+  },
+  triangleBack: {
+    left: -20,
+    borderLeftWidth: 70,
+    borderRightWidth: 70,
+    borderBottomWidth: 90,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#223a5c',
+    opacity: 0.92,
+  },
+  triangleMidLeft: {
+    left: 40,
+    borderLeftWidth: 40,
+    borderRightWidth: 40,
+    borderBottomWidth: 60,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#345c87',
+    opacity: 0.8,
+  },
+  triangleMidRight: {
+    left: 90,
+    borderLeftWidth: 35,
+    borderRightWidth: 35,
+    borderBottomWidth: 50,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#4a7ca8',
+    opacity: 0.7,
+  },
+  triangleFront: {
+    left: 120,
+    borderLeftWidth: 22,
+    borderRightWidth: 22,
+    borderBottomWidth: 32,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#6fa4d6',
+    opacity: 0.65,
+  },
+  triangleRight: {
+    position: 'absolute',
+    bottom: 0,
+    right: -18,
+    width: 0,
+    height: 0,
+    borderStyle: 'solid',
+    borderLeftWidth: 28,
+    borderRightWidth: 28,
+    borderBottomWidth: 54,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#345c87',
+    opacity: 0.8,
+  },
 });

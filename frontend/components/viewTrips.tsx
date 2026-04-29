@@ -29,6 +29,7 @@ export function ViewTripsScreen() {
   const tripsLoaded = useMobileTripStore((state) => state.tripsLoaded);
   const setTripsCache = useMobileTripStore((state) => state.setTrips);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
+  const desktopColumns = 3;
 
   const [trips, setTrips] = useState<MobileTrip[]>(cachedTrips);
   const [loading, setLoading] = useState(!tripsLoaded);
@@ -36,7 +37,15 @@ export function ViewTripsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setTrips(cachedTrips);
+    const sortedTrips = [...cachedTrips].sort((a, b) => {
+      const aTime = new Date(a.startDate).getTime();
+      const bTime = new Date(b.startDate).getTime();
+      if (Number.isNaN(aTime) && Number.isNaN(bTime)) return 0;
+      if (Number.isNaN(aTime)) return 1;
+      if (Number.isNaN(bTime)) return -1;
+      return aTime - bTime;
+    });
+    setTrips(sortedTrips);
     if (cachedTrips.length > 0 || tripsLoaded) {
       setLoading(false);
     }
@@ -114,6 +123,7 @@ export function ViewTripsScreen() {
       }}
       style={({ hovered, pressed }) => [
         styles.card,
+        isDesktopWeb && styles.cardDesktop,
         isDesktopWeb && hovered && styles.cardHovered,
         pressed && styles.cardPressed,
       ]}>
@@ -134,7 +144,9 @@ export function ViewTripsScreen() {
         </View>
       </View>
       {isDesktopWeb && item.description ? (
-        <Text style={styles.description}>{item.description}</Text>
+        <Text style={styles.description} numberOfLines={3}>
+          {item.description}
+        </Text>
       ) : null}
     </Pressable>
   );
@@ -179,7 +191,10 @@ export function ViewTripsScreen() {
             data={trips}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderTrip}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            numColumns={isDesktopWeb ? desktopColumns : 1}
+            key={isDesktopWeb ? 'desktop-grid' : 'mobile-list'}
+            columnWrapperStyle={isDesktopWeb ? styles.desktopColumnWrap : undefined}
+            ItemSeparatorComponent={isDesktopWeb ? undefined : () => <View style={styles.separator} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -226,7 +241,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 16,
-    gap: 16,
+    gap: 24,
+  },
+  desktopColumnWrap: {
+    gap: 18,
   },
   card: {
     backgroundColor: '#ffffff',
@@ -234,6 +252,10 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: '#d0e5f7',
     overflow: 'hidden',
+  },
+  cardDesktop: {
+    flex: 1,
+    height: 220,
   },
   cardPressed: {
     opacity: 0.92,
@@ -279,7 +301,7 @@ const styles = StyleSheet.create({
   },
   description: {
     paddingHorizontal: 18,
-    paddingBottom: 14,
+    paddingBottom: 22,
     fontSize: 13,
     color: '#5a7a94',
     lineHeight: 19,

@@ -161,9 +161,9 @@ export default function TripHomeScreen() {
             </>
           ) : null}
           <TripActionButton
-            label="Events"
-            backgroundColor="#eaf7ec"
-            textColor="#1a3d1a"
+            label="See Events"
+            backgroundColor="#4a7ca8"
+            textColor="#fff"
             onPress={() =>
               router.push({
                 pathname: '/trips/[id]/events',
