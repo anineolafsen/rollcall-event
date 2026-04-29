@@ -310,21 +310,23 @@ export default function EventDetailsScreen() {
         <Text style={styles.title}>{event.name}</Text>
         <View style={styles.titleDivider} />
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Date And Time</Text>
-          <View style={styles.dateContainer}>
-            <View style={styles.dateBlock}>
-              <Text style={styles.dateLabel}>From</Text>
-              <Text style={styles.dateValue}>{formatEventDate(event.startDate)}</Text>
-              <Text style={styles.timeValue}>{formatEventTime(event.startDate)}</Text>
-            </View>
-            <View style={styles.dateBlock}>
-              <Text style={styles.dateLabel}>To</Text>
-              <Text style={styles.dateValue}>{formatEventDate(event.endDate)}</Text>
-              <Text style={styles.timeValue}>{formatEventTime(event.endDate)}</Text>
+        {!event.isEmergency && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Date And Time</Text>
+            <View style={styles.dateContainer}>
+              <View style={styles.dateBlock}>
+                <Text style={styles.dateLabel}>From</Text>
+                <Text style={styles.dateValue}>{formatEventDate(event.startDate)}</Text>
+                <Text style={styles.timeValue}>{formatEventTime(event.startDate)}</Text>
+              </View>
+              <View style={styles.dateBlock}>
+                <Text style={styles.dateLabel}>To</Text>
+                <Text style={styles.dateValue}>{formatEventDate(event.endDate)}</Text>
+                <Text style={styles.timeValue}>{formatEventTime(event.endDate)}</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {event.location && (
           <View style={styles.section}>
@@ -333,15 +335,19 @@ export default function EventDetailsScreen() {
           </View>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Attendance</Text>
-          <Text style={styles.sectionValue}>{formatAttendanceMode(event.attendanceMode)}</Text>
-        </View>
+        {!event.isEmergency && (
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Attendance</Text>
+              <Text style={styles.sectionValue}>{formatAttendanceMode(event.attendanceMode)}</Text>
+            </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Capacity</Text>
-          <Text style={styles.sectionValue}>{capacityText}</Text>
-        </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Capacity</Text>
+              <Text style={styles.sectionValue}>{capacityText}</Text>
+            </View>
+          </>
+        )}
 
         {event.description && (
           <View style={styles.section}>
