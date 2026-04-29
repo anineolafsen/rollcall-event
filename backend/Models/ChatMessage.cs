@@ -11,9 +11,12 @@ namespace MyApp.API.Models
         [Required]
         [ForeignKey(nameof(Chat))]
         public int ChatId { get; set; }
+        public Chat? Chat { get; set; }
         
         [Required]
-        public string SenderEmail { get; set; } = string.Empty;
+        [ForeignKey(nameof(Sender))]
+        public int SenderId { get; set; }
+        public User? Sender { get; set; }
 
         [Required]
         public string Content { get; set; } = string.Empty;

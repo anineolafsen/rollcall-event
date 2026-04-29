@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyApp.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260423081401_AddChatAndMessageService")]
-    partial class AddChatAndMessageService
+    [Migration("20260429144516_ImplmentChatSystemWithID")]
+    partial class ImplmentChatSystemWithID
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -36,9 +36,8 @@ namespace MyApp.API.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("CreatorId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("CreatorId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -48,6 +47,10 @@ namespace MyApp.API.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatorId");
+
+                    b.HasIndex("TripId");
 
                     b.ToTable("Chats");
                 });
@@ -67,14 +70,17 @@ namespace MyApp.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("SenderEmail")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("SenderId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ChatId");
+
+                    b.HasIndex("SenderId");
 
                     b.ToTable("ChatMessages");
                 });
@@ -82,19 +88,45 @@ namespace MyApp.API.Migrations
             modelBuilder.Entity("MyApp.API.Models.ChatParticipant", b =>
                 {
                     b.Property<int>("ChatId")
-                        .HasColumnType("integer")
-                        .HasColumnOrder(0);
+                        .HasColumnType("integer");
 
-                    b.Property<string>("UserEmail")
-                        .HasColumnType("text")
-                        .HasColumnOrder(1);
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("ChatId", "UserEmail");
+                    b.HasKey("ChatId", "UserId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("ChatParticipants");
+                });
+
+            modelBuilder.Entity("MyApp.API.Models.Checkin", b =>
+                {
+                    b.Property<int>("CheckinID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CheckinID"));
+
+                    b.Property<int>("EventID")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ParticipantID")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("CheckinID");
+
+                    b.HasIndex("EventID");
+
+                    b.HasIndex("EventID", "ParticipantID");
+
+                    b.ToTable("Checkins");
                 });
 
             modelBuilder.Entity("MyApp.API.Models.Event", b =>
@@ -139,6 +171,69 @@ namespace MyApp.API.Migrations
                     b.HasIndex("TripId");
 
                     b.ToTable("Events");
+                });
+
+            modelBuilder.Entity("MyApp.API.Models.EventCheckinSession", b =>
+                {
+                    b.Property<int>("SessionID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SessionID"));
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("EventID")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SessionType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("SessionID");
+
+                    b.HasIndex("EventID", "SessionType", "IsActive");
+
+                    b.ToTable("EventCheckinSessions");
+                });
+
+            modelBuilder.Entity("MyApp.API.Models.EventParticipant", b =>
+                {
+                    b.Property<int>("EventParticipantID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EventParticipantID"));
+
+                    b.Property<int>("EventID")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserID")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("EventParticipantID");
+
+                    b.HasIndex("UserID");
+
+                    b.HasIndex("EventID", "UserID")
+                        .IsUnique();
+
+                    b.ToTable("EventParticipants");
                 });
 
             modelBuilder.Entity("MyApp.API.Models.Invitation", b =>
@@ -245,7 +340,10 @@ namespace MyApp.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("FirstName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastName")
                         .HasColumnType("text");
 
                     b.Property<string>("Phone")
@@ -254,6 +352,61 @@ namespace MyApp.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("MyApp.API.Models.Chat", b =>
+                {
+                    b.HasOne("MyApp.API.Models.User", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MyApp.API.Models.Trip", null)
+                        .WithMany("Chats")
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Creator");
+                });
+
+            modelBuilder.Entity("MyApp.API.Models.ChatMessage", b =>
+                {
+                    b.HasOne("MyApp.API.Models.Chat", "Chat")
+                        .WithMany()
+                        .HasForeignKey("ChatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MyApp.API.Models.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Chat");
+
+                    b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("MyApp.API.Models.ChatParticipant", b =>
+                {
+                    b.HasOne("MyApp.API.Models.Chat", "Chat")
+                        .WithMany()
+                        .HasForeignKey("ChatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MyApp.API.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Chat");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MyApp.API.Models.Event", b =>
@@ -265,6 +418,26 @@ namespace MyApp.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Trip");
+                });
+
+            modelBuilder.Entity("MyApp.API.Models.EventParticipant", b =>
+                {
+                    b.HasOne("MyApp.API.Models.Event", "Event")
+                        .WithMany("Participants")
+                        .HasForeignKey("EventID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+                });
+
+            modelBuilder.Entity("MyApp.API.Models.Invitation", b =>
+                {
+                    b.HasOne("MyApp.API.Models.Trip", null)
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MyApp.API.Models.Participant", b =>
@@ -286,8 +459,15 @@ namespace MyApp.API.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MyApp.API.Models.Event", b =>
+                {
+                    b.Navigation("Participants");
+                });
+
             modelBuilder.Entity("MyApp.API.Models.Trip", b =>
                 {
+                    b.Navigation("Chats");
+
                     b.Navigation("Events");
 
                     b.Navigation("Participants");

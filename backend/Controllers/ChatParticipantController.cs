@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authorization;
 namespace MyApp.API.Controllers
 {
   public record AddChatParticipantRequest(int ChatId, int UserId);
-  public record AddChatParticipantByEmailRequest(int ChatId, string UserEmail);
 
   [ApiController]
   [Route("api/chat-participants")]
@@ -67,49 +66,12 @@ namespace MyApp.API.Controllers
       }
     }
 
-    [HttpPost("by-email")]
-    public IActionResult AddParticipantByEmail([FromBody] AddChatParticipantByEmailRequest request)
+    [HttpDelete("{chatId}/{userId}")]
+    public IActionResult RemoveParticipant(int chatId, int userId)
     {
       try
       {
-        if (string.IsNullOrWhiteSpace(request.UserEmail))
-        {
-          return BadRequest("UserEmail is required.");
-        }
-
-        var chat = _chatService.GetChatById(request.ChatId);
-        if (chat == null)
-        {
-          return BadRequest("Chat not found.");
-        }
-
-        // Look up user by email
-        var user = _userService.GetByEmail(request.UserEmail);
-        if (user == null)
-        {
-          return BadRequest("User not found.");
-        }
-
-        if (_participantService.ParticipantExistsByUserId(request.ChatId, user.Id))
-        {
-          return BadRequest("User is already a participant in this chat.");
-        }
-
-        var participant = _participantService.AddParticipantByUserId(request.ChatId, user.Id);
-        return CreatedAtAction(nameof(GetParticipantsByChat), new { chatId = request.ChatId }, participant);
-      }
-      catch (Exception ex)
-      {
-        return StatusCode(500, new { error = ex.Message });
-      }
-    }
-
-    [HttpDelete("{chatId}/{userEmail}")]
-    public IActionResult RemoveParticipant(int chatId, string userEmail)
-    {
-      try
-      {
-        var success = _participantService.RemoveParticipant(chatId, userEmail);
+        var success = _participantService.RemoveParticipant(chatId, userId);
         if (!success)
         {
           return NotFound();

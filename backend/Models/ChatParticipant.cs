@@ -1,18 +1,19 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace MyApp.API.Models
 {
+    [PrimaryKey(nameof(ChatId), nameof(UserId))]
     public class ChatParticipant
     {
-        [Key]
-        [Column(Order = 0)]
         [ForeignKey(nameof(Chat))]
         public int ChatId { get; set; }
+        public Chat? Chat { get; set; }
         
-        [Key]
-        [Column(Order = 1)]
-        public string UserEmail { get; set; } = string.Empty;
+        [ForeignKey(nameof(User))]
+        public int UserId { get; set; }
+        public User? User { get; set; }
         
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
     }

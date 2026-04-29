@@ -51,9 +51,9 @@ namespace MyApp.API.Controllers
         message.Content = message.Content.Trim();
       }
 
-      if (string.IsNullOrWhiteSpace(message.Content) || string.IsNullOrWhiteSpace(message.SenderEmail))
+      if (string.IsNullOrWhiteSpace(message.Content) || message.SenderId == 0)
       {
-        return BadRequest("Content and SenderEmail are required.");
+        return BadRequest("Content and SenderId are required.");
       }
 
       var chat = _chatService.GetChatById(message.ChatId);

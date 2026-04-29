@@ -21,7 +21,7 @@ interface Chat {
   id: number;
   tripId: number;
   title: string;
-  creatorId: string;
+  creatorId: number;
   createdAt: string;
 }
 
@@ -31,6 +31,7 @@ interface Trip {
 }
 
 interface Participant {
+  userId: number;
   email: string;
   name: string;
   type: 'participant' | 'invitation';
@@ -46,16 +47,35 @@ export default function EditChatScreen() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [title, setTitle] = useState('');
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
+  const [selectedParticipants, setSelectedParticipants] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const chatID = id ? Number(id) : null;
-  const currentUserEmail = clerkUser?.primaryEmailAddress?.emailAddress;
+
+  // Fetch current user's internal ID from API
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const token = await getToken({ template: 'RollCallAuth' });
+        const response = await fetch(`${API_BASE_URL}/api/users/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          setCurrentUserId(userData.id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch current user:", err);
+      }
+    };
+    fetchCurrentUser();
+  }, [getToken]);
 
   // Load chat data
   useEffect(() => {
@@ -94,8 +114,8 @@ export default function EditChatScreen() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const currentChatParticipants: any[] = partRes.ok ? await partRes.json() : [];
-        const participantEmails = currentChatParticipants.map((p: any) => p.userEmail);
-        setSelectedParticipants(new Set(participantEmails));
+        const participantIds = currentChatParticipants.map((p: any) => p.userId);
+        setSelectedParticipants(new Set(participantIds));
 
         // Fetch available participants from trip
         const tripPartRes = await fetch(
@@ -104,15 +124,16 @@ export default function EditChatScreen() {
         );
         const tripPartData = tripPartRes.ok ? await tripPartRes.json() : [];
 
-        const participantMap = new Map<string, Participant>();
+        const participantMap = new Map<number, Participant>();
 
-        // Add participants (accepted) - use lowercase field names
+        // Add participants (accepted)
         tripPartData.forEach((p: any) => {
-          const email = p.email;
-          if (email && !participantMap.has(email)) {
-            participantMap.set(email, {
-              email,
-              name: p.name || email.split('@')[0],
+          const userId = p.userId;
+          if (userId && !participantMap.has(userId)) {
+            participantMap.set(userId, {
+              userId: userId,
+              email: p.email || '',
+              name: p.name || p.email || 'Unknown',
               type: 'participant',
             });
           }
@@ -131,23 +152,23 @@ export default function EditChatScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatID]);
 
-  // Check creator after chat is loaded and current user email is available
+  // Check creator after chat is loaded
   useEffect(() => {
-    if (chat && currentUserEmail) {
-      const isCreatorMatch = chat.creatorId.toLowerCase() === currentUserEmail.toLowerCase();
+    if (chat && currentUserId) {
+      const isCreatorMatch = chat.creatorId === currentUserId;
       setIsCreator(isCreatorMatch);
     } else {
       setIsCreator(false);
     }
-  }, [chat, currentUserEmail]);
+  }, [chat, currentUserId]);
 
-  const toggleParticipant = useCallback((email: string) => {
+  const toggleParticipant = useCallback((userId: number) => {
     setSelectedParticipants((prev) => {
       const updated = new Set(prev);
-      if (updated.has(email)) {
-        updated.delete(email);
+      if (updated.has(userId)) {
+        updated.delete(userId);
       } else {
-        updated.add(email);
+        updated.add(userId);
       }
       return updated;
     });
@@ -193,13 +214,13 @@ export default function EditChatScreen() {
       const currentRes = await fetch(`${API_BASE_URL}/api/chat-participants/chat/${chatID}`, {
         headers,
       });
-      const currentParticipants: { userEmail: string }[] = currentRes.ok ? await currentRes.json() : [];
-      const currentEmails = new Set(currentParticipants.map((p) => p.userEmail));
+      const currentParticipants: { userId: number }[] = currentRes.ok ? await currentRes.json() : [];
+      const currentUserIds = new Set(currentParticipants.map((p) => p.userId));
 
       // Remove participants that were deselected
-      for (const email of currentEmails) {
-        if (!selectedParticipants.has(email)) {
-          await fetch(`${API_BASE_URL}/api/chat-participants/${chatID}/${email}`, {
+      for (const userId of currentUserIds) {
+        if (!selectedParticipants.has(userId)) {
+          await fetch(`${API_BASE_URL}/api/chat-participants/${chatID}/${userId}`, {
             method: 'DELETE',
             headers,
           });
@@ -207,14 +228,14 @@ export default function EditChatScreen() {
       }
 
       // Add new participants
-      for (const email of selectedParticipants) {
-        if (!currentEmails.has(email)) {
-          await fetch(`${API_BASE_URL}/api/chat-participants/by-email`, {
+      for (const userId of selectedParticipants) {
+        if (!currentUserIds.has(userId)) {
+          await fetch(`${API_BASE_URL}/api/chat-participants`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
               chatId: chatID,
-              userEmail: email,
+              userId: userId,
             }),
           });
         }
@@ -344,19 +365,19 @@ export default function EditChatScreen() {
               <FlatList
                 scrollEnabled={false}
                 data={participants}
-                keyExtractor={(item) => item.email}
+                keyExtractor={(item) => item.userId.toString()}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.participantItem}
-                    onPress={() => toggleParticipant(item.email)}
+                    onPress={() => toggleParticipant(item.userId)}
                   >
                     <View
                       style={[
                         styles.checkbox,
-                        selectedParticipants.has(item.email) && styles.checkboxChecked,
+                        selectedParticipants.has(item.userId) && styles.checkboxChecked,
                       ]}
                     >
-                      {selectedParticipants.has(item.email) && (
+                      {selectedParticipants.has(item.userId) && (
                         <Text style={styles.checkboxMark}>✓</Text>
                       )}
                     </View>

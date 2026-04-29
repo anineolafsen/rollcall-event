@@ -15,8 +15,10 @@ namespace MyApp.API.Models
         [Required]
         public string Title { get; set; } = string.Empty;
 
-        public string CreatorId { get; set; } = string.Empty;
-        
+        [ForeignKey(nameof(Creator))]
+        public int CreatorId { get; set; }
+        public User? Creator { get; set; }
+                
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

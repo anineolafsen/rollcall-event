@@ -9,6 +9,13 @@ namespace MyApp.API.Data
     {
     }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+      base.OnConfiguring(optionsBuilder);
+      optionsBuilder.ConfigureWarnings(w =>
+        w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+
     public DbSet<User> Users { get; set; }
     public DbSet<Trip> Trips { get; set; }
     public DbSet<Participant> Participants { get; set; }
@@ -17,9 +24,9 @@ namespace MyApp.API.Data
     public DbSet<EventParticipant> EventParticipants { get; set; }
     public DbSet<Checkin> Checkins { get; set; }
     public DbSet<EventCheckinSession> EventCheckinSessions { get; set; }
-    public DbSet<Chat> Chats { get; set; } = null!;
-    public DbSet<ChatParticipant> ChatParticipants { get; set; } = null!;
-    public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
+    public DbSet<Chat> Chats { get; set; }
+    public DbSet<ChatParticipant> ChatParticipants { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,9 +57,6 @@ namespace MyApp.API.Data
         .WithMany()
         .HasForeignKey(p => p.UserId)
         .OnDelete(DeleteBehavior.Cascade);
-
-      modelBuilder.Entity<ChatParticipant>()
-        .HasKey(cp => new { cp.ChatId, cp.UserEmail });
 
       modelBuilder.Entity<Event>()
         .HasOne(e => e.Trip)
@@ -99,6 +103,12 @@ namespace MyApp.API.Data
 
       // Chat relationships
       modelBuilder.Entity<Chat>()
+        .HasOne(c => c.Creator)
+        .WithMany()
+        .HasForeignKey(c => c.CreatorId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+      modelBuilder.Entity<Chat>()
         .HasOne<Trip>()
         .WithMany(t => t.Chats)
         .HasForeignKey(c => c.TripId)
@@ -106,12 +116,29 @@ namespace MyApp.API.Data
 
       // ChatMessage relationships
       modelBuilder.Entity<ChatMessage>()
-        .HasOne<Chat>()
+        .HasOne(cm => cm.Chat)
         .WithMany()
         .HasForeignKey(cm => cm.ChatId)
         .OnDelete(DeleteBehavior.Cascade);
 
-      // ChatParticipant already has HasKey configured above
+      modelBuilder.Entity<ChatMessage>()
+        .HasOne(cm => cm.Sender)
+        .WithMany()
+        .HasForeignKey(cm => cm.SenderId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+      // ChatParticipant relationships (HasKey is on the model via [PrimaryKey] attribute)
+      modelBuilder.Entity<ChatParticipant>()
+        .HasOne(cp => cp.Chat)
+        .WithMany()
+        .HasForeignKey(cp => cp.ChatId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      modelBuilder.Entity<ChatParticipant>()
+        .HasOne(cp => cp.User)
+        .WithMany()
+        .HasForeignKey(cp => cp.UserId)
+        .OnDelete(DeleteBehavior.Cascade);
     }
   }
 }

@@ -30,7 +30,7 @@ const DRAWER_WIDTH = Dimensions.get("window").width * 0.3;
 type Message = {
   id: number;
   chatId: number;
-  senderEmail: string;
+  senderId: number;
   content: string;
   timestamp: string;
 };
@@ -46,14 +46,14 @@ interface ChatData {
   id: number;
   title: string;
   tripId: number;
-  creatorId: string;
+  creatorId: number;
 }
 
 interface Chat {
   id: number;
   tripId: number;
   title: string;
-  creatorId: string;
+  creatorId: number;
   createdAt: string;
 }
 
@@ -147,12 +147,12 @@ function MessageBubble({
     setIsEditing(false);
   };
 
-  const displayName = userInfo ? `${userInfo.firstName || ""} ${userInfo.lastName || ""}`.trim() : message.senderEmail.split("@")[0];
+  const displayName = userInfo ? `${userInfo.firstName || "User"}` : `User ${message.senderId}`;
 
   return (
     <View>
       {/* Message row: avatar + bubble + timestamp (+ menu for own messages) */}
-      <View style={[styles.messageRow, isOwn && styles.messageRowUser]}>
+      <View style={[styles.messageRow, isOwn && styles.messageRowUser]} pointerEvents="box-none">
         {/* Other user: avatar on the left */}
         {!isOwn && (
           <View style={styles.senderColumn}>
@@ -165,7 +165,7 @@ function MessageBubble({
 
         {/* Dropdown menu (own messages only) — positioned left of bubble */}
         {isOwn && (
-          <View style={styles.menuContainer}>
+          <View style={styles.menuContainer} pointerEvents="box-none">
             <TouchableOpacity
               style={styles.menuButton}
               onPress={() => setShowMenu(!showMenu)}
@@ -175,7 +175,7 @@ function MessageBubble({
 
             {/* Dropdown menu items */}
             {showMenu && (
-              <View style={styles.dropdownMenu}>
+              <View style={styles.dropdownMenu} pointerEvents="auto">
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => {
@@ -367,6 +367,7 @@ function ChatSidePanel({
   const [chatsWithTrips, setChatsWithTrips] = useState<ChatWithTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userCache, setUserCache] = useState<Record<number, UserInfo>>({});
 
   useEffect(() => {
     if (isOpen) {
@@ -399,6 +400,28 @@ function ChatSidePanel({
     }
   }, [isOpen, translateX, overlayOpacity]);
 
+  const fetchCreatorUsers = useCallback(async (creatorIds: number[], token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const users: UserInfo[] = await response.json();
+        const newCache: Record<number, UserInfo> = {};
+        creatorIds.forEach(id => {
+          const user = users.find(u => u.id === id);
+          if (user) {
+            newCache[id] = user;
+          }
+        });
+        setUserCache(newCache);
+      }
+    } catch (err) {
+      console.error('Failed to fetch creator users:', err);
+    }
+  }, []);
+
   const fetchAllChats = useCallback(async () => {
     try {
       setError(null);
@@ -427,6 +450,11 @@ function ChatSidePanel({
           new Date(b.chat.createdAt).getTime() -
           new Date(a.chat.createdAt).getTime(),
       );
+      
+      // Fetch creator user details
+      const creatorIds = [...new Set(allChats.map(c => c.chat.creatorId))];
+      await fetchCreatorUsers(creatorIds, token);
+      
       setChatsWithTrips(allChats);
     } catch {
       setError("Could not load chats.");
@@ -476,7 +504,11 @@ function ChatSidePanel({
             </Text>
           </View>
           <Text style={styles.panelCreatedBy}>
-            {item.chat.creatorId.split("@")[0]}
+            {userCache[item.chat.creatorId] ? (
+              `By ${userCache[item.chat.creatorId].firstName || ''} ${userCache[item.chat.creatorId].lastName || ''}`.trim()
+            ) : (
+              `By User #${item.chat.creatorId}`
+            )}
           </Text>
           {isActive && <View style={styles.activeIndicator} />}
         </View>
@@ -557,30 +589,49 @@ export default function ChatScreen() {
   const [error, setError] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
-  const [userCache, setUserCache] = useState<Record<string, UserInfo>>({});
+  const [userCache, setUserCache] = useState<Record<number, UserInfo>>({});
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const chatID = id ? Number(id) : null;
-  const currentUserEmail = user?.primaryEmailAddress?.emailAddress;
-  const userCacheRef = useRef<Record<string, UserInfo>>({});
-  const fetchingRef = useRef<Set<string>>(new Set());
+  const userCacheRef = useRef<Record<number, UserInfo>>({});
+  const fetchingRef = useRef<Set<number>>(new Set());
 
   // Update ref when cache changes
   useEffect(() => {
     userCacheRef.current = userCache;
   }, [userCache]);
 
-  // Fetch user details by email
-  const fetchUserByEmail = useCallback(async (email: string) => {
-    if (userCacheRef.current[email]) {
-      return userCacheRef.current[email];
+  // Fetch current user's internal ID from API
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const token = await getToken({ template: 'RollCallAuth' });
+        const response = await fetch(`${API_BASE_URL}/api/users/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          setCurrentUserId(userData.id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch current user:", err);
+      }
+    };
+    fetchCurrentUser();
+  }, [getToken]);
+
+  // Fetch user details by ID
+  const fetchUserById = useCallback(async (userId: number) => {
+    if (userCacheRef.current[userId]) {
+      return userCacheRef.current[userId];
     }
 
     // Prevent duplicate fetch requests
-    if (fetchingRef.current.has(email)) {
+    if (fetchingRef.current.has(userId)) {
       return null;
     }
 
-    fetchingRef.current.add(email);
+    fetchingRef.current.add(userId);
 
     try {
       const token = await getToken({ template: 'RollCallAuth' });
@@ -590,16 +641,16 @@ export default function ChatScreen() {
       
       if (response.ok) {
         const users: UserInfo[] = await response.json();
-        const userByEmail = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-        if (userByEmail) {
-          setUserCache(prev => ({ ...prev, [email]: userByEmail }));
-          return userByEmail;
+        const user = users.find(u => u.id === userId);
+        if (user) {
+          setUserCache(prev => ({ ...prev, [userId]: user }));
+          return user;
         }
       }
     } catch (err) {
       console.error("Failed to fetch user:", err);
     } finally {
-      fetchingRef.current.delete(email);
+      fetchingRef.current.delete(userId);
     }
     
     return null;
@@ -633,7 +684,7 @@ export default function ChatScreen() {
           id: msg.id,
           chatId: msg.chatId,
           content: msg.content,
-          senderEmail: msg.senderEmail,
+          senderId: msg.senderId,
           timestamp: msg.timestamp,
         }));
 
@@ -655,25 +706,25 @@ export default function ChatScreen() {
 
   // Check if current user is the creator
   useEffect(() => {
-    if (chatData && currentUserEmail) {
-      const isCreatorMatch = chatData.creatorId.toLowerCase() === currentUserEmail.toLowerCase();
+    if (chatData && currentUserId) {
+      const isCreatorMatch = chatData.creatorId === currentUserId;
       setIsCreator(isCreatorMatch);
     }
-  }, [chatData, currentUserEmail]);
+  }, [chatData, currentUserId]);
 
   // Fetch user data for all message senders
   useEffect(() => {
-    const uniqueEmails = new Set(messages.map(m => m.senderEmail));
-    uniqueEmails.forEach(email => {
-      if (!userCacheRef.current[email]) {
-        fetchUserByEmail(email);
+    const uniqueIds = new Set(messages.map(m => m.senderId));
+    uniqueIds.forEach(id => {
+      if (!userCacheRef.current[id]) {
+        fetchUserById(id);
       }
     });
-  }, [messages, fetchUserByEmail]);
+  }, [messages, fetchUserById]);
 
   const handleSend = async () => {
     const text = draft.trim().replace(/[\n\r]+$/, "");
-    if (!text || !user?.primaryEmailAddress?.emailAddress || !chatID) return;
+    if (!text || !currentUserId || !chatID) return;
 
     try {
       setSending(true);
@@ -686,7 +737,7 @@ export default function ChatScreen() {
         },
         body: JSON.stringify({
           ChatId: chatID,
-          SenderEmail: user.primaryEmailAddress.emailAddress,
+          SenderId: currentUserId,
           Content: text,
           Timestamp: new Date().toISOString(),
         }),
@@ -701,7 +752,7 @@ export default function ChatScreen() {
           id: sentMessage.id,
           chatId: sentMessage.chatId,
           content: sentMessage.content,
-          senderEmail: sentMessage.senderEmail,
+          senderId: sentMessage.senderId,
           timestamp: sentMessage.timestamp,
         },
       ]);
@@ -717,23 +768,15 @@ export default function ChatScreen() {
 
   const handleDeleteMessage = async (messageId: number) => {
     try {
-      console.log('Deleting message:', messageId);
       const token = await getToken({ template: 'RollCallAuth' });
-      console.log('Token obtained:', !!token);
       const url = `${API_BASE_URL}/api/chat-messages/${messageId}`;
-      console.log('Delete URL:', url);
       
       const response = await fetch(url, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('Delete response status:', response.status);
-      console.log('Delete response ok:', response.ok);
-      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Delete error response:', errorText);
         throw new Error("Failed to delete message");
       }
       
@@ -747,18 +790,12 @@ export default function ChatScreen() {
 
   const handleEditMessage = async (messageId: number, newContent: string) => {
     try {
-      console.log('Editing message:', messageId, 'new content:', newContent);
       const token = await getToken({ template: 'RollCallAuth' });
-      console.log('Token obtained:', !!token);
       const url = `${API_BASE_URL}/api/chat-messages/${messageId}`;
-      console.log('Edit URL:', url);
       
       const body = {
-        ChatId: chatID,
-        SenderEmail: user?.primaryEmailAddress?.emailAddress,
         Content: newContent,
       };
-      console.log('Edit body:', body);
       
       const response = await fetch(url, {
         method: "PUT",
@@ -769,17 +806,12 @@ export default function ChatScreen() {
         body: JSON.stringify(body),
       });
       
-      console.log('Edit response status:', response.status);
-      console.log('Edit response ok:', response.ok);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Edit error response:', errorText);
-        throw new Error("Failed to update message");
+        throw new Error(`Failed to update message: ${errorText}`);
       }
       
       const updatedMessage = await response.json();
-      console.log('Updated message:', updatedMessage);
       
       setMessages((prev) =>
         prev.map((m) =>
@@ -862,13 +894,13 @@ export default function ChatScreen() {
               </View>
             ) : (
               messages.map((msg) => {
-                const senderInfo = userCache[msg.senderEmail] || null;
+                const senderInfo = userCache[msg.senderId] || null;
                 return (
                   <MessageBubble
                     key={msg.id}
                     message={msg}
                     isOwn={
-                      msg.senderEmail === user?.primaryEmailAddress?.emailAddress
+                      msg.senderId === currentUserId
                     }
                     onDelete={handleDeleteMessage}
                     onEdit={handleEditMessage}
@@ -1009,7 +1041,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: C.surface,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.3,
   },
@@ -1018,7 +1050,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   avatarName: {
-    fontSize: 10,
+    fontSize: 12,
     color: C.muted,
     marginTop: 2,
     maxWidth: 40,
@@ -1114,9 +1146,11 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   menuItem: {
+    width: "100%",
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: "center",
+    justifyContent: "center",
   },
   menuItemText: {
     fontSize: 13,
@@ -1238,8 +1272,6 @@ const styles = StyleSheet.create({
   panelContainerActive: {
     pointerEvents: "auto",
   },
-
-  // ── Side Panel ──────────────────────────────────────────────────────────────
 
   overlay: {
     ...StyleSheet.absoluteFillObject,

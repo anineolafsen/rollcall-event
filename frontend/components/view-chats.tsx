@@ -23,7 +23,7 @@ interface Chat {
   id: number;
   tripId: number;
   title: string;
-  creatorId: string;
+  creatorId: number;
   createdAt: string;
 }
 
@@ -36,6 +36,13 @@ interface ChatWithTrip {
   chat: Chat;
   trip: Trip | null;
 }
+
+type UserInfo = {
+  id: number;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+};
 
 interface CacheData {
   data: ChatWithTrip[];
@@ -50,6 +57,7 @@ export function ViewChatsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [userCache, setUserCache] = useState<Record<number, UserInfo>>({});
 
   const cacheRef = useRef<CacheData | null>(null);
   const lastRefreshRef = useRef<number>(0);
@@ -59,6 +67,28 @@ export function ViewChatsScreen() {
     const age = Date.now() - cacheRef.current.timestamp;
     return age < CACHE_TTL;
   };
+
+  const fetchCreatorUsers = useCallback(async (creatorIds: number[], token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const users: UserInfo[] = await response.json();
+        const newCache: Record<number, UserInfo> = { ...userCache };
+        creatorIds.forEach(id => {
+          const user = users.find(u => u.id === id);
+          if (user) {
+            newCache[id] = user;
+          }
+        });
+        setUserCache(newCache);
+      }
+    } catch (err) {
+      console.error('Failed to fetch creator users:', err);
+    }
+  }, [userCache]);
 
   const showToast = (message: string) => {
     // Only show toast on native platforms, not web
@@ -136,6 +166,10 @@ export function ViewChatsScreen() {
         const dateB = new Date(b.chat.createdAt).getTime();
         return dateB - dateA;
       });
+
+      // Fetch creator user details
+      const creatorIds = [...new Set(allChats.map(c => c.chat.creatorId))];
+      await fetchCreatorUsers(creatorIds, token);
 
       // Cache the results
       cacheRef.current = {
@@ -246,7 +280,11 @@ export function ViewChatsScreen() {
 
         <View style={styles.cardMeta}>
           <Text style={styles.createdBy}>
-            Created by {item.chat.creatorId.split('@')[0]}
+            {userCache[item.chat.creatorId] ? (
+              `Created by ${userCache[item.chat.creatorId].firstName || ''} ${userCache[item.chat.creatorId].lastName || ''}`.trim()
+            ) : (
+              `Created by User ${item.chat.creatorId}`
+            )}
           </Text>
         </View>
       </View>

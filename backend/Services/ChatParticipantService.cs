@@ -21,18 +21,18 @@ namespace MyApp.API.Services
         .ToList();
     }
 
-    public ChatParticipant? GetParticipant(int chatId, string userEmail)
+    public ChatParticipant? GetParticipant(int chatId, int userId)
     {
       return _context.ChatParticipants
-        .FirstOrDefault(cp => cp.ChatId == chatId && cp.UserEmail == userEmail);
+        .FirstOrDefault(cp => cp.ChatId == chatId && cp.UserId == userId);
     }
 
-    public ChatParticipant AddParticipant(int chatId, string userEmail)
+    public ChatParticipant AddParticipant(int chatId, int userId)
     {
       var participant = new ChatParticipant
       {
         ChatId = chatId,
-        UserEmail = userEmail,
+        UserId = userId,
         JoinedAt = DateTime.UtcNow
       };
 
@@ -49,13 +49,13 @@ namespace MyApp.API.Services
         throw new InvalidOperationException("User not found.");
       }
 
-      return AddParticipant(chatId, user.Email);
+      return AddParticipant(chatId, user.Id);
     }
 
-    public bool RemoveParticipant(int chatId, string userEmail)
+    public bool RemoveParticipant(int chatId, int userId)
     {
       var participant = _context.ChatParticipants
-        .FirstOrDefault(cp => cp.ChatId == chatId && cp.UserEmail == userEmail);
+        .FirstOrDefault(cp => cp.ChatId == chatId && cp.UserId == userId);
 
       if (participant == null)
       {
@@ -67,10 +67,10 @@ namespace MyApp.API.Services
       return true;
     }
 
-    public bool ParticipantExists(int chatId, string userEmail)
+    public bool ParticipantExists(int chatId, int userId)
     {
       return _context.ChatParticipants
-        .Any(cp => cp.ChatId == chatId && cp.UserEmail == userEmail);
+        .Any(cp => cp.ChatId == chatId && cp.UserId == userId);
     }
 
     public bool ParticipantExistsByUserId(int chatId, int userId)
@@ -81,7 +81,7 @@ namespace MyApp.API.Services
         return false;
       }
 
-      return ParticipantExists(chatId, user.Email);
+      return ParticipantExists(chatId, user.Id);
     }
   }
 }

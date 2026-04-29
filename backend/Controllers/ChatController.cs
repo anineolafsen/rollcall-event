@@ -76,8 +76,8 @@ namespace MyApp.API.Controllers
           return BadRequest("Trip not found.");
         }
 
-        // Set the creator to the authenticated user's email
-        chat.CreatorId = user.Email;
+        // Set the creator to the authenticated user's ID
+        chat.CreatorId = user.Id;
 
         var createdChat = _chatService.CreateChat(chat);
         return CreatedAtAction(nameof(GetChatById), new { id = createdChat.Id }, createdChat);
@@ -104,7 +104,7 @@ namespace MyApp.API.Controllers
         }
 
         var user = GetAuthenticatedUser();
-        if (existingChat.CreatorId != user.Email)
+        if (existingChat.CreatorId != user.Id)
         {
           return Forbid("Only the chat creator can edit this chat.");
         }
@@ -136,13 +136,13 @@ namespace MyApp.API.Controllers
         var user = GetAuthenticatedUser();
         
         // Case-insensitive email comparison
-        if (!string.Equals(chat.CreatorId, user.Email, System.StringComparison.OrdinalIgnoreCase))
+        if (chat.CreatorId != user.Id)
         {
-          Console.WriteLine($"[ChatController.DeleteChat] Permission denied: chat creator '{chat.CreatorId}' != user email '{user.Email}'");
+          Console.WriteLine($"[ChatController.DeleteChat] Permission denied: chat creator '{chat.CreatorId}' != user ID '{user.Id}'");
           return Forbid("Only the chat creator can delete this chat.");
         }
 
-        Console.WriteLine($"[ChatController.DeleteChat] User '{user.Email}' authorized to delete chat {id}");
+        Console.WriteLine($"[ChatController.DeleteChat] User '{user.Id}' authorized to delete chat {id}");
         var success = _chatService.DeleteChat(id);
         if (!success)
         {
