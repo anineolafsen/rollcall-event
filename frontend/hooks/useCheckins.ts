@@ -16,7 +16,7 @@ export function useCheckins(eventId: string, token?: string | null, tripId?: str
   const [error, setError] = useState<string | null>(null);
 
   const fetchParticipants = useCallback(async () => {
-    if (!eventId) {
+    if (!eventId || !token) {
       setParticipants([]);
       setLoading(false);
       return;
@@ -57,7 +57,7 @@ export function useCheckins(eventId: string, token?: string | null, tripId?: str
   }, [fetchParticipants, tripId]);
 
   useEffect(() => {
-    if (!eventId) {
+    if (!eventId || !token) {
       return;
     }
 
@@ -66,7 +66,7 @@ export function useCheckins(eventId: string, token?: string | null, tripId?: str
     }, 10000);
 
     return () => clearInterval(intervalId);
-  }, [eventId, fetchParticipants]);
+  }, [eventId, fetchParticipants, token]);
 
   const checkedIn = participants.filter(p => p.checkedIn === true);
   const notCheckedIn = participants.filter(p => p.checkedIn !== true);

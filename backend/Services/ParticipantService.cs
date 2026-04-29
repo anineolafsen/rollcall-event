@@ -21,6 +21,13 @@ namespace MyApp.API.Services
     public string? OtherInfo { get; set; }
   }
 
+  public class ParticipantContactDto
+  {
+    public int UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+  }
+
   public class ParticipantService
   {
     private readonly AppDbContext _context;
@@ -56,6 +63,29 @@ namespace MyApp.API.Services
           OtherInfo = p.OtherInfo
         })
         .ToList();
+    }
+
+    public List<ParticipantContactDto> GetContactsByTrip(int tripId)
+    {
+      return _context.Participants
+        .Include(p => p.User)
+        .Where(p => p.TripId == tripId && p.User!.Phone != null)
+        .Select(p => new ParticipantContactDto
+        {
+          UserId = p.UserId,
+          Name = (p.User!.FirstName + " " + p.User.LastName).Trim(),
+          Phone = p.User!.Phone!
+        })
+        .ToList();
+    }
+
+    public string? GetOrganizerPhoneByTrip(int tripId)
+    {
+      return _context.Participants
+        .Include(p => p.User)
+        .Where(p => p.TripId == tripId && p.IsOrganizer && p.User != null && p.User.Phone != null && p.User.Phone != "")
+        .Select(p => p.User!.Phone)
+        .FirstOrDefault();
     }
 
     public Participant? GetByTripAndUser(int tripId, int userId)

@@ -15,7 +15,7 @@ export default function TabLayout() {
 
   const isWeb = Platform.OS === 'web';
   const router = useRouter();
-  const { userId, getToken } = useAuth();
+  const { userId, getToken, isLoaded, isSignedIn } = useAuth();
   const getTokenRef = useRef(getToken);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -88,7 +88,7 @@ export default function TabLayout() {
   }, []);
 
   const refreshActiveCheckin = useCallback(async () => {
-    if (!userId || !isPageVisible) {
+    if (!isLoaded || !isSignedIn || !userId || !isPageVisible) {
       return;
     }
 
@@ -98,6 +98,11 @@ export default function TabLayout() {
 
     try {
       const token = await getTokenRef.current({ template: 'RollCallAuth' });
+      if (!token) {
+        recordPollFailure(new Error('401: missing auth token'));
+        return;
+      }
+
       const lookup = await checkinService.getActiveSessionsForUser(userId, token);
       const nextEventId = lookup.eventIds.length > 0 ? lookup.eventIds[0] : null;
 
@@ -134,7 +139,7 @@ export default function TabLayout() {
       recordPollFailure(error);
       
     }
-  }, [clearPollBackoff, isPageVisible, recordPollFailure, shouldPausePolling, userId]);
+  }, [clearPollBackoff, isLoaded, isPageVisible, isSignedIn, recordPollFailure, shouldPausePolling, userId]);
 
   useEffect(() => {
     void refreshActiveCheckin();
@@ -167,13 +172,18 @@ export default function TabLayout() {
   }, [refreshActiveCheckin]);
 
   const handleCheckIn = useCallback(async () => {
-    if (!activeEventId || !userId) {
+    if (!isLoaded || !isSignedIn || !activeEventId || !userId) {
       return;
     }
 
     try {
       setIsCheckingIn(true);
       const token = await getTokenRef.current({ template: 'RollCallAuth' });
+      if (!token) {
+        Alert.alert('Authentication required', 'Please sign in again and retry check-in.');
+        return;
+      }
+
       const participants = await checkinService.getEventParticipants(activeEventId, token);
       const me = participants.find((p: EventParticipantStatus) => p.userID === userId);
 
@@ -199,7 +209,7 @@ export default function TabLayout() {
     } finally {
       setIsCheckingIn(false);
     }
-  }, [activeEventId, clearPollBackoff, userId]);
+  }, [activeEventId, clearPollBackoff, isLoaded, isSignedIn, userId]);
 
   const handleContact = useCallback(() => {
     if (activeTripId) {

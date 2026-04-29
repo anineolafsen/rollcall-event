@@ -42,7 +42,8 @@ namespace MyApp.API.Controllers
     {
       var user = GetAuthenticatedUser();
       var trips = _tripService.GetTripsByUser(user.Id);
-      var result = trips.Select(t => new {
+      var result = trips.Select(t => new
+      {
         t.Id,
         t.Name,
         t.StartDate,
@@ -102,7 +103,8 @@ namespace MyApp.API.Controllers
         trip.EndDate,
         trip.Destination,
         trip.Description,
-        IsOrganizer = isParticipant && _tripService.UserIsOrganizer(id, user.Id)
+        IsOrganizer = isParticipant && _tripService.UserIsOrganizer(id, user.Id),
+        OrganizerPhone = _participantService.GetOrganizerPhoneByTrip(id)
       });
     }
 
@@ -222,7 +224,7 @@ namespace MyApp.API.Controllers
       var user = GetAuthenticatedUser();
 
       if (!_tripService.UserIsOrganizer(id, user.Id))
-          return Forbid();
+        return Forbid();
 
       var needs = _participantService.GetNeedsByTrip(id);
       return Ok(needs);

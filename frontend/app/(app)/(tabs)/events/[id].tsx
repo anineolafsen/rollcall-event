@@ -12,6 +12,7 @@ import {
   Platform,
   TextInput,
   Modal,
+  Pressable,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
 import { AppButton } from '@/components/ui/button';
@@ -126,8 +127,10 @@ export default function EventDetailsScreen() {
     router.replace('/trips' as any);
   };
 
-    const handleLeaveWithoutReason = async () => {
-    if (!event) return;
+  const handleLeaveWithoutReason = async () => {
+    if (!event) {
+      return;
+    }
 
     try {
       const token = await getToken();
@@ -141,7 +144,9 @@ export default function EventDetailsScreen() {
   };
 
   const handleLeaveWithReason = async () => {
-    if (!event) return;
+    if (!event) {
+      return;
+    }
 
     try {
       const token = await getToken();
@@ -167,7 +172,7 @@ export default function EventDetailsScreen() {
   if (error || !event) {
     return (
       <SafeAreaView style={styles.screen}>
-        <View style={styles.content}>
+        <View style={styles.screen}>
           <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
@@ -350,8 +355,13 @@ export default function EventDetailsScreen() {
           <View style={styles.actionRow}>
             <AppButton
               variant="default"
-              style={[styles.actionButton, isSelfCheckinActive ? styles.activeCheckinButton : null]}
-              textStyle={isSelfCheckinActive ? styles.activeCheckinButtonText : undefined}
+              style={[
+                styles.actionButton,
+                isSelfCheckinActive ? styles.startCheckinButtonActive : styles.startCheckinButton,
+              ]}
+              textStyle={
+                isSelfCheckinActive ? styles.startCheckinButtonTextActive : styles.startCheckinButtonText
+              }
               label={isSelfCheckinActive ? 'Check-in active' : 'Start check-in'}
               onPress={() => {
                 if (isSelfCheckinActive) {
@@ -368,18 +378,19 @@ export default function EventDetailsScreen() {
         {!event.isOrganizer && (
           <>
             <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({ hovered, pressed }) => [
                   styles.joinLeaveButton,
                   isParticipantCheckedIn && styles.joinLeaveButtonCheckedIn,
                   event.joinButtonState === 'leave' && !isParticipantCheckedIn && styles.joinLeaveButtonLeave,
                   event.joinButtonState === 'mandatory' && styles.joinLeaveButtonMandatory,
                   (!isParticipantCheckedIn && event.joinButtonState !== 'leave' && event.joinButtonState !== 'mandatory') && styles.joinLeaveButtonJoin,
+                  !(isUpdatingParticipation || event.joinButtonState === 'mandatory' || isParticipantCheckedIn) && hovered && styles.joinLeaveButtonHovered,
+                  !(isUpdatingParticipation || event.joinButtonState === 'mandatory' || isParticipantCheckedIn) && pressed && styles.joinLeaveButtonPressed,
                   (isUpdatingParticipation || event.joinButtonState === 'mandatory' || isParticipantCheckedIn) && styles.joinLeaveButtonDisabled,
                 ]}
                 onPress={handleJoinLeave}
                 disabled={isUpdatingParticipation || event.joinButtonState === 'mandatory' || isParticipantCheckedIn}
-                activeOpacity={0.85}
               >
                 <Text style={[
                   styles.joinLeaveButtonText,
@@ -388,7 +399,7 @@ export default function EventDetailsScreen() {
                 ]}>
                   {isUpdatingParticipation ? 'Updating...' : attendeeButtonLabel}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
             <Modal visible={showLeaveModal} transparent animationType="fade">
               <View style={styles.modalOverlay}>
@@ -474,7 +485,7 @@ const styles = StyleSheet.create({
     // flex: 1, -- (forslag) jeg kommenterte ut så man kan scrolle helt ned, men bare å ta bort igjen
     backgroundColor: '#eef5fb',
     paddingHorizontal: 22,
-    paddingTop: 80,
+    paddingTop: 64,
     paddingBottom: 80,
   },
   backButton: {
@@ -487,10 +498,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
-    fontSize: 32,
-    lineHeight: 40,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '700',
     color: '#090909',
+    textAlign: 'center',
   },
   titleDivider: {
     height: 3,
@@ -570,14 +582,28 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    borderRadius: 8,
+    minHeight: 48,
   },
-  activeCheckinButton: {
-    backgroundColor: '#ffffff',
+  startCheckinButton: {
+    backgroundColor: '#eaf7ec',
     borderWidth: 1,
-    borderColor: '#d9e8f5',
+    borderColor: '#4c915f',
   },
-  activeCheckinButtonText: {
-    color: '#111111',
+  startCheckinButtonActive: {
+    backgroundColor: '#f0f6fc',
+    borderWidth: 1,
+    borderColor: '#7e8d9a',
+  },
+  startCheckinButtonText: {
+    color: '#1a3d1a',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  startCheckinButtonTextActive: {
+    color: '#1a3d1a',
+    fontSize: 20,
+    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
@@ -633,15 +659,15 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   joinLeaveButtonJoin: {
-    backgroundColor: '#77c88a',
+    backgroundColor: '#eaf7ec',
     borderColor: '#4c915f',
   },
   joinLeaveButtonLeave: {
-    backgroundColor: '#ff6f80',
+    backgroundColor: '#fff0f1',
     borderColor: '#d45162',
   },
   joinLeaveButtonMandatory: {
-    backgroundColor: '#d9dd8a',
+    backgroundColor: '#fafadc',
     borderColor: '#a9ac5f',
   },
   joinLeaveButtonCheckedIn: {
@@ -651,16 +677,26 @@ const styles = StyleSheet.create({
   joinLeaveButtonDisabled: {
     opacity: 0.6,
   },
+  joinLeaveButtonHovered: {
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    transform: [{ translateY: -1 }],
+  },
+  joinLeaveButtonPressed: {
+    opacity: 0.88,
+    transform: [{ translateY: 0 }],
+  },
   joinLeaveButtonText: {
-    color: '#111111',
-    fontSize: 18,
+    color: '#1a3d1a',
+    fontSize: 20,
     fontWeight: '700',
-    lineHeight: 24,
   },
   joinLeaveButtonTextLeave: {
-    color: '#111111',
+    color: '#b0192a',
   },
   joinLeaveButtonTextMandatory: {
-    color: '#111111',
+    color: '#5a5a00',
   },
 });

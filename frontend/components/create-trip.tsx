@@ -363,6 +363,7 @@ export function CreateTripScreen() {
           ) : null}
 
           <AppButton
+            variant="edit"
             label={
               isLoading
                 ? isEditing
@@ -390,9 +391,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   content: {
-    backgroundColor: "#eef5fb",
-    paddingHorizontal: 22,
-    paddingTop: 80,
+    backgroundColor: '#eef5fb',
+    paddingHorizontal: 24,
+    paddingTop: 16,
     paddingBottom: 80,
   },
   title: {
@@ -411,8 +412,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 28,
   },
   backButton: {
-    marginBottom: 24,
-    alignSelf: "flex-start",
+    marginBottom: 12,
+    alignSelf: 'flex-start',
   },
   backButtonText: {
     fontSize: 15,

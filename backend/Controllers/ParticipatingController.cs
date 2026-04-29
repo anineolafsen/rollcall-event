@@ -38,6 +38,13 @@ namespace MyApp.API.Controllers
       return Ok(participants);
     }
 
+    [HttpGet("trip/{tripId}/contact")]
+    public IActionResult GetContactsByTrip(int tripId)
+    {
+      var contacts = _participantService.GetContactsByTrip(tripId);
+      return Ok(contacts);
+    }
+
     [HttpGet("my-trips")]
     public IActionResult GetMyTripsWithNeeds()
     {
