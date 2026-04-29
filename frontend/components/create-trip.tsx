@@ -313,7 +313,10 @@ export function CreateTripScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isMobileLayout && styles.mobileScrollContent,
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
@@ -409,6 +412,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+  },
+  mobileScrollContent: {
+    backgroundColor: '#eef5fb',
   },
   content: {
     backgroundColor: '#eef5fb',

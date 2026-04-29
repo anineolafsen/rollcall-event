@@ -1,7 +1,7 @@
 import { useAuth } from '@clerk/expo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -9,6 +9,7 @@ import {
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  type ScrollView as ScrollViewType,
   StyleSheet,
   Text,
   View,
@@ -26,6 +27,8 @@ export default function Home() {
   const router = useRouter();
   const { getToken } = useAuth();
   const { width } = useWindowDimensions();
+  const mobileTabScrollRef = useRef<ScrollViewType | null>(null);
+  const mobileTabScrollXRef = useRef(0);
   const selectedTripId = useMobileTripStore((state) => state.selectedTripId);
   const selectedTripName = useMobileTripStore((state) => state.selectedTripName);
   const cachedTrips = useMobileTripStore((state) => state.trips);
@@ -159,6 +162,12 @@ export default function Home() {
     ];
   }, [activeTrip]);
 
+  const handleMobileTabHintPress = useCallback(() => {
+    const nextOffset = mobileTabScrollXRef.current + 120;
+    mobileTabScrollRef.current?.scrollTo({ x: nextOffset, animated: true });
+    mobileTabScrollXRef.current = nextOffset;
+  }, []);
+
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView
@@ -194,28 +203,42 @@ export default function Home() {
             <>
               {activeTrip.isOrganizer && showMobileOrganizerTabs ? (
                 <View style={styles.mobileTabsSection}>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.mobileTabList}
-                    style={styles.mobileTabScroll}
-                  >
-                    {organizerTabs.map((tab, index) => {
-                      const isActive = index === activeMobileTab;
+                  <View style={styles.mobileTabScroller}>
+                    <ScrollView
+                      ref={mobileTabScrollRef}
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.mobileTabList}
+                      style={styles.mobileTabScroll}
+                      onScroll={(event) => {
+                        mobileTabScrollXRef.current = event.nativeEvent.contentOffset.x;
+                      }}
+                      scrollEventThrottle={16}
+                      >
+                        {organizerTabs.map((tab, index) => {
+                          const isActive = index === activeMobileTab;
 
-                      return (
-                        <Pressable
-                          key={tab.key}
-                          style={[styles.mobileTab, isActive && styles.mobileTabActive]}
-                          onPress={() => setActiveMobileTab(index)}
-                        >
-                          <Text style={[styles.mobileTabText, isActive && styles.mobileTabTextActive]}>
-                            {tab.label}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </ScrollView>
+                        return (
+                          <Pressable
+                            key={tab.key}
+                            style={[styles.mobileTab, isActive && styles.mobileTabActive]}
+                            onPress={() => setActiveMobileTab(index)}
+                          >
+                            <Text style={[styles.mobileTabText, isActive && styles.mobileTabTextActive]}>
+                              {tab.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                    <Pressable
+                      onPress={handleMobileTabHintPress}
+                      style={styles.mobileTabHintBadge}
+                      hitSlop={8}
+                    >
+                      <MaterialIcons name="chevron-right" size={18} color="#4a7ca8" />
+                    </Pressable>
+                  </View>
 
                   <View style={styles.mobileActivePanel}>
                     {organizerTabs[activeMobileTab]?.render()}
@@ -388,12 +411,19 @@ const styles = StyleSheet.create({
   mobileTabsSection: {
     gap: 16,
   },
+  mobileTabScroller: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   mobileTabScroll: {
-    marginHorizontal: -4,
+    flex: 1,
+    overflow: 'visible',
   },
   mobileTabList: {
     gap: 10,
-    paddingHorizontal: 4,
+    paddingLeft: 4,
+    paddingRight: 4,
   },
   mobileTab: {
     borderRadius: 999,
@@ -411,6 +441,24 @@ const styles = StyleSheet.create({
   },
   mobileTabTextActive: {
     color: '#ffffff',
+  },
+  mobileTabHintBadge: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    backgroundColor: '#f6fbff',
+    borderWidth: 1,
+    borderColor: '#c7dcef',
+    shadowColor: '#76b6ee',
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    elevation: 3,
   },
   mobileActivePanel: {
     minHeight: 0,

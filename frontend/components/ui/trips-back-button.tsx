@@ -15,8 +15,9 @@ export function TripsBackButton() {
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
   const isEventDetailsRoute = Boolean(pathname?.match(/^\/events\/[^/]+$/));
   const isCheckInRoute = pathname === '/checkIn';
+  const isProfileRoute = pathname === '/profile';
 
-  if (!pathname || pathname === '/trips' || isDesktopWeb || isCheckInRoute) {
+  if (!pathname || pathname === '/trips' || isDesktopWeb || isCheckInRoute || isProfileRoute) {
     return null;
   }
 
