@@ -368,6 +368,11 @@ function ChatSidePanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userCache, setUserCache] = useState<Record<number, UserInfo>>({});
+  const getTokenRef = useRef(getToken);
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   useEffect(() => {
     if (isOpen) {
@@ -425,7 +430,7 @@ function ChatSidePanel({
   const fetchAllChats = useCallback(async () => {
     try {
       setError(null);
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       const tripsRes = await fetch(`${API_BASE_URL}/api/trips/my`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -461,7 +466,7 @@ function ChatSidePanel({
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, []);
 
   useEffect(() => {
     if (isOpen && chatsWithTrips.length === 0) {
@@ -581,6 +586,11 @@ export default function ChatScreen() {
   const { getToken } = useAuth();
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
+  const getTokenRef = useRef(getToken);
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   const [chatData, setChatData] = useState<ChatData | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -605,7 +615,7 @@ export default function ChatScreen() {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const token = await getToken({ template: 'RollCallAuth' });
+        const token = await getTokenRef.current({ template: 'RollCallAuth' });
         const response = await fetch(`${API_BASE_URL}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -618,7 +628,7 @@ export default function ChatScreen() {
       }
     };
     fetchCurrentUser();
-  }, [getToken]);
+  }, []);
 
   // Fetch user details by ID
   const fetchUserById = useCallback(async (userId: number) => {
@@ -634,7 +644,7 @@ export default function ChatScreen() {
     fetchingRef.current.add(userId);
 
     try {
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       const response = await fetch(`${API_BASE_URL}/api/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -654,7 +664,7 @@ export default function ChatScreen() {
     }
     
     return null;
-  }, [getToken]);
+  }, []);
 
   useEffect(() => {
     const fetchChatData = async () => {
@@ -662,7 +672,7 @@ export default function ChatScreen() {
         setError(null);
         if (!chatID) throw new Error("Chat ID is required");
 
-        const token = await getToken({ template: 'RollCallAuth' });
+        const token = await getTokenRef.current({ template: 'RollCallAuth' });
         const chatResponse = await fetch(`${API_BASE_URL}/api/chats/${chatID}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -728,7 +738,7 @@ export default function ChatScreen() {
 
     try {
       setSending(true);
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       const response = await fetch(`${API_BASE_URL}/api/chat-messages`, {
         method: "POST",
         headers: { 
@@ -768,7 +778,7 @@ export default function ChatScreen() {
 
   const handleDeleteMessage = async (messageId: number) => {
     try {
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       const url = `${API_BASE_URL}/api/chat-messages/${messageId}`;
       
       const response = await fetch(url, {
@@ -790,7 +800,7 @@ export default function ChatScreen() {
 
   const handleEditMessage = async (messageId: number, newContent: string) => {
     try {
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       const url = `${API_BASE_URL}/api/chat-messages/${messageId}`;
       
       const body = {

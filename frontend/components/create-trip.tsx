@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@clerk/expo";
 import {
@@ -79,6 +79,11 @@ export function CreateTripScreen() {
   const router = useRouter();
   const isEditing = Boolean(tripId);
   const { getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -94,7 +99,7 @@ export function CreateTripScreen() {
         const apiUrl = process.env.EXPO_PUBLIC_API_URL
           ? `${process.env.EXPO_PUBLIC_API_URL}/api`
           : "http://localhost:5118/api";
-        const token = await getToken({ template: "RollCallAuth" });
+        const token = await getTokenRef.current({ template: "RollCallAuth" });
         const response = await fetch(`${apiUrl}/trips/${tripId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -126,7 +131,7 @@ export function CreateTripScreen() {
       }
     };
     fetchTrip();
-  }, [tripId, router, getToken]);
+  }, [tripId, router]);
 
   const updateField = <K extends keyof FormValues>(
     field: K,
@@ -239,7 +244,7 @@ export function CreateTripScreen() {
         Alert.alert("Success", "Trip updated successfully!");
         router.replace(`/trips/${tripId}`);
       } else {
-        const token = await getToken({ template: "RollCallAuth" });
+        const token = await getTokenRef.current({ template: "RollCallAuth" });
 
         // Create new trip
         const response = await fetch(`${apiUrl}/trips`, {

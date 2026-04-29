@@ -61,6 +61,11 @@ export function ViewChatsScreen() {
 
   const cacheRef = useRef<CacheData | null>(null);
   const lastRefreshRef = useRef<number>(0);
+  const getTokenRef = useRef(getToken);
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   const isCacheValid = (): boolean => {
     if (!cacheRef.current) return false;
@@ -126,7 +131,7 @@ export function ViewChatsScreen() {
       lastRefreshRef.current = now;
 
       // Get authentication token
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       console.log('🔐 Token acquired for API calls');
 
       // Fetch all trips first
@@ -197,7 +202,7 @@ export function ViewChatsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [getToken]);
+  }, []);
 
   useEffect(() => {
     fetchChats(false);
