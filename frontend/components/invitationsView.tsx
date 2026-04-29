@@ -1,5 +1,4 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,9 +11,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 
-import { AppButton } from '@/components/ui/button';
-import EmailInviteUploader, { type UploadState } from '@/components/invitationsFileUpload';
-import { useMobileTripStore } from '@/lib/mobile-trip-store';
+import EmailInviteUploader from '@/components/invitationsFileUpload';
 
 type InvitationsViewProps = {
   embedded?: boolean;
@@ -29,15 +26,12 @@ export default function InvitationsView({
 }: InvitationsViewProps) {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
   const isMobileStandalone = !embedded && !isDesktopWeb;
   const searchParams = useLocalSearchParams();
   const tripId = tripIdProp ?? (searchParams.tripId ? Number(searchParams.tripId) : null);
   const tripName = tripNameProp ?? (searchParams.tripName as string | undefined) ?? null;
-  const [uploadState, setUploadState] = useState<UploadState>('idle');
   const showBackButton = !embedded && isDesktopWeb;
-  const isLoading = uploadState === 'submitting';
 
   if (!tripId || !tripName) {
     return (
@@ -58,21 +52,6 @@ export default function InvitationsView({
     router.push('/trips');
   };
 
-  const handleComplete = () => {
-    setSelectedTrip({
-      id: tripId,
-      name: tripName,
-      isOrganizer: true,
-    });
-
-    if (isDesktopWeb) {
-      router.replace(`/trips/${tripId}`);
-      return;
-    }
-
-    router.replace('/');
-  };
-
   if (embedded) {
     return (
       <View style={styles.embeddedCard}>
@@ -80,7 +59,6 @@ export default function InvitationsView({
           <EmailInviteUploader
             tripId={tripId}
             apiUrl={process.env.EXPO_PUBLIC_API_URL ? `${process.env.EXPO_PUBLIC_API_URL}/api` : 'http://localhost:5118/api'}
-            onStateChange={setUploadState}
           />
         </View>
       </View>
@@ -119,18 +97,9 @@ export default function InvitationsView({
               <EmailInviteUploader
                 tripId={tripId}
                 apiUrl={process.env.EXPO_PUBLIC_API_URL ? `${process.env.EXPO_PUBLIC_API_URL}/api` : 'http://localhost:5118/api'}
-                onStateChange={setUploadState}
               />
             </View>
           </View>
-        </View>
-
-        <View style={styles.footer}>
-          <TouchableOpacity 
-            style={[styles.completeButton, isLoading && styles.completeButtonLoading]}
-            onPress={handleComplete}
-            disabled={isLoading}
-          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -152,10 +121,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   embeddedCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#eef5fb',
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#d9e8f5',
     overflow: 'hidden',
   },
   embeddedContent: {
@@ -237,35 +204,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: 24,
-  },
-  footer: {
-    paddingHorizontal: 22,
-    paddingBottom: 40,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#d0e5f7',
-    backgroundColor: '#eef5fb',
-  },
-  mobileFooter: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    borderTopWidth: 0,
-    backgroundColor: 'transparent',
-  },
-  completeButton: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  completeButtonLoading: {
-    opacity: 0.7,
-  },
-  completeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   centered: {
     flex: 1,
