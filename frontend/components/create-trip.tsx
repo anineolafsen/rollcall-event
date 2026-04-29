@@ -28,22 +28,18 @@ type FormValues = {
 type FormErrors = Partial<Record<'title' | 'destination' | 'dateFrom' | 'dateTo' | 'description', string>>;
 type DateFieldName = 'dateFrom' | 'dateTo';
 
-// Helper: Validate and parse date from DD.MM.YYYY format
 const parseDate = (dateStr: string): Date | null => {
   const trimmed = dateStr.trim();
-  // Try DD.MM.YYYY format
   const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
   if (ddmmyyyyMatch) {
     const [, day, month, year] = ddmmyyyyMatch;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    // Validate that the date is valid (e.g., not Feb 30)
     if (date.getDate() === parseInt(day)) {
       return date;
     }
     return null;
   }
-  
-  // Try ISO format (YYYY-MM-DD)
+
   const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
     const [, year, month, day] = isoMatch;
@@ -53,15 +49,14 @@ const parseDate = (dateStr: string): Date | null => {
     }
     return null;
   }
-  
+
   return null;
 };
 
-// Helper: Format date to ISO string (backend expects this)
 const formatDateToISO = (dateStr: string): string | null => {
   const date = parseDate(dateStr);
   if (!date) return null;
-  return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+  return date.toISOString().split('T')[0];
 };
 
 const initialFormValues: FormValues = {
@@ -135,7 +130,6 @@ export function CreateTripScreen() {
 
     if (values.dateFrom) {
       const startDate = parseDateValue(values.dateFrom);
-
       if (startDate < now) {
         nextErrors.dateFrom = 'Start date cannot be in the past.';
       }
@@ -144,7 +138,6 @@ export function CreateTripScreen() {
     if (values.dateFrom && values.dateTo) {
       const startDate = parseDateValue(values.dateFrom);
       const endDate = parseDateValue(values.dateTo);
-
       if (endDate <= startDate) {
         nextErrors.dateTo = 'End date must be after start date.';
       }
@@ -187,6 +180,10 @@ export function CreateTripScreen() {
     }));
 
     setSuccessMessage('');
+  };
+
+  const toggleDatePicker = (field: DateFieldName) => {
+    setActiveDateField((currentField) => (currentField === field ? null : field));
   };
 
   const validateForm = () => {
@@ -233,7 +230,7 @@ export function CreateTripScreen() {
         throw new Error('Failed to parse dates');
       }
 
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL 
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL
         ? `${process.env.EXPO_PUBLIC_API_URL}/api`
         : 'http://localhost:5118/api';
 
@@ -263,14 +260,13 @@ export function CreateTripScreen() {
         Alert.alert('Success', 'Trip updated successfully!');
         router.replace(`/trips/${tripId}`);
       } else {
-        const token = await getToken({ template: "RollCallAuth" });
-        
-        // Create new trip
+        const token = await getToken({ template: 'RollCallAuth' });
+
         const response = await fetch(`${apiUrl}/trips`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(tripData),
         });
@@ -281,10 +277,8 @@ export function CreateTripScreen() {
         }
 
         const result = await response.json();
-        console.log('Trip creation response:', result);
         setSuccessMessage('Trip created successfully!');
         const newTripId = result.id || result.tripID || result.tripId || 1;
-        console.log('Extracted tripId:', newTripId);
         router.push({
           pathname: '/invite',
           params: {
@@ -309,15 +303,13 @@ export function CreateTripScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        
-        {/* Trip Creation Form */}
         <View style={styles.content}>
           {showBackButton ? (
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
               <Text style={styles.backButtonText}>← Go back</Text>
             </TouchableOpacity>
           ) : null}
-          
+
           <Text style={styles.title}>{isEditing ? 'Edit Trip' : 'Create New Trip'}</Text>
           <View style={styles.titleDivider} />
           {isLoadingTrip ? <Text style={styles.helperText}>Loading trip details...</Text> : null}
@@ -344,7 +336,7 @@ export function CreateTripScreen() {
                 label="Date from"
                 value={formValues.dateFrom}
                 minValue={minimumStartValue}
-                onToggle={() => setActiveDateField('dateFrom')}
+                onToggle={() => toggleDatePicker('dateFrom')}
                 onChange={(value) => updateDateField('dateFrom', value)}
                 onClose={() => setActiveDateField(null)}
                 isOpen={activeDateField === 'dateFrom'}
@@ -357,7 +349,7 @@ export function CreateTripScreen() {
                 label="Date to"
                 value={formValues.dateTo}
                 minValue={formValues.dateFrom || minimumStartValue}
-                onToggle={() => setActiveDateField('dateTo')}
+                onToggle={() => toggleDatePicker('dateTo')}
                 onChange={(value) => updateDateField('dateTo', value)}
                 onClose={() => setActiveDateField(null)}
                 isOpen={activeDateField === 'dateTo'}

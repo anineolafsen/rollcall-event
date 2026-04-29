@@ -310,8 +310,7 @@ export default function EmailInviteUploader({
     <View style={styles.container}>
       <Text style={styles.title}>Invite by email</Text>
       <Text style={styles.subtitle}>
-        Upload an Excel file with email addresses in the first column (column
-        A).
+        Type one email address at a time and add it to the invite list.
       </Text>
 
       {/* Manual Email Input */}
@@ -320,7 +319,7 @@ export default function EmailInviteUploader({
           <View style={styles.manualInputRow}>
             <TextInput
               style={styles.emailInput}
-              placeholder="Or type an email address"
+              placeholder="Type an email address"
               placeholderTextColor="#9CA3AF"
               value={manualEmail}
               onChangeText={setManualEmail}
@@ -346,10 +345,16 @@ export default function EmailInviteUploader({
       {/* Upload button*/}
       {(state === "idle" || state === "error" || state === "ready") && (
         <>
+          <View style={styles.sectionDivider} />
+          <Text style={styles.title}>Invite by spreadsheet</Text>
+          <Text style={styles.subtitle}>
+            Upload an Excel file with email addresses in the first column (column A).
+          </Text>
           <AppButton
             variant="edit"
             style={styles.uploadButton}
-            label="Select spreadsheet"
+            textStyle={styles.uploadButtonText}
+            label="Upload spreadsheet"
             onPress={handlePickFile}
           />
           {state === "error" && errorMessage && (
@@ -544,10 +549,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   uploadButton: {
-    backgroundColor: "#4a7ca8",
-    borderColor: "#4a7ca8",
+    alignSelf: 'flex-start',
+    width: 220,
+    backgroundColor: '#ffffff',
+    borderColor: '#c5ccd4',
+    borderWidth: 1,
+    borderRadius: 16,
     minHeight: 52,
     paddingHorizontal: 18,
+    marginBottom: 12,
+  },
+  uploadButtonText: {
+    color: '#0f4778',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: '#d0e5f7',
+    borderRadius: 999,
+    marginTop: 4,
     marginBottom: 12,
   },
   loadingContainer: {
