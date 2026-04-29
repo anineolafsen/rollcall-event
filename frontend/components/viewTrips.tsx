@@ -14,7 +14,7 @@ import {
   Pressable,
   RefreshControl,
   useWindowDimensions,
-  Platform,
+  Platform
 } from 'react-native';
 import { useMobileTripStore, type MobileTrip } from '@/lib/mobile-trip-store';
 
@@ -35,6 +35,19 @@ export function ViewTripsScreen() {
   const [loading, setLoading] = useState(!tripsLoaded);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper to pad trips for grid
+  const getPaddedTrips = (data: MobileTrip[]) => {
+    if (!isDesktopWeb) return data;
+    const remainder = data.length % desktopColumns;
+    if (remainder === 0) return data;
+    const placeholders = Array.from({ length: desktopColumns - remainder }, (_, i) => ({
+      id: `placeholder-${i}`,
+      isPlaceholder: true,
+    }));
+    // @ts-ignore
+    return [...data, ...placeholders];
+  };
 
   useEffect(() => {
     const sortedTrips = [...cachedTrips].sort((a, b) => {
@@ -110,46 +123,50 @@ export function ViewTripsScreen() {
     });
   };
 
-  const renderTrip = ({ item }: { item: MobileTrip }) => (
-    <Pressable
-      onPress={() => {
-        setSelectedTrip({ id: item.id, name: item.name, isOrganizer: Boolean(item.isOrganizer) });
-        if (isDesktopWeb) {
-          router.push(`/trips/${item.id}`);
-          return;
-        }
-
-        router.push('/');
-      }}
-      style={({ hovered, pressed }) => [
-        styles.card,
-        isDesktopWeb && styles.cardDesktop,
-        isDesktopWeb && hovered && styles.cardHovered,
-        pressed && styles.cardPressed,
-      ]}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.tripName}>{item.name}</Text>
-        {item.destination && (
-          <Text style={styles.destination}>{item.destination}</Text>
-        )}
-      </View>
-      <View style={styles.cardBody}>
-        <View style={styles.dateBlock}>
-          <Text style={styles.dateLabel}>From</Text>
-          <Text style={styles.dateValue}>{item.startDate ? formatDate(item.startDate) : '-'}</Text>
+  const renderTrip = ({ item }: { item: MobileTrip & { isPlaceholder?: boolean } }) => {
+    if (item.isPlaceholder) {
+      return <View style={[styles.card, styles.cardDesktop, { opacity: 0 }]} pointerEvents="none" />;
+    }
+    return (
+      <Pressable
+        onPress={() => {
+          setSelectedTrip({ id: item.id, name: item.name, isOrganizer: Boolean(item.isOrganizer) });
+          if (isDesktopWeb) {
+            router.push(`/trips/${item.id}`);
+            return;
+          }
+          router.push('/');
+        }}
+        style={({ hovered, pressed }) => [
+          styles.card,
+          isDesktopWeb && styles.cardDesktop,
+          isDesktopWeb && hovered && styles.cardHovered,
+          pressed && styles.cardPressed,
+        ]}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.tripName}>{item.name}</Text>
+          {item.destination && (
+            <Text style={styles.destination}>{item.destination}</Text>
+          )}
         </View>
-        <View style={styles.dateBlock}>
-          <Text style={styles.dateLabel}>To</Text>
-          <Text style={styles.dateValue}>{item.endDate ? formatDate(item.endDate) : '-'}</Text>
+        <View style={styles.cardBody}>
+          <View style={styles.dateBlock}>
+            <Text style={styles.dateLabel}>From</Text>
+            <Text style={styles.dateValue}>{item.startDate ? formatDate(item.startDate) : '-'}</Text>
+          </View>
+          <View style={styles.dateBlock}>
+            <Text style={styles.dateLabel}>To</Text>
+            <Text style={styles.dateValue}>{item.endDate ? formatDate(item.endDate) : '-'}</Text>
+          </View>
         </View>
-      </View>
-      {isDesktopWeb && item.description ? (
-        <Text style={styles.description} numberOfLines={3}>
-          {item.description}
-        </Text>
-      ) : null}
-    </Pressable>
-  );
+        {isDesktopWeb && item.description ? (
+          <Text style={styles.description} numberOfLines={3}>
+            {item.description}
+          </Text>
+        ) : null}
+      </Pressable>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -188,7 +205,7 @@ export function ViewTripsScreen() {
           </View>
         ) : (
           <FlatList
-            data={trips}
+            data={getPaddedTrips(trips)}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderTrip}
             numColumns={isDesktopWeb ? desktopColumns : 1}
