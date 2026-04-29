@@ -50,7 +50,11 @@ export function EventCard({
       ]}
     >
       <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
-        <View style={[styles.cardHeader, isStartingSoon && styles.cardHeaderSoon]}>
+        <View style={[
+          styles.cardHeader,
+          isEmergency && styles.cardHeaderEmergency,
+          isStartingSoon && !isEmergency && styles.cardHeaderSoon,
+        ]}>
           <View style={styles.headingBlock}>
             {isEmergency ? (
               <View style={styles.emergencyBadge}>
@@ -314,5 +318,8 @@ const styles = StyleSheet.create({
   },
   actionButtonTextMandatory: {
     color: '#5a5a00',
+  },
+    cardHeaderEmergency: {
+    backgroundColor: '#fde8e8',
   },
 });

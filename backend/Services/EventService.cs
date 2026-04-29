@@ -75,8 +75,6 @@ namespace MyApp.API.Services
       {
         appEvent.AttendanceMode = "mandatory";
         appEvent.HasUnlimitedCapacity = true;
-        appEvent.Capacity = null;
-        appEvent.Description = null;
       }
 
       appEvent.Id = GenerateUniqueEventId();
