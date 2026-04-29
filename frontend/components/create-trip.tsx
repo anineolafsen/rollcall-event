@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import {
@@ -82,14 +82,23 @@ export function CreateTripScreen() {
   const [isLoadingTrip, setIsLoadingTrip] = useState(false);
   const showBackButton = Platform.OS === 'web' && width >= 900;
   const minimumStartValue = formatDateValue(new Date());
+  const loadedTripIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchTrip = async () => {
       if (!tripId) return;
+      if (loadedTripIdRef.current === tripId) return;
+
+      loadedTripIdRef.current = tripId;
       setIsLoadingTrip(true);
       try {
+        const token = await getToken({ template: 'RollCallAuth' });
         const apiUrl = process.env.EXPO_PUBLIC_API_URL ? `${process.env.EXPO_PUBLIC_API_URL}/api` : 'http://localhost:5118/api';
-        const response = await fetch(`${apiUrl}/trips/${tripId}`);
+        const response = await fetch(`${apiUrl}/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) throw new Error('Failed to load trip');
         const data = await response.json();
         setFormValues({
@@ -100,6 +109,7 @@ export function CreateTripScreen() {
           description: data.description || '',
         });
       } catch (error) {
+        loadedTripIdRef.current = null;
         const errorMessage = error instanceof Error ? error.message : 'Failed to load trip';
         Alert.alert('Error', errorMessage);
         router.back();
@@ -107,8 +117,8 @@ export function CreateTripScreen() {
         setIsLoadingTrip(false);
       }
     };
-    fetchTrip();
-  }, [tripId, router]);
+    void fetchTrip();
+  }, [getToken, tripId, router]);
 
   const updateField = <K extends keyof FormValues>(field: K, value: FormValues[K]) => {
     setFormValues((currentValues) => ({
@@ -243,10 +253,12 @@ export function CreateTripScreen() {
       };
 
       if (isEditing && tripId) {
+        const token = await getToken({ template: 'RollCallAuth' });
         const response = await fetch(`${apiUrl}/trips/${tripId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(tripData),
         });
