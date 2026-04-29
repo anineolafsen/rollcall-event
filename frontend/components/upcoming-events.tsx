@@ -16,7 +16,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
-import { Bell, Plus } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 
 import { EventCard } from '@/components/event-card';
 import { AppButton } from '@/components/ui/button';
@@ -29,6 +29,7 @@ import { getEvents, joinEvent, leaveEvent, type EventRecord } from '@/lib/events
 type UpcomingEventsScreenProps = {
   tripId?: string | number;
   title?: string;
+  tripName?: string;
   showBackButton?: boolean;
   isOrganizer?: boolean;
   actionsBelowHeader?: React.ReactNode;
@@ -40,6 +41,7 @@ type UpcomingEventsScreenProps = {
 export function UpcomingEventsScreen({
   tripId,
   title = 'Upcoming Events',
+  tripName,
   showBackButton = false,
   isOrganizer = false,
   actionsBelowHeader,
@@ -84,8 +86,6 @@ export function UpcomingEventsScreen({
   const [leaveReason, setLeaveReason] = useState('');
   const [eventToLeave, setEventToLeave] = useState<EventRecord | null>(null);
   const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
-  const showMobileHeaderDivider = !showDesktopBackButton;
-  const showMobileHeaderActions = Boolean(tripId && isOrganizer && !showDesktopBackButton);
   const showEventLocation = showDesktopBackButton;
 
   useEffect(() => {
@@ -544,30 +544,44 @@ export function UpcomingEventsScreen({
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.content}>
-        {showBackButton && showDesktopBackButton ? (
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
-        ) : null}
+        <View style={styles.headerBlock}>
+          {showBackButton && showDesktopBackButton ? (
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
 
-        
-        <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
-          {/* SECURITY: Only show Create button if user is an organizer */}
-          {tripId && isOrganizer ? (
-            <Pressable
-              onPress={() => router.push(`/events/create?tripId=${tripId}`)}
-              style={({ pressed, hovered }) => [
-                styles.createButton,
-                hovered && styles.createButtonHovered,
-                pressed && { opacity: 0.8 },
-              ]}>
-              {({ hovered }) => (
-                <Plus size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
-              )}
-            </Pressable>
-          ) :null}
+          <View style={styles.header}>
+            <Text style={styles.title}>{title}</Text>
+            {tripName ? <Text style={styles.tripName}>{tripName}</Text> : null}
+            {tripId && isOrganizer && !actionsBelowHeader ? (
+              <Pressable
+                onPress={() => router.push(`/events/create?tripId=${tripId}`)}
+                style={({ pressed, hovered }) => [
+                  styles.createButton,
+                  hovered && styles.createButtonHovered,
+                  pressed && { opacity: 0.8 },
+                ]}>
+                {({ hovered }) => (
+                  <Plus size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
+                )}
+              </Pressable>
+            ) : null}
+          </View>
+          <View
+            style={[
+              styles.divider,
+              titleTopOffset != null ? { marginTop: titleTopOffset } : null,
+              titleDividerTopMargin != null ? { marginTop: titleDividerTopMargin } : null,
+              titleDividerHorizontalMargin != null
+                ? {
+                    marginHorizontal: titleDividerHorizontalMargin,
+                  }
+                : null,
+            ]}
+          />
         </View>
+        {actionsBelowHeader ? <View style={styles.actionsRow}>{actionsBelowHeader}</View> : null}
         <View style={styles.timelineSection}>
           <View style={styles.timelineRail} />
           <View style={styles.timelineContent}>
@@ -666,17 +680,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#edf4fa',
     paddingHorizontal: 24,
-    paddingTop: 74,
+    paddingTop: 16,
     paddingBottom: 36,
   },
+  headerBlock: {
+    backgroundColor: '#edf4fa',
+  },
   backButton: {
-    marginBottom: 24,
+    marginBottom: 12,
     alignSelf: 'flex-start',
   },
   backButtonText: {
     fontSize: 15,
     color: '#4a7ca8',
     fontWeight: '600',
+  },
+  actionsRow: {
+    marginBottom: 20,
   },
   timelineSection: {
     flex: 1,
@@ -764,38 +784,52 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },  
   header: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 18,
-  position: 'relative',
-},
-title: {
-  fontSize: 28,
-  lineHeight: 34,
-  fontWeight: '700',
-  textAlign: 'center',
-  color: '#090909',
-},
-createButton: {
-  position: 'absolute',
-  right: 0,
-  backgroundColor: '#ffffff',
-  borderWidth: 1,
-  borderColor: '#4a7ca8',
-  borderRadius: 10,
-  width: 40,
-  height: 40,
-  alignItems: 'center',
-  justifyContent: 'center',
-  shadowColor: '#4a7ca8',
-  shadowOpacity: 0.15,
-  shadowRadius: 4,
-  shadowOffset: { width: 0, height: 2 },
-  elevation: 2,
-},
-createButtonHovered: {
-  backgroundColor: '#4a7ca8',
-  borderColor: '#4a7ca8',
-},
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  title: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#090909',
+    marginBottom: 2,
+  },
+  tripName: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  divider: {
+    height: 3,
+    backgroundColor: '#76b6ee',
+    borderRadius: 999,
+    marginTop: 14,
+    marginBottom: 28,
+    marginHorizontal: 28,
+  },
+  createButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#4a7ca8',
+    borderRadius: 10,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4a7ca8',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  createButtonHovered: {
+    backgroundColor: '#4a7ca8',
+    borderColor: '#4a7ca8',
+  },
 });

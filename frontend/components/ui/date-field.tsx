@@ -117,32 +117,6 @@ export function DateField({
     }
   }, [isOpen, maxValue, minValue, onChange, onClose, value]);
 
-  const handlePress = () => {
-    if (Platform.OS !== 'web') {
-      onToggle();
-      return;
-    }
-
-    const input = webInputRef.current;
-
-    if (!input) {
-      onToggle();
-      return;
-    }
-
-    try {
-      if (typeof input.showPicker === 'function') {
-        input.showPicker();
-      } else {
-        input.focus();
-        input.click();
-      }
-      onToggle();
-    } catch {
-      input.focus();
-    }
-  };
-
   const handleIosChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
       onClose?.();
@@ -161,6 +135,7 @@ export function DateField({
       const input = webInputRef.current;
 
       if (!input) {
+        onToggle();
         return;
       }
 
@@ -169,13 +144,14 @@ export function DateField({
       try {
         if (typeof input.showPicker === 'function') {
           input.showPicker();
-          return;
+        } else {
+          input.click();
         }
       } catch {
-        // Fall back to click for browsers that restrict showPicker.
+        input.click();
       }
 
-      input.click();
+      onToggle();
       return;
     }
 

@@ -76,7 +76,8 @@ export default function TripEventsScreen() {
   return (
     <UpcomingEventsScreen
       tripId={trip.id}
-      title={`${trip.name} events`}
+      title="Upcoming Events"
+      tripName={trip.name}
       showBackButton
       isOrganizer={trip.isOrganizer}
       actionsBelowHeader={
