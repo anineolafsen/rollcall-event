@@ -11,10 +11,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@clerk/expo';
+import { useAuth, useClerk } from '@clerk/expo';
 
 import { AppButton } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -27,8 +28,12 @@ type TripNeeds = {
 
 export default function ProfileScreen() {
   const { getToken } = useAuth();
+  const { signOut } = useClerk();
   const router = useRouter();
   const getTokenRef = useRef(getToken);
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
+  const clearTrips = useMobileTripStore((state) => state.clearTrips);
+  const clearTripEvents = useMobileTripStore((state) => state.clearTripEvents);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -37,6 +42,7 @@ export default function ProfileScreen() {
   const [tripNeeds, setTripNeeds] = useState<TripNeeds[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const [editingTripId, setEditingTripId] = useState<number | null>(null);
   const [draftAllergies, setDraftAllergies] = useState('');
@@ -141,6 +147,32 @@ export default function ProfileScreen() {
     }
     setEditingTripId(null);
   };
+
+  const performSignOut = useCallback(async () => {
+    setIsSigningOut(true);
+    setSelectedTrip({ id: null });
+    clearTrips();
+    clearTripEvents();
+    await signOut();
+  }, [clearTripEvents, clearTrips, setSelectedTrip, signOut]);
+
+  const handleSignOut = useCallback(() => {
+    if (Platform.OS === 'web') {
+      void performSignOut();
+      return;
+    }
+
+    Alert.alert('Sign out', 'Do you want to sign out of your account?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: async () => {
+          await performSignOut();
+        },
+      },
+    ]);
+  }, [performSignOut]);
 
   if (loading) {
     return (
@@ -293,6 +325,15 @@ export default function ProfileScreen() {
               )}
             </>
           )}
+
+          <View style={styles.signOutSection}>
+            <AppButton
+              label={isSigningOut ? 'Signing out...' : 'Sign out'}
+              onPress={handleSignOut}
+              disabled={isSigningOut}
+              style={styles.signOutButton}
+            />
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -405,5 +446,11 @@ const styles = StyleSheet.create({
     color: '#777777',
     fontStyle: 'italic',
     marginBottom: 14,
+  },
+  signOutSection: {
+    marginTop: 28,
+  },
+  signOutButton: {
+    backgroundColor: '#4a7ca8',
   },
 });
