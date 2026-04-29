@@ -18,6 +18,7 @@ import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date
 import { FormField } from '@/components/ui/form-field';
 import { SelectionChip } from '@/components/ui/selection-chip';
 import { createEvent, getEventById, updateEvent, type AttendanceMode, type EventPayload } from '@/lib/events';
+import { checkinService } from '@/services/checkinService';
 
 type FormValues = {
   title: string;
@@ -52,8 +53,6 @@ export function CreateEventScreen() {
   const router = useRouter();
   const { getToken } = useAuth();
 
-  const isEmergencyMode = emergency === 'true';
-
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
@@ -64,8 +63,10 @@ export function CreateEventScreen() {
   const minimumStartValue = formatDateValue(new Date());
   const isEditing = Boolean(id);
 
+  const isEmergency = emergency === 'true' || formValues.isEmergency || isLoadingEvent;
+
     useEffect(() => {
-    if (!isEmergencyMode) return;
+    if (!isEmergency) return;
 
     const now = new Date();
     const inThreeHours = new Date(now.getTime() + 3 * 60 * 60 * 1000);
@@ -81,7 +82,7 @@ export function CreateEventScreen() {
       attendanceMode: 'mandatory',
       isEmergency: true,
     });
-  }, [isEmergencyMode]);
+  }, [isEmergency]);
 
 
   const capacityHint = formValues.hasUnlimitedCapacity
@@ -221,7 +222,7 @@ export function CreateEventScreen() {
       nextErrors.description = 'Add a short description.';
     }
 
-    if (!isEmergencyMode) {
+    if (!isEmergency) {
       if (!formValues.dateFrom.trim()) {
         nextErrors.dateFrom = 'Add a start date.';
       }
@@ -282,16 +283,23 @@ export function CreateEventScreen() {
 
       if (isEditing) {
         await updateEvent(id!, payload, token);
+        Alert.alert('Success', 'Event updated successfully!');
+        router.replace(`/trips/${eventTripId}`);
       } else {
-        await createEvent(payload, token);
+        const createdEvent = await createEvent(payload, token);
+
+        if (payload.isEmergency && createdEvent?.id) {
+          await checkinService.startSession(createdEvent.id, 'self', 180, token);
+          router.replace(`/trips/${eventTripId}`);
+        } else {
+          Alert.alert('Success', 'Event created successfully!');
+          router.replace(`/trips/${eventTripId}`);
+        }
       }
 
-      setSuccessMessage(isEditing ? 'Event updated successfully!' : 'Event created successfully!');
       setFormValues(initialFormValues);
       setFormErrors({});
       setActiveDateField(null);
-      Alert.alert('Success', isEditing ? 'Event updated successfully!' : 'Event created successfully!');
-      router.replace(`/trips/${eventTripId}`);
     } catch (error) {
       const errorMessage = error instanceof Error
         ? error.message
@@ -322,7 +330,7 @@ export function CreateEventScreen() {
           </TouchableOpacity>
 
           <Text style={styles.title}>
-            {isEmergencyMode ? '🚨 Emergency Event 🚨' : isEditing ? 'Edit Event' : 'Create New Event'}
+            {isEmergency ? '🚨 Emergency Event 🚨' : isEditing ? 'Edit Event' : 'Create New Event'}
           </Text>
           <View style={styles.titleDivider} />
 
@@ -357,7 +365,7 @@ export function CreateEventScreen() {
           />
 
         {/* Only show extra fields if NOT emergency */}
-        {!isEmergencyMode && (
+        {!isEmergency && (
           <>
             <View style={styles.row}>
               <View style={styles.rowField}>
@@ -432,11 +440,11 @@ export function CreateEventScreen() {
             label={
               isSubmitting
                 ? isEditing ? 'Saving event...' : 'Creating event...'
-                : isEditing ? 'Save changes' : isEmergencyMode ? 'Create Emergency Event' : 'Create event'
+                : isEditing ? 'Save changes' : isEmergency ? 'Create Emergency Event' : 'Create event'
             }
             onPress={handleSubmit}
             disabled={isSubmitting || isLoadingEvent}
-            style={isEmergencyMode ? { backgroundColor: '#c92a2a' } : undefined}
+            style={isEmergency ? { backgroundColor: '#c92a2a' } : undefined}
           />
         </View>
       </ScrollView>
