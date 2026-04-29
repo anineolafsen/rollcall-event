@@ -1,4 +1,4 @@
-import { FlatList, View, Text, TextInput, StyleSheet, Pressable } from "react-native";
+import { FlatList, View, Text, TextInput, StyleSheet, Pressable, Platform, useWindowDimensions } from "react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { ParticipantItem } from "./participant-item";
 import { useCheckins } from "@/hooks/useCheckins";
@@ -16,12 +16,14 @@ type CheckInCardProps = {
 
 export function CheckInCard({ eventId, tripId, isOrganizer, token }: CheckInCardProps) {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const { checkedIn, notCheckedIn, participants, event, refetch, error } = useCheckins(eventId, token, tripId);
   const [activeTab, setActiveTab] = useState<'checked_in' | 'not_checked_in'>('checked_in');
   const [search, setSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [sessionClosedNotice, setSessionClosedNotice] = useState(false);
   const hideNoticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDesktopWeb = Platform.OS === 'web' && width >= 900;
 
   useEffect(() => {
     return () => {
@@ -68,7 +70,14 @@ export function CheckInCard({ eventId, tripId, isOrganizer, token }: CheckInCard
     <View style={{ flex: 1 }}>
       {isOrganizer && (
         <Pressable
-          onPress={() => router.push({ pathname: '/trips/[id]', params: { id: tripId } })}
+          onPress={() => {
+            if (isDesktopWeb) {
+              router.replace({ pathname: '/trips/[id]', params: { id: tripId } });
+              return;
+            }
+
+            router.replace('/events');
+          }}
           style={{ position: 'absolute', top: 12, right: 16, zIndex: 10, padding: 8 }}
           accessibilityLabel="Close check-in"
         >
