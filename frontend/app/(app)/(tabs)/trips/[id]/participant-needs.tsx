@@ -3,23 +3,39 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useAuth } from '@clerk/expo';
 import { getParticipantNeeds, type ParticipantNeedsDto } from '@/lib/participants';
 
-export default function ParticipantNeedsScreen() {
-  const { id, tripName } = useLocalSearchParams<{ id: string; tripName?: string }>();
+type ParticipantNeedsScreenProps = {
+  embedded?: boolean;
+  tripId?: number | null;
+  tripName?: string | null;
+};
+
+export default function ParticipantNeedsScreen({
+  embedded = false,
+  tripId: tripIdProp,
+  tripName: tripNameProp,
+}: ParticipantNeedsScreenProps) {
+  const searchParams = useLocalSearchParams<{ id: string; tripName?: string }>();
+  const id = tripIdProp != null ? String(tripIdProp) : searchParams.id;
+  const tripName = tripNameProp ?? searchParams.tripName ?? null;
   const router = useRouter();
   const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
 
   const [participants, setParticipants] = useState<ParticipantNeedsDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const showBackButton = !embedded && Platform.OS === 'web' && width >= 900;
 
   useEffect(() => {
     const load = async () => {
@@ -72,12 +88,70 @@ export default function ParticipantNeedsScreen() {
     </View>
   );
 
+  const list = (
+    <>
+      <View style={styles.summaryRow}>
+        <View style={[styles.pill, withNeeds.length > 0 ? styles.pillAlert : styles.pillOk]}>
+          <Text style={[styles.pillText, withNeeds.length > 0 ? styles.pillTextAlert : styles.pillTextOk]}>
+            {withNeeds.length} of {participants.length} have special needs
+          </Text>
+        </View>
+      </View>
+
+      {withNeeds.length > 0 && (
+        <>
+          <Text style={styles.sectionLabel}>Special needs</Text>
+          {withNeeds.map((item) => (
+            <View key={item.userId}>{renderWithNeeds({ item })}</View>
+          ))}
+        </>
+      )}
+
+      {withoutNeeds.length > 0 && (
+        <>
+          <Text style={[styles.sectionLabel, { marginTop: withNeeds.length > 0 ? 24 : 0 }]}>
+            No special needs
+          </Text>
+          {withoutNeeds.map((item) => (
+            <View key={item.userId}>{renderWithoutNeeds({ item })}</View>
+          ))}
+        </>
+      )}
+
+      {participants.length === 0 && (
+        <View style={styles.centered}>
+          <Text style={styles.emptyText}>No participants yet.</Text>
+        </View>
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <View style={styles.embeddedCard}>
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color="#76b6ee" />
+          </View>
+        ) : error ? (
+          <View style={styles.centered}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : (
+          <View style={styles.embeddedContent}>{list}</View>
+        )}
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Go back</Text>
-        </TouchableOpacity>
+        {showBackButton ? (
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.title}>Participant Needs</Text>
         {tripName ? <Text style={styles.tripName}>{tripName}</Text> : null}
         <View style={styles.divider} />
@@ -98,44 +172,7 @@ export default function ParticipantNeedsScreen() {
           renderItem={null}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <>
-              {/* Summary pill */}
-              <View style={styles.summaryRow}>
-                <View style={[styles.pill, withNeeds.length > 0 ? styles.pillAlert : styles.pillOk]}>
-                  <Text style={[styles.pillText, withNeeds.length > 0 ? styles.pillTextAlert : styles.pillTextOk]}>
-                    {withNeeds.length} of {participants.length} have special needs
-                  </Text>
-                </View>
-              </View>
-
-              {withNeeds.length > 0 && (
-                <>
-                  <Text style={styles.sectionLabel}>Special needs</Text>
-                  {withNeeds.map((item) => (
-                    <View key={item.userId}>{renderWithNeeds({ item })}</View>
-                  ))}
-                </>
-              )}
-
-              {withoutNeeds.length > 0 && (
-                <>
-                  <Text style={[styles.sectionLabel, { marginTop: withNeeds.length > 0 ? 24 : 0 }]}>
-                    No special needs
-                  </Text>
-                  {withoutNeeds.map((item) => (
-                    <View key={item.userId}>{renderWithoutNeeds({ item })}</View>
-                  ))}
-                </>
-              )}
-
-              {participants.length === 0 && (
-                <View style={styles.centered}>
-                  <Text style={styles.emptyText}>No participants yet.</Text>
-                </View>
-              )}
-            </>
-          }
+          ListHeaderComponent={list}
         />
       )}
     </SafeAreaView>
@@ -146,6 +183,18 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#eef5fb',
+  },
+  embeddedCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+    overflow: 'hidden',
+  },
+  embeddedContent: {
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 20,
   },
   header: {
     paddingHorizontal: 24,

@@ -1,11 +1,14 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { useAuth } from '@clerk/expo';
+import { useRouter } from 'expo-router';
 
 import { NotifyButton } from '@/components/NotifyButton';
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
 import { TripActionButton } from '@/components/ui/trip-action-button';
+import { AppButton } from '@/components/ui/button';
+import { Siren } from 'lucide-react-native';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
@@ -17,8 +20,8 @@ interface Trip {
 
 export default function TripEventsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const { getToken } = useAuth();
+  const router = useRouter();
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,7 +79,8 @@ export default function TripEventsScreen() {
   return (
     <UpcomingEventsScreen
       tripId={trip.id}
-      title={`${trip.name} events`}
+      title="Upcoming Events"
+      tripName={trip.name}
       showBackButton
       isOrganizer={trip.isOrganizer}
       actionsBelowHeader={
@@ -84,25 +88,17 @@ export default function TripEventsScreen() {
           <View style={styles.buttonRow}>
             <NotifyButton tripId={trip.id} tripName={trip.name} />
 
-            <TripActionButton
-              label="+ Create event"
-              backgroundColor="#ffffff"
-              textColor="#1a3d5c"
-              onPress={() => router.push(`/events/create?tripId=${trip.id}`)}
-            />
 
-            <TouchableOpacity
-              style={styles.emergencyButton}
-              onPress={() =>
-                router.push(`/events/create?tripId=${trip.id}&emergency=true`)
-              }
-            >
-              <Image
-                source={require('@/assets/images/siren.png')}
-                style={styles.emergencyImage}
-                resizeMode="cover"
-              />
-            </TouchableOpacity>
+
+            <TripActionButton
+              label="+ Emergency event"
+              backgroundColor="#ffeaea"
+              textColor="#c92a2a"
+              borderColor="#c92a2a"
+              borderWidth={1}
+              rightIcon={<Siren size={18} color="#c92a2a" style={{ marginLeft: 8 }} />}
+              onPress={() => router.push(`/events/create?tripId=${trip.id}&emergency=true`)}
+            />
           </View>
         ) : undefined
       }
@@ -131,16 +127,5 @@ const styles = StyleSheet.create({
     gap: 10,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-    emergencyButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-
-  emergencyImage: {
-    width: '100%',
-    height: '100%',
   },
 });

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '@clerk/expo';
 import { TripNeedsModal } from '@/components/TripNeedsModal';
+import { notifyPendingInvitationsChanged } from '@/hooks/use-pending-invitations-count';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -136,6 +137,7 @@ export function ParticipationView() {
       setInvitations((prev) =>
         prev.filter((item) => item.invitation.id !== invitationId)
       );
+      notifyPendingInvitationsChanged();
 
       setAcceptedTripId(tripId);
       setNeedsModalVisible(true);
@@ -175,6 +177,7 @@ export function ParticipationView() {
       setInvitations((prev) =>
         prev.filter((item) => item.invitation.id !== invitationId)
       );
+      notifyPendingInvitationsChanged();
 
       Alert.alert('Success', 'Invitation ignored.');
     } catch (err) {

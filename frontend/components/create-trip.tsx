@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@clerk/expo";
 import {
@@ -9,11 +9,14 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 
 import { AppButton } from "@/components/ui/button";
+import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date-field';
 import { FormField } from "@/components/ui/form-field";
+import { useMobileTripStore, type MobileTrip } from '@/lib/mobile-trip-store';
 
 type FormValues = {
   title: string;
@@ -23,22 +26,15 @@ type FormValues = {
   description: string;
 };
 
-type FormErrors = Partial<
-  Record<
-    "title" | "destination" | "dateFrom" | "dateTo" | "description",
-    string
-  >
->;
+type FormErrors = Partial<Record<'title' | 'destination' | 'dateFrom' | 'dateTo' | 'description', string>>;
+type DateFieldName = 'dateFrom' | 'dateTo';
 
-// Helper: Validate and parse date from DD.MM.YYYY format
 const parseDate = (dateStr: string): Date | null => {
   const trimmed = dateStr.trim();
-  // Try DD.MM.YYYY format
   const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
   if (ddmmyyyyMatch) {
     const [, day, month, year] = ddmmyyyyMatch;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    // Validate that the date is valid (e.g., not Feb 30)
     if (date.getDate() === parseInt(day)) {
       return date;
     }
@@ -59,7 +55,6 @@ const parseDate = (dateStr: string): Date | null => {
   return null;
 };
 
-// Helper: Format date to ISO string (backend expects this)
 const formatDateToISO = (dateStr: string): string | null => {
   const date = parseDate(dateStr);
   if (!date) return null;
@@ -80,20 +75,32 @@ export function CreateTripScreen() {
   const isEditing = Boolean(tripId);
   const { getToken } = useAuth();
   const getTokenRef = useRef(getToken);
+  const cachedTrips = useMobileTripStore((state) => state.trips);
+  const setTripsCache = useMobileTripStore((state) => state.setTrips);
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
 
   useEffect(() => {
     getTokenRef.current = getToken;
   }, [getToken]);
+  const { width } = useWindowDimensions();
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
-  const [successMessage, setSuccessMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState('');
+  const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTrip, setIsLoadingTrip] = useState(false);
+  const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
+  const isMobileLayout = !showDesktopBackButton;
+  const minimumStartValue = formatDateValue(new Date());
+  const loadedTripIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchTrip = async () => {
       if (!tripId) return;
+      if (loadedTripIdRef.current === tripId) return;
+
+      loadedTripIdRef.current = tripId;
       setIsLoadingTrip(true);
       try {
         const apiUrl = process.env.EXPO_PUBLIC_API_URL
@@ -122,6 +129,7 @@ export function CreateTripScreen() {
           description: data.description || "",
         });
       } catch (error) {
+        loadedTripIdRef.current = null;
         const errorMessage =
           error instanceof Error ? error.message : "Failed to load trip";
         Alert.alert("Error", errorMessage);
@@ -130,8 +138,8 @@ export function CreateTripScreen() {
         setIsLoadingTrip(false);
       }
     };
-    fetchTrip();
-  }, [tripId, router]);
+    void fetchTrip();
+  }, [getToken, tripId, router]);
 
   const updateField = <K extends keyof FormValues>(
     field: K,
@@ -148,6 +156,68 @@ export function CreateTripScreen() {
     }));
 
     setSuccessMessage("");
+  };
+
+  const getDateErrors = (values: Pick<FormValues, 'dateFrom' | 'dateTo'>) => {
+    const nextErrors: Pick<FormErrors, 'dateFrom' | 'dateTo'> = {};
+    const now = new Date();
+
+    if (values.dateFrom) {
+      const startDate = parseDateValue(values.dateFrom);
+      if (startDate < now) {
+        nextErrors.dateFrom = 'Start date cannot be in the past.';
+      }
+    }
+
+    if (values.dateFrom && values.dateTo) {
+      const startDate = parseDateValue(values.dateFrom);
+      const endDate = parseDateValue(values.dateTo);
+      if (endDate <= startDate) {
+        nextErrors.dateTo = 'End date must be after start date.';
+      }
+    }
+
+    return nextErrors;
+  };
+
+  const updateDateField = (field: DateFieldName, value: string) => {
+    setFormValues((currentValues) => {
+      const nextValues = {
+        ...currentValues,
+        [field]: value,
+      };
+
+      if (
+        field === 'dateFrom' &&
+        nextValues.dateTo &&
+        parseDateValue(nextValues.dateTo) <= parseDateValue(value)
+      ) {
+        nextValues.dateTo = '';
+      }
+
+      return nextValues;
+    });
+
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      dateFrom: undefined,
+      dateTo: undefined,
+      ...getDateErrors({
+        dateFrom: field === 'dateFrom' ? value : formValues.dateFrom,
+        dateTo:
+          field === 'dateTo'
+            ? value
+            : field === 'dateFrom' && formValues.dateTo && parseDateValue(formValues.dateTo) <= parseDateValue(value)
+              ? ''
+              : formValues.dateTo,
+      }),
+    }));
+
+    setSuccessMessage("");
+  };
+
+  const toggleDatePicker = (field: DateFieldName) => {
+    setActiveDateField((currentField) => (currentField === field ? null : field));
   };
 
   const validateForm = () => {
@@ -225,10 +295,12 @@ export function CreateTripScreen() {
       };
 
       if (isEditing && tripId) {
+        const token = await getToken({ template: 'RollCallAuth' });
         const response = await fetch(`${apiUrl}/trips/${tripId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(tripData),
         });
@@ -268,11 +340,48 @@ export function CreateTripScreen() {
         setSuccessMessage("Trip created successfully!");
         const newTripId = result.id || result.tripID || result.tripId || 1;
         console.log("Extracted tripId:", newTripId);
-        router.push({
+
+        const createdTrip: MobileTrip = {
+          id: newTripId,
+          name: result.name || formValues.title,
+          startDate: result.startDate || startDateISO,
+          endDate: result.endDate || endDateISO,
+          destination: result.destination || formValues.destination,
+          description: result.description || formValues.description,
+          isOrganizer: true,
+        };
+
+        const nextTrips = [...cachedTrips.filter((trip) => trip.id !== newTripId), createdTrip].sort(
+          (a, b) => {
+            const aTime = new Date(a.startDate).getTime();
+            const bTime = new Date(b.startDate).getTime();
+
+            if (Number.isNaN(aTime) && Number.isNaN(bTime)) {
+              return 0;
+            }
+            if (Number.isNaN(aTime)) {
+              return 1;
+            }
+            if (Number.isNaN(bTime)) {
+              return -1;
+            }
+
+            return aTime - bTime;
+          }
+        );
+
+        setTripsCache(nextTrips);
+        setSelectedTrip({
+          id: createdTrip.id,
+          name: createdTrip.name,
+          isOrganizer: true,
+        });
+
+        router.replace({
           pathname: "/invite",
           params: {
-            id: newTripId,
-            tripName: formValues.title,
+            tripId: String(newTripId),
+            tripName: createdTrip.name,
           },
         });
       }
@@ -295,7 +404,10 @@ export function CreateTripScreen() {
       style={styles.screen}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isMobileLayout && styles.mobileScrollContent,
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -334,21 +446,27 @@ export function CreateTripScreen() {
 
           <View style={styles.row}>
             <View style={styles.rowField}>
-              <FormField
+              <DateField
                 label="Date from"
-                placeholder="DD.MM.YYYY"
                 value={formValues.dateFrom}
-                onChangeText={(value) => updateField("dateFrom", value)}
+                minValue={minimumStartValue}
+                onToggle={() => toggleDatePicker('dateFrom')}
+                onChange={(value) => updateDateField("dateFrom", value)}
+                onClose={() => setActiveDateField(null)}
+                isOpen={activeDateField === 'dateFrom'}
                 error={formErrors.dateFrom}
               />
             </View>
 
             <View style={styles.rowField}>
-              <FormField
+              <DateField
                 label="Date to"
-                placeholder="DD.MM.YYYY"
                 value={formValues.dateTo}
-                onChangeText={(value) => updateField("dateTo", value)}
+                minValue={formValues.dateFrom || minimumStartValue}
+                onToggle={() => toggleDatePicker('dateTo')}
+                onChange={(value) => updateDateField("dateTo", value)}
+                onClose={() => setActiveDateField(null)}
+                isOpen={activeDateField === 'dateTo'}
                 error={formErrors.dateTo}
               />
             </View>
@@ -390,16 +508,23 @@ export function CreateTripScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#f4f1ec",
+    backgroundColor: "#eef5fb",
   },
   scrollContent: {
     flexGrow: 1,
+  },
+  mobileScrollContent: {
+    backgroundColor: '#eef5fb',
   },
   content: {
     backgroundColor: '#eef5fb',
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 80,
+  },
+  mobileContent: {
+    paddingHorizontal: 22,
+    paddingTop: 64,
   },
   title: {
     fontSize: 28,

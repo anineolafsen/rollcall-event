@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState, type AppStateStatus, Platform, View } from 'react-native';
+import { Alert, AppState, type AppStateStatus, Platform, View, useWindowDimensions } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { AppNavbar } from '@/components/ui/nav-bar';
 import { AppSidebar } from '@/components/ui/side-bar';
@@ -13,7 +13,8 @@ export default function TabLayout() {
   const ACTIVE_POLL_MS = 5000;
   const IDLE_POLL_MS = 15000;
 
-  const isWeb = Platform.OS === 'web';
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === 'web' && width >= 900;
   const router = useRouter();
   const { userId, getToken, isLoaded, isSignedIn } = useAuth();
   const getTokenRef = useRef(getToken);
@@ -228,7 +229,7 @@ export default function TabLayout() {
     setModalVisible(false);
   }, [activeEventId]);
 
-  if (isWeb) {
+  if (isDesktopWeb) {
     return (
       <View style={{ flex: 1, flexDirection: 'row' }}>
         <AppSidebar />
@@ -253,6 +254,11 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1 }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
       <AppNavbar />
       <CheckinSessionModal
         visible={modalVisible}

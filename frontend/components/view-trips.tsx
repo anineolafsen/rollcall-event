@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from "@clerk/expo";
 import { Plus } from 'lucide-react-native';
 
@@ -11,28 +11,58 @@ import {
   ActivityIndicator,
   SafeAreaView,
   TouchableOpacity,
-  RefreshControl,
   Pressable,
+  RefreshControl,
+  useWindowDimensions,
+  Platform
 } from 'react-native';
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+import { useMobileTripStore, type MobileTrip } from '@/lib/mobile-trip-store';
 
-interface Trip {
-  id: number;
-  name: string;
-  startDate: string;
-  endDate: string;
-  destination?: string;
-  description?: string;
-}
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export function ViewTripsScreen() {
   const router = useRouter();
-  const {getToken} = useAuth();
+  const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
+  const cachedTrips = useMobileTripStore((state) => state.trips);
+  const tripsLoaded = useMobileTripStore((state) => state.tripsLoaded);
+  const setTripsCache = useMobileTripStore((state) => state.setTrips);
+  const isDesktopWeb = Platform.OS === 'web' && width >= 900;
+  const desktopColumns = 3;
 
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [trips, setTrips] = useState<MobileTrip[]>(cachedTrips);
+  const [loading, setLoading] = useState(!tripsLoaded);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper to pad trips for grid
+  const getPaddedTrips = (data: MobileTrip[]) => {
+    if (!isDesktopWeb) return data;
+    const remainder = data.length % desktopColumns;
+    if (remainder === 0) return data;
+    const placeholders = Array.from({ length: desktopColumns - remainder }, (_, i) => ({
+      id: `placeholder-${i}`,
+      isPlaceholder: true,
+    }));
+    // @ts-ignore
+    return [...data, ...placeholders];
+  };
+
+  useEffect(() => {
+    const sortedTrips = [...cachedTrips].sort((a, b) => {
+      const aTime = new Date(a.startDate).getTime();
+      const bTime = new Date(b.startDate).getTime();
+      if (Number.isNaN(aTime) && Number.isNaN(bTime)) return 0;
+      if (Number.isNaN(aTime)) return 1;
+      if (Number.isNaN(bTime)) return -1;
+      return aTime - bTime;
+    });
+    setTrips(sortedTrips);
+    if (cachedTrips.length > 0 || tripsLoaded) {
+      setLoading(false);
+    }
+  }, [cachedTrips, tripsLoaded]);
 
   const fetchTrips = useCallback(async () => {
     try {
@@ -46,7 +76,7 @@ export function ViewTripsScreen() {
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}`);
       }
-      const data: Trip[] = await response.json();
+      const data: MobileTrip[] = await response.json();
       const sortedTrips = [...data].sort((a, b) => {
         const aTime = new Date(a.startDate).getTime();
         const bTime = new Date(b.startDate).getTime();
@@ -64,22 +94,30 @@ export function ViewTripsScreen() {
         return aTime - bTime;
       });
       setTrips(sortedTrips);
+      setTripsCache(data);
     } catch {
       setError('Could not load trips. Please try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // getToken is stable
+  }, [getToken, setTripsCache]); // getToken is stable
 
   useEffect(() => {
-    fetchTrips();
-  }, [fetchTrips]);
+    if (!tripsLoaded) {
+      void fetchTrips();
+    }
+  }, [fetchTrips, tripsLoaded]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchTrips();
+    }, [fetchTrips])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchTrips();
+    void fetchTrips();
   };
 
   const formatDate = (dateStr: string) => {
@@ -91,35 +129,57 @@ export function ViewTripsScreen() {
     });
   };
 
-  const renderTrip = ({ item }: { item: Trip }) => (
-    <Pressable 
-      onPress={() => router.push(`/trips/${item.id}`)}
-      style={({ hovered, pressed }) => [
-        styles.card,
-        hovered && styles.cardHovered,
-        pressed && {opacity: 0.9 },
-      ]}>
+  const renderTrip = ({ item }: { item: MobileTrip & { isPlaceholder?: boolean } }) => {
+    if (item.isPlaceholder) {
+      return <View style={[styles.card, styles.cardDesktop, { opacity: 0 }]} pointerEvents="none" />;
+    }
+    return (
+      <Pressable
+        onPress={() => {
+          setSelectedTrip({ id: item.id, name: item.name, isOrganizer: Boolean(item.isOrganizer) });
+          if (isDesktopWeb) {
+            router.push(`/trips/${item.id}`);
+            return;
+          }
+          router.push('/');
+        }}
+        style={({ hovered, pressed }) => [
+          styles.card,
+          isDesktopWeb && styles.cardDesktop,
+          isDesktopWeb && hovered && styles.cardHovered,
+          pressed && styles.cardPressed,
+        ]}>
         <View style={styles.cardHeader}>
-          <Text style={styles.tripName}>{item.name}</Text>
-          {item.destination && (
-            <Text style={styles.destination}>{item.destination}</Text>
-          )}
+          <View style={styles.titleRow}>
+            <Text style={styles.tripName}>{item.name}</Text>
+            {item.isOrganizer ? (
+              <View style={styles.organizerBadge}>
+                <Text style={styles.organizerBadgeText}>Organizer</Text>
+              </View>
+            ) : null}
+          </View>
+          {item.destination && <Text style={styles.destination}>{item.destination}</Text>}
         </View>
         <View style={styles.cardBody}>
-          <View style={styles.dateBlock}>
-            <Text style={styles.dateLabel}>From</Text>
-            <Text style={styles.dateValue}>{item.startDate ? formatDate(item.startDate) : '-'}</Text>
-          </View>
-          <View style={styles.dateBlock}>
-            <Text style={styles.dateLabel}>To</Text>
-            <Text style={styles.dateValue}>{item.endDate ? formatDate(item.endDate) : '-'}</Text>
+          <View style={styles.dateRow}>
+            <View style={styles.dateBlock}>
+              <Text style={styles.dateLabel}>From</Text>
+              <Text style={styles.dateValue}>{item.startDate ? formatDate(item.startDate) : '-'}</Text>
+            </View>
+            <View style={styles.dateBlock}>
+              <Text style={styles.dateLabel}>To</Text>
+              <Text style={styles.dateValue}>{item.endDate ? formatDate(item.endDate) : '-'}</Text>
+            </View>
           </View>
         </View>
-        {item.description ? (
-          <Text style={styles.description}>{item.description}</Text>
+        {isDesktopWeb && item.description ? (
+          <Text style={styles.description} numberOfLines={3}>
+            {item.description}
+          </Text>
         ) : null}
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -129,9 +189,10 @@ export function ViewTripsScreen() {
           <Pressable
             onPress={() => router.push('/trips/create')}
             style={({ pressed, hovered }) => [
-              styles.createButton,
+              styles.iconButton,
+              styles.rightIconButton,
               hovered && styles.createButtonHovered,
-              pressed && { opacity: 0.8 },
+              pressed && styles.iconButtonPressed,
             ]}>
             {({ hovered }) => (
             <Plus size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
@@ -157,10 +218,13 @@ export function ViewTripsScreen() {
           </View>
         ) : (
           <FlatList
-            data={trips}
+            data={getPaddedTrips(trips)}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderTrip}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            numColumns={isDesktopWeb ? desktopColumns : 1}
+            key={isDesktopWeb ? 'desktop-grid' : 'mobile-list'}
+            columnWrapperStyle={isDesktopWeb ? styles.desktopColumnWrap : undefined}
+            ItemSeparatorComponent={isDesktopWeb ? undefined : () => <View style={styles.separator} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -207,7 +271,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 16,
-    gap: 16,
+    gap: 24,
+  },
+  desktopColumnWrap: {
+    gap: 18,
   },
   card: {
     backgroundColor: '#ffffff',
@@ -216,15 +283,29 @@ const styles = StyleSheet.create({
     borderColor: '#d0e5f7',
     overflow: 'hidden',
   },
+  cardDesktop: {
+    flex: 1,
+    height: 220,
+  },
+  cardPressed: {
+    opacity: 0.92,
+  },
   cardHeader: {
     backgroundColor: '#4a7ca8', 
     paddingHorizontal: 18,
     paddingVertical: 14,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   tripName: {
     fontSize: 18,
     fontWeight: '500',
     color: '#ffffff',
+    flex: 1,
   },
   destination: {
     fontSize: 13,
@@ -232,10 +313,26 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cardBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: 12,
     paddingHorizontal: 18,
     paddingVertical: 14,
+  },
+  organizerBadge: {
+    borderWidth: 1.1,
+    borderColor: '#f0b43a',
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    backgroundColor: '#487CA8',
+  },
+  organizerBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffffff',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   dateBlock: {
     flex: 1,
@@ -257,7 +354,7 @@ const styles = StyleSheet.create({
   },
   description: {
     paddingHorizontal: 18,
-    paddingBottom: 14,
+    paddingBottom: 22,
     fontSize: 13,
     color: '#5a7a94',
     lineHeight: 19,
@@ -288,9 +385,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7a9ab8',
   },
-  createButton: {
-    position: 'absolute',
-    right: 0,
+  iconButton: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#4a7ca8',
@@ -305,25 +400,37 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 14,
-    },
-    separator: {
-      height: 1,
-      backgroundColor: '#d0e5f7',
-      marginVertical: 8,
-      marginHorizontal: 4,
-      opacity: 1,
-    },
-    createButtonHovered: {
-      backgroundColor: '#4a7ca8',
-      borderColor: '#4a7ca8',
-    },
-    cardHovered: {
-      borderColor: '#4a7ca8',
-      
-    },
+  leftIconButton: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 2,
+  },
+  rightIconButton: {
+    position: 'absolute',
+    right: 0,
+    zIndex: 2,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  iconButtonPressed: {
+    opacity: 0.8,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#d0e5f7',
+    marginVertical: 8,
+    marginHorizontal: 4,
+    opacity: 1,
+  },
+  createButtonHovered: {
+    backgroundColor: '#4a7ca8',
+    borderColor: '#4a7ca8',
+  },
+  cardHovered: {
+    borderColor: '#4a7ca8',
+  },
 });

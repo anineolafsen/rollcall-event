@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useAuth } from '@clerk/expo';
 
@@ -14,11 +14,13 @@ export default function QrCheckinScreen() {
   }>();
   const router = useRouter();
   const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
 
   const [token, setToken] = useState<string | null>(initialToken ?? null);
   const [expiresAt, setExpiresAt] = useState<string | null>(initialExpiresAt ?? null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const showBackButton = Platform.OS === 'web' && width >= 900;
 
   const startQrSession = useCallback(async () => {
     setIsLoading(true);
@@ -64,9 +66,11 @@ export default function QrCheckinScreen() {
 
   return (
     <View style={styles.screen}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Text style={styles.backButtonText}>← Go back</Text>
-      </TouchableOpacity>
+      {showBackButton ? (
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>← Go back</Text>
+        </TouchableOpacity>
+      ) : null}
 
       <Text style={styles.title}>QR Check-in</Text>
       <Text style={styles.subtitle}>Participants can scan this code to check in</Text>

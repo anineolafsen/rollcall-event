@@ -10,6 +10,7 @@ type EventCardProps = {
   onActionPress?: () => void;
   actionDisabled?: boolean;
   actionVariant?: 'start' | 'active' | 'checkedin' | 'join' | 'leave' | 'mandatory' | 'updating';
+  showLocation?: boolean;
 };
 
 export function EventCard({
@@ -19,6 +20,7 @@ export function EventCard({
   onActionPress,
   actionDisabled = false,
   actionVariant = 'join',
+  showLocation = true,
 }: EventCardProps) {
   const isStartingSoon = isEventWithinNext24Hours(event);
   const isEmergency = Boolean(event.isEmergency);
@@ -92,7 +94,7 @@ export function EventCard({
               <Text style={styles.metaValue}>{participantCounter}</Text>
             </View>
           </View>
-          {event.location ? (
+          {showLocation && event.location ? (
             <View style={styles.metaCell}>
               <Text style={styles.metaLabel}>Location</Text>
               <Text style={styles.metaValue}>{event.location}</Text>

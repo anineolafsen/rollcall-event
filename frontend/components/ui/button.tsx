@@ -107,4 +107,21 @@ const styles = StyleSheet.create({
   labelDisabled: {
     color: '#cccccc',
   },
+  emergencyButton: {
+    borderRadius: 18,
+    minHeight: 66,
+    paddingHorizontal: 28,
+    paddingVertical: 18,
+    backgroundColor: '#ffeaea', // light red
+    borderWidth: 2,
+    borderColor: '#c92a2a', // red
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emergencyLabel: {
+    fontSize: 26,
+    lineHeight: 30,
+    fontWeight: '900',
+    color: '#c92a2a',
+  },
 });

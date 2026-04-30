@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useAuth } from "@clerk/expo";
@@ -52,6 +53,7 @@ export function CreateEventScreen() {
   const { id, tripId, emergency } = useLocalSearchParams<{ id?: string; tripId?: string; emergency?: string; }>();
   const router = useRouter();
   const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -62,6 +64,14 @@ export function CreateEventScreen() {
   const [eventTripId, setEventTripId] = useState<number | null>(tripId ? Number(tripId) : null);
   const minimumStartValue = formatDateValue(new Date());
   const isEditing = Boolean(id);
+  const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
+  const isMobileLayout = !showDesktopBackButton;
+  const eventsRoute = eventTripId
+    ? {
+        pathname: '/trips/[id]/events' as const,
+        params: { id: String(eventTripId) },
+      }
+    : null;
 
   const isEmergency = emergency === 'true' || formValues.isEmergency || isLoadingEvent;
 
@@ -283,23 +293,23 @@ export function CreateEventScreen() {
 
       if (isEditing) {
         await updateEvent(id!, payload, token);
-        Alert.alert('Success', 'Event updated successfully!');
-        router.replace(`/trips/${eventTripId}`);
       } else {
         const createdEvent = await createEvent(payload, token);
 
         if (payload.isEmergency && createdEvent?.id) {
           await checkinService.startSession(createdEvent.id, 'self', 180, token);
-          router.replace(`/trips/${eventTripId}`);
-        } else {
-          Alert.alert('Success', 'Event created successfully!');
-          router.replace(`/trips/${eventTripId}`);
         }
       }
 
       setFormValues(initialFormValues);
       setFormErrors({});
       setActiveDateField(null);
+      Alert.alert('Success', isEditing ? 'Event updated successfully!' : 'Event created successfully!');
+      if (eventsRoute) {
+        router.replace(eventsRoute);
+      } else {
+        router.back();
+      }
     } catch (error) {
       const errorMessage = error instanceof Error
         ? error.message
@@ -324,13 +334,29 @@ export function CreateEventScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
+        <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
+          {showDesktopBackButton ? (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => {
+                if (eventsRoute) {
+                  router.replace(eventsRoute);
+                  return;
+                }
 
-          <Text style={styles.title}>
-            {isEmergency ? '🚨 Emergency Event 🚨' : isEditing ? 'Edit Event' : 'Create New Event'}
+                router.back();
+              }}>
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          <Text
+            style={[
+              styles.title,
+              isEmergency ? styles.emergencyTitle : styles.normalTitle,
+            ]}
+          >
+            {isEmergency ? 'Emergency Event' : isEditing ? 'Edit Event' : 'Create New Event'}
           </Text>
           <View style={styles.titleDivider} />
 
@@ -344,6 +370,7 @@ export function CreateEventScreen() {
             value={formValues.title}
             onChangeText={(value) => updateField('title', value)}
             error={formErrors.title}
+            highlightColor={isEmergency ? '#c92a2a' : undefined}
           />
           </>)}
 
@@ -353,6 +380,7 @@ export function CreateEventScreen() {
             value={formValues.location}
             onChangeText={(value) => updateField('location', value)}
             error={formErrors.location}
+            highlightColor={isEmergency ? '#c92a2a' : undefined}
           />
 
           <FormField
@@ -362,6 +390,7 @@ export function CreateEventScreen() {
             onChangeText={(value) => updateField('description', value)}
             error={formErrors.description}
             multiline
+            highlightColor={isEmergency ? '#c92a2a' : undefined}
           />
 
         {/* Only show extra fields if NOT emergency */}
@@ -437,7 +466,7 @@ export function CreateEventScreen() {
           {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
 
           <AppButton
-            variant="edit"
+            variant={isEmergency ? undefined : 'edit'}
             label={
               isSubmitting
                 ? isEditing ? 'Saving event...' : 'Creating event...'
@@ -445,7 +474,8 @@ export function CreateEventScreen() {
             }
             onPress={handleSubmit}
             disabled={isSubmitting || isLoadingEvent}
-            style={isEmergency ? { backgroundColor: '#c92a2a' } : undefined}
+            style={isEmergency ? [styles.emergencyButton] : undefined}
+            textStyle={isEmergency ? [styles.emergencyLabel] : undefined}
           />
         </View>
       </ScrollView>
@@ -456,7 +486,7 @@ export function CreateEventScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f4f1ec',
+    backgroundColor: '#eef5fb',
   },
   scrollContent: {
     flexGrow: 1,
@@ -467,12 +497,16 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 80,
   },
+  mobileContent: {
+    paddingHorizontal: 22,
+    paddingTop: 64,
+  },
   title: {
     fontSize: 28,
     lineHeight: 34,
     fontWeight: '700',
     textAlign: 'center',
-    color: '#090909',
+    // color will be set dynamically
   },
   titleDivider: {
     height: 3,
@@ -551,5 +585,20 @@ const styles = StyleSheet.create({
     color: '#246b3f',
     fontSize: 14,
     lineHeight: 20,
+  },
+  emergencyTitle: {
+    color: '#c92a2a',
+  },
+  normalTitle: {
+    color: '#090909',
+  },
+  emergencyButton: {
+    backgroundColor: '#c92a2a',
+    borderWidth: 1.5,
+    borderColor: '#c92a2a',
+  },
+  emergencyLabel: {
+    color: '#ffffff',
+    fontWeight: '600',
   },
 });

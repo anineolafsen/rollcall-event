@@ -13,8 +13,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/components/ui/button';
 import { SelectionChip } from '@/components/ui/selection-chip';
@@ -29,6 +31,11 @@ export default function NotifyScreen() {
   const { id, tripName } = useLocalSearchParams<{ id: string; tripName?: string }>();
   const router = useRouter();
   const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const showBackButton = Platform.OS === 'web' && width >= 900;
+  const isCompactMobile = width < 420;
+  const scrollBottomInset = (showBackButton ? 32 : 104) + insets.bottom;
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +85,14 @@ export default function NotifyScreen() {
   const charCount = message.length;
   const overLimit = charCount > MAX_CHARS;
   const canSend = !sending && message.trim().length > 0;
+  const eventsRoute = {
+    pathname: '/trips/[id]/events' as const,
+    params: {
+      id,
+      ...(tripName ? { tripName } : {}),
+    },
+  };
+  const handleBack = () => router.replace(eventsRoute);
 
   if (sentCount !== null) {
     return (
@@ -92,7 +107,7 @@ export default function NotifyScreen() {
           </Text>
           <AppButton
             label="Done"
-            onPress={() => router.replace({ pathname: '/trips/[id]', params: { id } })}
+            onPress={() => router.replace(eventsRoute)}
             style={styles.doneButton}
           />
         </View>
@@ -108,25 +123,39 @@ export default function NotifyScreen() {
       >
         <ScrollView
           style={styles.flex}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: scrollBottomInset },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.replace({ pathname: '/trips/[id]', params: { id } })}
-            >
-              <Text style={styles.backButtonText}>← Go back</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>Notify all participants</Text>
+          <View style={[styles.header, isCompactMobile && styles.headerCompact]}>
+            {showBackButton ? (
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleBack}
+              >
+                <Text style={styles.backButtonText}>← Go back</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                style={styles.mobileBackButton}
+                onPress={handleBack}
+              >
+                <MaterialIcons name="arrow-back" size={20} color="#1a3d5c" />
+              </TouchableOpacity>
+            )}
+            <Text style={[styles.title, isCompactMobile && styles.titleCompact]}>Notify all participants</Text>
             {tripName ? <Text style={styles.tripName}>{tripName}</Text> : null}
             <View style={styles.divider} />
           </View>
 
-          <View style={styles.content}>
+          <View style={[styles.content, isCompactMobile && styles.contentCompact]}>
             <Text style={styles.sectionLabel}>Channel</Text>
-            <View style={styles.channelRow}>
+            <View style={[styles.channelRow, isCompactMobile && styles.channelRowCompact]}>
               <View style={styles.channelItem}>
                 <SelectionChip label="SMS" selected onPress={() => {}} />
               </View>
@@ -137,7 +166,12 @@ export default function NotifyScreen() {
 
             <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Message</Text>
             <TextInput
-              style={[styles.messageInput, overLimit && styles.messageInputError]}
+              style={[
+                styles.messageInput,
+                { backgroundColor: '#fff' },
+                isCompactMobile && styles.messageInputCompact,
+                overLimit && styles.messageInputError,
+              ]}
               multiline
               numberOfLines={5}
               placeholder="Write your message here..."
@@ -175,12 +209,13 @@ export default function NotifyScreen() {
             <ActivityIndicator color="#4a7ca8" />
           ) : (
             <AppButton
-              variant="edit"
               label={
                 sending
                   ? 'Sending...'
                   : `Send to ${contacts.length} participant${contacts.length !== 1 ? 's' : ''}`
               }
+              variant="edit"
+              style={{ backgroundColor: '#76b6ee', minWidth: '100%' }}
               onPress={handleSend}
               disabled={!canSend}
             />
@@ -203,14 +238,41 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    paddingHorizontal: 22,
+    position: 'relative',
+    paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 20,
+    paddingBottom: 0,
     backgroundColor: '#eef5fb',
+  },
+  headerCompact: {
+    paddingHorizontal: 20,
+    paddingTop: 34,
+    paddingBottom: 0,
   },
   backButton: {
     marginBottom: 12,
     alignSelf: 'flex-start',
+  },
+  mobileBackButton: {
+    position: 'absolute',
+    left: 20,
+    top: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+    shadowColor: '#0b2540',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    elevation: 3,
   },
   backButtonText: {
     fontSize: 15,
@@ -218,26 +280,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '700',
     color: '#090909',
-    marginBottom: 4,
+    textAlign: 'center',
+    marginBottom: 2,
+    paddingHorizontal: 44,
+  },
+  titleCompact: {
+    fontSize: 23,
+    lineHeight: 26,
+    paddingHorizontal: 48,
+    marginTop: 30,
   },
   tripName: {
-    fontSize: 15,
-    color: '#4a7ca8',
+    fontSize: 14,
+    color: '#6b7280',
     fontWeight: '500',
-    marginBottom: 14,
+    textAlign: 'center',
   },
   divider: {
-    height: 2,
+    height: 3,
     backgroundColor: '#76b6ee',
     borderRadius: 999,
+    marginTop: 14,
+    marginBottom: 28,
+    marginHorizontal: 28,
   },
   content: {
     paddingHorizontal: 22,
     paddingTop: 24,
     paddingBottom: 20,
+  },
+  contentCompact: {
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 16,
   },
   sectionLabel: {
     fontSize: 17,
@@ -252,6 +331,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     alignItems: 'stretch',
+  },
+  channelRowCompact: {
+    flexDirection: 'column',
+    gap: 10,
   },
   channelItem: {
     flex: 1,
@@ -280,6 +363,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111111',
     textAlignVertical: 'top',
+  },
+  messageInputCompact: {
+    minHeight: 112,
   },
   messageInputError: {
     borderColor: '#d95c5c',
@@ -321,11 +407,14 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 22,
-    paddingBottom: 32,
+    paddingBottom: 20,
     paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#d9e8f5',
     backgroundColor: '#eef5fb',
+  },
+  footerCompact: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    paddingTop: 8,
   },
   successContainer: {
     flex: 1,

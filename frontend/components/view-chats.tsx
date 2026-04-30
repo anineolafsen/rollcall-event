@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { useFocusEffect } from '@react-navigation/native';
+import { Plus } from 'lucide-react-native';
 import {
   View,
   Text,
@@ -13,7 +14,9 @@ import {
   RefreshControl,
   ToastAndroid,
 } from 'react-native';
-import { AppButton } from '@/components/ui/button';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { IconButton } from '@/components/ui/icon-button';
+import { useUnreadChats } from '@/hooks/use-unread-chats';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 const CACHE_TTL = 60 * 1000; // Cache for 60 seconds
@@ -50,8 +53,11 @@ interface CacheData {
 }
 
 export function ViewChatsScreen() {
+  const insets = useSafeAreaInsets();
+  const mobileNavbarOffset = 68 + Math.max(insets.bottom, 8);
   const router = useRouter();
   const { getToken } = useAuth();
+  const { unreadChatIds } = useUnreadChats();
   const [chatsWithTrips, setChatsWithTrips] = useState<ChatWithTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -202,7 +208,7 @@ export function ViewChatsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [fetchCreatorUsers]);
 
   useEffect(() => {
     fetchChats(false);
@@ -273,7 +279,10 @@ export function ViewChatsScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.chatInfo}>
-            <Text style={styles.chatTitle}>{item.chat.title}</Text>
+            <View style={styles.chatTitleRow}>
+              <Text style={styles.chatTitle}>{item.chat.title}</Text>
+              {unreadChatIds.includes(item.chat.id) ? <View style={styles.unreadDot} /> : null}
+            </View>
             {item.trip && (
               <Text style={styles.tripName}>
                 📌 {item.trip.name}
@@ -299,11 +308,20 @@ export function ViewChatsScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.content}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>Chats</Text>
-          <Text style={styles.lastUpdatedText}>Updated: {formatLastUpdated()}</Text>
+        <View style={styles.header}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Chats</Text>
+            <IconButton
+              accessibilityLabel="Create new chat"
+              onPress={() => router.push('/(app)/(tabs)/chats/create' as any)}
+              renderIcon={(color) => <Plus size={20} color={color} />}
+              size={40}
+              style={styles.createChatButton}
+            />
+          </View>
         </View>
         <View style={styles.titleDivider} />
+        <Text style={styles.lastUpdatedText}>Updated: {formatLastUpdated()}</Text>
 
         {loading && !refreshing ? (
           <View style={styles.centered}>
@@ -328,7 +346,10 @@ export function ViewChatsScreen() {
             data={chatsWithTrips}
             keyExtractor={(item) => item.chat.id.toString()}
             renderItem={renderChat}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[
+              styles.listContent,
+              { paddingBottom: mobileNavbarOffset + 16 },
+            ]}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
@@ -340,12 +361,6 @@ export function ViewChatsScreen() {
           />
         )}
 
-        <AppButton
-          variant="create"
-          style={styles.createButton}
-          label="Create new chat +"
-          onPress={() => router.push('/(app)/(tabs)/chats/create' as any)}
-        />
       </View>
     </SafeAreaView>
   );
@@ -354,33 +369,54 @@ export function ViewChatsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#eef5fb',
+    backgroundColor: '#edf4fa',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: '#edf4fa',
+    paddingHorizontal: 22,
+    paddingTop: 64,
+    paddingBottom: 12,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  header: {
     alignItems: 'center',
-    marginBottom: 4,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  titleRow: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    minHeight: 44,
   },
   title: {
     fontSize: 28,
+    lineHeight: 34,
     fontWeight: '700',
     color: '#090909',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  createChatButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  titleDivider: {
+    height: 3,
+    backgroundColor: '#76b6ee',
+    borderRadius: 999,
+    marginTop: 8,
+    marginBottom: 10,
+    marginHorizontal: 28,
   },
   lastUpdatedText: {
     fontSize: 11,
     color: '#7a9bb5',
     fontWeight: '500',
-  },
-  titleDivider: {
-    height: 1,
-    backgroundColor: '#d9e8f5',
-    marginBottom: 16,
+    textAlign: 'center',
+    marginBottom: 18,
   },
   centered: {
     flex: 1,
@@ -444,11 +480,22 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
+  chatTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
   chatTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#090909',
-    marginBottom: 4,
+  },
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#ff3040',
   },
   tripName: {
     fontSize: 13,
@@ -466,9 +513,5 @@ const styles = StyleSheet.create({
   createdBy: {
     fontSize: 12,
     color: '#7a9bb5',
-  },
-  createButton: {
-    marginTop: 'auto',
-    marginBottom: 16,
   },
 });
