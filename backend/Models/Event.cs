@@ -8,8 +8,8 @@ namespace MyApp.API.Models
   {
     [Key]
     public int Id { get; set; }
-    public required string Name { get; set; }
-    public required string Location { get; set; }
+    public string? Name { get; set; }
+    public string? Location { get; set; }
     public required string StartDate { get; set; }
     public required string EndDate { get; set; }
     public string? Description { get; set; }

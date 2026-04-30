@@ -210,17 +210,17 @@ export function CreateEventScreen() {
   const validateForm = () => {
     const nextErrors: FormErrors = {};
 
-    if (!formValues.title.trim()) {
+    if (!isEmergency && !formValues.title.trim()) {
       nextErrors.title = 'Add an event name.';
     }
 
-    if (!formValues.location.trim()) {
+    if (!isEmergency && !formValues.location.trim()) {
       nextErrors.location = 'Add a location.';
     }
 
-    if (!formValues.description.trim()) {
+    /*if (!formValues.description.trim()) {
       nextErrors.description = 'Add a short description.';
-    }
+    }*/
 
     if (!isEmergency) {
       if (!formValues.dateFrom.trim()) {
@@ -336,18 +336,20 @@ export function CreateEventScreen() {
 
           {isLoadingEvent ? <Text style={styles.helperText}>Loading event details...</Text> : null}
           
-
+          {!isEmergency && (
+          <>
           <FormField
-            label="Name of Event"
-            placeholder="Add event name"
+            label={isEmergency ? "Emergency Name" : "Name of Event"}
+            placeholder={isEmergency ? "Add emergency name" : "Add event name"}
             value={formValues.title}
             onChangeText={(value) => updateField('title', value)}
             error={formErrors.title}
           />
+          </>)}
 
           <FormField
-            label="Where"
-            placeholder="Add location"
+            label={isEmergency ? "Assembly Point" : "Location"}
+            placeholder={isEmergency ? 'Add assembly point' : 'Add location'}
             value={formValues.location}
             onChangeText={(value) => updateField('location', value)}
             error={formErrors.location}
