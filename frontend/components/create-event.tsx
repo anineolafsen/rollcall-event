@@ -49,6 +49,8 @@ const initialFormValues: FormValues = {
 
 type DateFieldName = 'dateFrom' | 'dateTo';
 
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
+
 export function CreateEventScreen() {
   const { id, tripId, emergency } = useLocalSearchParams<{ id?: string; tripId?: string; emergency?: string; }>();
   const router = useRouter();
@@ -62,6 +64,7 @@ export function CreateEventScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingEvent, setIsLoadingEvent] = useState(false);
   const [eventTripId, setEventTripId] = useState<number | null>(tripId ? Number(tripId) : null);
+  const [tripDateRange, setTripDateRange] = useState<{ startDate: string; endDate: string } | null>(null);
   const minimumStartValue = formatDateValue(new Date());
   const isEditing = Boolean(id);
   const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
@@ -110,6 +113,13 @@ export function CreateEventScreen() {
 
       if (startDate < now) {
         nextErrors.dateFrom = 'Start date and time cannot be in the past.';
+      } else if (tripDateRange) {
+        const tripStart = parseDateValue(tripDateRange.startDate);
+        const tripEnd = parseDateValue(tripDateRange.endDate);
+
+        if (startDate < tripStart || startDate > tripEnd) {
+          nextErrors.dateFrom = 'Start date must be within the trip dates.';
+        }
       }
     }
 
@@ -119,11 +129,40 @@ export function CreateEventScreen() {
 
       if (endDate < startDate) {
         nextErrors.dateTo = 'End date and time cannot be earlier than the start date and time.';
+      } else if (tripDateRange) {
+        const tripEnd = parseDateValue(tripDateRange.endDate);
+
+        if (endDate > tripEnd) {
+          nextErrors.dateTo = 'End date must be within the trip dates.';
+        }
       }
     }
 
     return nextErrors;
   };
+
+  const fetchTrip = useCallback(async (tripId: number) => {
+    try {
+      const token = await getToken({ template: 'RollCallAuth' });
+      const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const trip: { startDate?: string; endDate?: string } = await response.json();
+
+      if (trip.startDate && trip.endDate) {
+        setTripDateRange({ startDate: trip.startDate, endDate: trip.endDate });
+      }
+    } catch {
+      return;
+    }
+  }, [getToken]);
 
   const fetchEvent = useCallback(async () => {
     if (!id) return;
@@ -157,6 +196,12 @@ export function CreateEventScreen() {
   useEffect(() => {
     fetchEvent();
   }, [fetchEvent]);
+
+  useEffect(() => {
+    if (eventTripId) {
+      void fetchTrip(eventTripId);
+    }
+  }, [eventTripId, fetchTrip]);
 
   const updateDateField = (field: DateFieldName, value: string) => {
     setFormValues((currentValues) => {
