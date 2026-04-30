@@ -123,14 +123,6 @@ export default function InvitationsView({
           </View>
         </View>
       </ScrollView>
-      <View style={{ padding: 24 }}>
-        <AppButton
-          label={`Send to 1 participant`}
-          variant="edit"
-          style={{ minWidth: '100%', backgroundColor: '#76b6ee' }}
-          onPress={() => router.push(`/trips/${tripId}`)}
-        />
-      </View>
     </KeyboardAvoidingView>
   );
 }

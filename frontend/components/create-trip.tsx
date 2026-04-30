@@ -16,6 +16,7 @@ import {
 import { AppButton } from "@/components/ui/button";
 import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date-field';
 import { FormField } from "@/components/ui/form-field";
+import { useMobileTripStore, type MobileTrip } from '@/lib/mobile-trip-store';
 
 type FormValues = {
   title: string;
@@ -74,6 +75,9 @@ export function CreateTripScreen() {
   const isEditing = Boolean(tripId);
   const { getToken } = useAuth();
   const getTokenRef = useRef(getToken);
+  const cachedTrips = useMobileTripStore((state) => state.trips);
+  const setTripsCache = useMobileTripStore((state) => state.setTrips);
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -336,11 +340,48 @@ export function CreateTripScreen() {
         setSuccessMessage("Trip created successfully!");
         const newTripId = result.id || result.tripID || result.tripId || 1;
         console.log("Extracted tripId:", newTripId);
+
+        const createdTrip: MobileTrip = {
+          id: newTripId,
+          name: result.name || formValues.title,
+          startDate: result.startDate || startDateISO,
+          endDate: result.endDate || endDateISO,
+          destination: result.destination || formValues.destination,
+          description: result.description || formValues.description,
+          isOrganizer: true,
+        };
+
+        const nextTrips = [...cachedTrips.filter((trip) => trip.id !== newTripId), createdTrip].sort(
+          (a, b) => {
+            const aTime = new Date(a.startDate).getTime();
+            const bTime = new Date(b.startDate).getTime();
+
+            if (Number.isNaN(aTime) && Number.isNaN(bTime)) {
+              return 0;
+            }
+            if (Number.isNaN(aTime)) {
+              return 1;
+            }
+            if (Number.isNaN(bTime)) {
+              return -1;
+            }
+
+            return aTime - bTime;
+          }
+        );
+
+        setTripsCache(nextTrips);
+        setSelectedTrip({
+          id: createdTrip.id,
+          name: createdTrip.name,
+          isOrganizer: true,
+        });
+
         router.replace({
           pathname: "/invite",
           params: {
             tripId: String(newTripId),
-            tripName: formValues.title,
+            tripName: createdTrip.name,
           },
         });
       }

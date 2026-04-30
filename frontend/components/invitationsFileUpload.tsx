@@ -535,7 +535,7 @@ export default function EmailInviteUploader({
 
           <AppButton
             variant="edit"
-            style={styles.uploadButton}
+            style={[styles.uploadButton, styles.centeredUploadButton]}
             textStyle={styles.uploadButtonText}
             label="Add more emails"
             onPress={handleReset}
@@ -599,6 +599,10 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: 18,
     marginBottom: 12,
+  },
+  centeredUploadButton: {
+    alignSelf: 'center',
+    marginBottom: 0,
   },
   uploadButtonText: {
     color: '#0f4778',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from "@clerk/expo";
 import { Plus } from 'lucide-react-native';
 
@@ -108,6 +108,12 @@ export function ViewTripsScreen() {
       void fetchTrips();
     }
   }, [fetchTrips, tripsLoaded]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchTrips();
+    }, [fetchTrips])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
