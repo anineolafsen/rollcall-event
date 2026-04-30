@@ -71,12 +71,7 @@ export function CheckInCard({ eventId, tripId, isOrganizer, token }: CheckInCard
       {isOrganizer && (
         <Pressable
           onPress={() => {
-            if (isDesktopWeb) {
-              router.replace({ pathname: '/trips/[id]', params: { id: tripId } });
-              return;
-            }
-
-            router.replace('/events');
+            router.replace({ pathname: '/trips/[id]/events', params: { id: tripId } });
           }}
           style={{ position: 'absolute', top: 12, right: 16, zIndex: 10, padding: 8 }}
           accessibilityLabel="Close check-in"

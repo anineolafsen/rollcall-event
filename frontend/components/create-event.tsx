@@ -293,17 +293,11 @@ export function CreateEventScreen() {
 
       if (isEditing) {
         await updateEvent(id!, payload, token);
-        Alert.alert('Success', 'Event updated successfully!');
-        router.replace(`/trips/${eventTripId}`);
       } else {
         const createdEvent = await createEvent(payload, token);
 
         if (payload.isEmergency && createdEvent?.id) {
           await checkinService.startSession(createdEvent.id, 'self', 180, token);
-          router.replace(`/trips/${eventTripId}`);
-        } else {
-          Alert.alert('Success', 'Event created successfully!');
-          router.replace(`/trips/${eventTripId}`);
         }
       }
 
@@ -311,7 +305,11 @@ export function CreateEventScreen() {
       setFormErrors({});
       setActiveDateField(null);
       Alert.alert('Success', isEditing ? 'Event updated successfully!' : 'Event created successfully!');
-      router.replace(`/trips/${eventTripId}`);
+      if (eventsRoute) {
+        router.replace(eventsRoute);
+      } else {
+        router.back();
+      }
     } catch (error) {
       const errorMessage = error instanceof Error
         ? error.message
