@@ -65,12 +65,16 @@ namespace MyApp.API.Controllers
       var normalizedType = sessionType.Trim().ToLowerInvariant();
       var parsedType = normalizedType == "qr" ? CheckinSessionType.Qr : CheckinSessionType.Self;
 
-      var stopped = _checkinService.StopSession(eventId, parsedType);
-      if (!stopped)
+      // Logging for debugging
+      Console.WriteLine($"[StopCheckinSession] eventId: {eventId}, sessionType: {sessionType}, parsedType: {parsedType}");
+      var session = _checkinService.GetActiveSession(eventId, parsedType);
+      if (session == null)
       {
+        Console.WriteLine($"[StopCheckinSession] No active session found for eventId: {eventId}, sessionType: {parsedType}");
         return NotFound(new { message = "No active session found for this event and session type." });
       }
-
+      Console.WriteLine($"[StopCheckinSession] Stopping session: {session.SessionID} for eventId: {eventId}");
+      var stopped = _checkinService.StopSession(eventId, parsedType);
       return Ok(new { message = "Session stopped." });
     }
 

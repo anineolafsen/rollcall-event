@@ -168,6 +168,7 @@ export default function NotifyScreen() {
             <TextInput
               style={[
                 styles.messageInput,
+                { backgroundColor: '#fff' },
                 isCompactMobile && styles.messageInputCompact,
                 overLimit && styles.messageInputError,
               ]}

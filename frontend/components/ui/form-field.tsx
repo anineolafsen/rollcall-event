@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 48,
     borderRadius: 12,
-    backgroundColor: '#fbf5f4',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e9e1df',
     paddingHorizontal: 14,
