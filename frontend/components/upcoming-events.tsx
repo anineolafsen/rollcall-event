@@ -564,7 +564,7 @@ export function UpcomingEventsScreen({
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             {tripName ? <Text style={styles.tripName}>{tripName}</Text> : null}
-            {tripId && isOrganizer && !actionsBelowHeader && !isMobileLayout ? (
+            {tripId && isOrganizer && !isMobileLayout ? (
               <Pressable
                 onPress={() => router.push(`/events/create?tripId=${tripId}`)}
                 style={({ pressed, hovered }) => [

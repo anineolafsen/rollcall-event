@@ -19,7 +19,6 @@ import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date
 import { FormField } from '@/components/ui/form-field';
 import { SelectionChip } from '@/components/ui/selection-chip';
 import { createEvent, getEventById, updateEvent, type AttendanceMode, type EventPayload } from '@/lib/events';
-import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 type FormValues = {
   title: string;
@@ -52,7 +51,6 @@ export function CreateEventScreen() {
   const router = useRouter();
   const { getToken } = useAuth();
   const { width } = useWindowDimensions();
-  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -65,6 +63,12 @@ export function CreateEventScreen() {
   const isEditing = Boolean(id);
   const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
   const isMobileLayout = !showDesktopBackButton;
+  const eventsRoute = eventTripId
+    ? {
+        pathname: '/trips/[id]/events' as const,
+        params: { id: String(eventTripId) },
+      }
+    : null;
 
   const capacityHint = formValues.hasUnlimitedCapacity
     ? 'No participant limit is set for this event.'
@@ -275,13 +279,10 @@ export function CreateEventScreen() {
       setFormErrors({});
       setActiveDateField(null);
       Alert.alert('Success', isEditing ? 'Event updated successfully!' : 'Event created successfully!');
-      if (showDesktopBackButton) {
-        router.replace(`/trips/${eventTripId}`);
+      if (eventsRoute) {
+        router.replace(eventsRoute);
         return;
       }
-
-      setSelectedTrip({ id: eventTripId, isOrganizer: true });
-      router.replace('/events');
     } catch (error) {
       const errorMessage = error instanceof Error
         ? error.message
@@ -308,7 +309,16 @@ export function CreateEventScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
           {showDesktopBackButton ? (
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => {
+                if (eventsRoute) {
+                  router.replace(eventsRoute);
+                  return;
+                }
+
+                router.back();
+              }}>
               <Text style={styles.backButtonText}>← Go back</Text>
             </TouchableOpacity>
           ) : null}

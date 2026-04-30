@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   uploadButton: {
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     width: 220,
     backgroundColor: '#ffffff',
     borderColor: '#c5ccd4',

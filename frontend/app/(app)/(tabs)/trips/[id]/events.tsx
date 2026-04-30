@@ -1,11 +1,10 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@clerk/expo';
 
 import { NotifyButton } from '@/components/NotifyButton';
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
-import { TripActionButton } from '@/components/ui/trip-action-button';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
@@ -17,7 +16,6 @@ interface Trip {
 
 export default function TripEventsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const { getToken } = useAuth();
 
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -84,12 +82,6 @@ export default function TripEventsScreen() {
         trip.isOrganizer ? (
           <View style={styles.buttonRow}>
             <NotifyButton tripId={trip.id} tripName={trip.name} />
-            <TripActionButton
-              label="+ Create event"
-              backgroundColor="#ffffff"
-              textColor="#1a3d5c"
-              onPress={() => router.push(`/events/create?tripId=${trip.id}`)}
-            />
           </View>
         ) : undefined
       }

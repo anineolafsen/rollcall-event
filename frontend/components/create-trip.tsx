@@ -336,10 +336,10 @@ export function CreateTripScreen() {
         setSuccessMessage("Trip created successfully!");
         const newTripId = result.id || result.tripID || result.tripId || 1;
         console.log("Extracted tripId:", newTripId);
-        router.push({
+        router.replace({
           pathname: "/invite",
           params: {
-            id: newTripId,
+            tripId: String(newTripId),
             tripName: formValues.title,
           },
         });

@@ -85,7 +85,14 @@ export default function NotifyScreen() {
   const charCount = message.length;
   const overLimit = charCount > MAX_CHARS;
   const canSend = !sending && message.trim().length > 0;
-  const handleBack = () => router.replace({ pathname: '/trips/[id]', params: { id } });
+  const eventsRoute = {
+    pathname: '/trips/[id]/events' as const,
+    params: {
+      id,
+      ...(tripName ? { tripName } : {}),
+    },
+  };
+  const handleBack = () => router.replace(eventsRoute);
 
   if (sentCount !== null) {
     return (
@@ -100,7 +107,7 @@ export default function NotifyScreen() {
           </Text>
           <AppButton
             label="Done"
-            onPress={() => router.replace({ pathname: '/trips/[id]', params: { id } })}
+            onPress={() => router.replace(eventsRoute)}
             style={styles.doneButton}
           />
         </View>
