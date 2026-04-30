@@ -290,6 +290,12 @@ export function CreateEventScreen() {
 
       if (!formValues.hasUnlimitedCapacity && !formValues.capacity.trim()) {
         nextErrors.capacity = 'Add a participant limit or choose no limitation.';
+      } else if (!formValues.hasUnlimitedCapacity) {
+        const parsedCapacity = Number(formValues.capacity);
+
+        if (!Number.isInteger(parsedCapacity) || parsedCapacity <= 0) {
+          nextErrors.capacity = 'Capacity must be a whole number above 0.';
+        }
       }
     }
 
@@ -473,7 +479,7 @@ export function CreateEventScreen() {
               label="Participant capacity"
               placeholder={formValues.hasUnlimitedCapacity ? 'No limitation selected' : 'e.g. 35'}
               value={formValues.capacity}
-              onChangeText={(value) => updateField('capacity', value.replace(/[^0-9]/g, ''))}
+              onChangeText={(value) => updateField('capacity', value.replace(/\D/g, ''))}
               error={formErrors.capacity}
               keyboardType="number-pad"
               editable={!formValues.hasUnlimitedCapacity}
