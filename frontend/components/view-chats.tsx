@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { useFocusEffect } from '@react-navigation/native';
+import { Plus } from 'lucide-react-native';
 import {
   View,
   Text,
@@ -13,7 +14,7 @@ import {
   RefreshControl,
   ToastAndroid,
 } from 'react-native';
-import { AppButton } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 const CACHE_TTL = 60 * 1000; // Cache for 60 seconds
@@ -202,7 +203,7 @@ export function ViewChatsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [fetchCreatorUsers]);
 
   useEffect(() => {
     fetchChats(false);
@@ -299,8 +300,17 @@ export function ViewChatsScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.content}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>Chats</Text>
+        <View style={styles.header}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Chats</Text>
+            <IconButton
+              accessibilityLabel="Create new chat"
+              onPress={() => router.push('/(app)/(tabs)/chats/create' as any)}
+              renderIcon={(color) => <Plus size={20} color={color} />}
+              size={40}
+              style={styles.createChatButton}
+            />
+          </View>
           <Text style={styles.lastUpdatedText}>Updated: {formatLastUpdated()}</Text>
         </View>
         <View style={styles.titleDivider} />
@@ -340,12 +350,6 @@ export function ViewChatsScreen() {
           />
         )}
 
-        <AppButton
-          variant="create"
-          style={styles.createButton}
-          label="Create new chat +"
-          onPress={() => router.push('/(app)/(tabs)/chats/create' as any)}
-        />
       </View>
     </SafeAreaView>
   );
@@ -358,29 +362,43 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: 12,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  header: {
     marginBottom: 4,
+  },
+  titleRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    minHeight: 40,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     color: '#090909',
+    textAlign: 'center',
+  },
+  createChatButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   lastUpdatedText: {
     fontSize: 11,
     color: '#7a9bb5',
     fontWeight: '500',
+    textAlign: 'right',
+    marginTop: 6,
   },
   titleDivider: {
-    height: 1,
-    backgroundColor: '#d9e8f5',
-    marginBottom: 16,
+    height: 3,
+    backgroundColor: '#76b6ee',
+    borderRadius: 999,
+    marginTop: 14,
+    marginBottom: 28,
+    marginHorizontal: 28,
   },
   centered: {
     flex: 1,
@@ -466,9 +484,5 @@ const styles = StyleSheet.create({
   createdBy: {
     fontSize: 12,
     color: '#7a9bb5',
-  },
-  createButton: {
-    marginTop: 'auto',
-    marginBottom: 16,
   },
 });

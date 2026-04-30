@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   FlatList,
   Alert,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useAuth, useUser } from '@clerk/expo';
 
@@ -32,7 +34,9 @@ export default function CreateChatScreen() {
   const { getToken } = useAuth();
   const { user: clerkUser } = useUser();
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const getTokenRef = React.useRef(getToken);
+  const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
 
   React.useEffect(() => {
     getTokenRef.current = getToken;
@@ -48,6 +52,10 @@ export default function CreateChatScreen() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTripDropdown, setShowTripDropdown] = useState(false);
+
+  const goToChats = useCallback(() => {
+    router.replace('/(app)/(tabs)/chats');
+  }, [router]);
 
   // Fetch authenticated user's trips
   useEffect(() => {
@@ -286,12 +294,17 @@ export default function CreateChatScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.header}>
+          {showDesktopBackButton ? (
+            <TouchableOpacity style={styles.backButton} onPress={goToChats}>
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
 
-        <Text style={styles.title}>Create Chat</Text>
+          <Text style={styles.title}>Create Chat</Text>
+          <View style={styles.titleDivider} />
+        </View>
 
         {/* Chat Title Input */}
         <View style={styles.section}>
@@ -407,7 +420,7 @@ export default function CreateChatScreen() {
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.button, styles.cancelButton]}
-            onPress={() => router.back()}
+            onPress={goToChats}
             disabled={creating}
           >
             <Text style={styles.buttonText}>Cancel</Text>
@@ -445,13 +458,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef5fb',
   },
   container: {
-    flex: 1,
-    padding: 16,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 24,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  header: {
+    marginBottom: 20,
   },
   backButton: {
     marginBottom: 12,
@@ -463,10 +480,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: '#090909',
-    marginBottom: 20,
+    textAlign: 'center',
+  },
+  titleDivider: {
+    height: 3,
+    backgroundColor: '#76b6ee',
+    borderRadius: 999,
+    marginTop: 14,
+    marginBottom: 28,
+    marginHorizontal: 28,
   },
   section: {
     marginBottom: 24,

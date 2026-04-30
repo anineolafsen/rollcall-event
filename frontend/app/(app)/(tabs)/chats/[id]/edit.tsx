@@ -632,9 +632,9 @@ const styles = StyleSheet.create({
     color: '#4a7ca8',
   },
   deleteButton: {
-    backgroundColor: '#fff3e0',
+    backgroundColor: '#d32f2f',
     borderWidth: 1,
-    borderColor: '#ffb74d',
+    borderColor: '#d32f2f',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#d32f2f',
+    color: '#ffffff',
   },
   modalOverlay: {
     flex: 1,
