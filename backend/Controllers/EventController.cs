@@ -59,6 +59,7 @@ namespace MyApp.API.Controllers
         appEvent.Capacity,
         appEvent.HasUnlimitedCapacity,
         appEvent.AttendanceMode,
+        appEvent.IsEmergency,
         appEvent.TripId,
         appEvent.ParticipantCount,
         appEvent.TripParticipantCount,
