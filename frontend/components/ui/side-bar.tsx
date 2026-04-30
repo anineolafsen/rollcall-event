@@ -6,13 +6,14 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 
 type NavItem = {
   name: string;
-  href: '/(app)/(tabs)/trips' | '/(app)/(tabs)/my-invitations' | '/(app)/(tabs)/profile';
-  icon: 'suitcase.fill' | 'envelope.fill' | 'person.fill';
+  href: '/(app)/(tabs)/trips' | '/(app)/(tabs)/my-invitations' | '/(app)/(tabs)/profile' | '/(app)/(tabs)/chats';
+  icon: 'suitcase.fill' | 'envelope.fill' | 'person.fill' | 'message.circle.fill';
 };
 
 const navItems: NavItem[] = [
   { name: 'My Trips', href: '/(app)/(tabs)/trips', icon: 'suitcase.fill' },
   { name: 'Invitations', href: '/(app)/(tabs)/my-invitations', icon: 'envelope.fill' },
+  { name: 'Chats', href: '/(app)/(tabs)/chats', icon: 'message.circle.fill' },
   { name: 'Profile', href: '/(app)/(tabs)/profile', icon: 'person.fill' },
 ];
 

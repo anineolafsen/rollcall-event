@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useUser } from '@clerk/expo';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -17,9 +18,11 @@ import EmailInviteUploader, { type UploadState } from '@/components/invitationsF
 export default function InvitationsView() {
   const router = useRouter();
   const searchParams = useLocalSearchParams();
-  const tripId = searchParams.tripId ? Number(searchParams.tripId) : null;
+  const { user, isLoaded } = useUser();
+  const tripId = searchParams.id ? Number(searchParams.id) : null;
   const tripName = searchParams.tripName as string;
   const [uploadState, setUploadState] = useState<UploadState>('idle');
+  const organizerEmail = isLoaded ? user?.emailAddresses[0]?.emailAddress || null : null;
 
   if (!tripId || !tripName) {
     return (
@@ -63,11 +66,19 @@ export default function InvitationsView() {
         </View>
 
         <View style={styles.content}>
-          <EmailInviteUploader
-            tripId={tripId}
-            apiUrl={process.env.EXPO_PUBLIC_API_URL ? `${process.env.EXPO_PUBLIC_API_URL}/api` : 'http://localhost:5118/api'}
-            onStateChange={setUploadState}
-          />
+          {!isLoaded ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4F46E5" />
+              <Text style={styles.loadingText}>Loading your information...</Text>
+            </View>
+          ) : (
+            <EmailInviteUploader
+              tripId={tripId}
+              organizerEmail={organizerEmail}
+              apiUrl={process.env.EXPO_PUBLIC_API_URL ? `${process.env.EXPO_PUBLIC_API_URL}/api` : 'http://localhost:5118/api'}
+              onStateChange={setUploadState}
+            />
+          )}
         </View>
 
         <View style={styles.footer}>
@@ -150,6 +161,28 @@ const styles = StyleSheet.create({
   },
   completeButton: {
     minHeight: 52,
+    backgroundColor: '#4F46E5',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  completeButtonLoading: {
+    opacity: 0.7,
+  },
+  completeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   centered: {
     flex: 1,

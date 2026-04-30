@@ -34,6 +34,7 @@ export type UploadState =
 
 export type EmailInviteUploaderProps = {
   tripId: number;
+  organizerEmail?: string | null;
   apiUrl?: string;
   onSubmit?: (validEmails: string[]) => Promise<void>;
   onStateChange?: (state: UploadState) => void;
@@ -85,6 +86,7 @@ async function readXlsxToRows(uri: string): Promise<string[][]> {
 
 export default function EmailInviteUploader({
   tripId,
+  organizerEmail,
   apiUrl = process.env.EXPO_PUBLIC_API_URL
     ? `${process.env.EXPO_PUBLIC_API_URL}/api`
     : "http://localhost:5118/api",
@@ -106,6 +108,10 @@ export default function EmailInviteUploader({
 
   const validEntries = entries.filter((e) => e.valid);
   const invalidEntries = entries.filter((e) => !e.valid);
+  const filteredEntries = validEntries.filter(
+    (e) => !organizerEmail || e.email.toLowerCase() !== organizerEmail.toLowerCase()
+  );
+  const organizerFilteredCount = validEntries.length - filteredEntries.length;
 
   const handlePickFile = useCallback(async () => {
     try {
@@ -185,7 +191,13 @@ export default function EmailInviteUploader({
   const submitEmails = useCallback(async () => {
     try {
       setState("submitting");
-      const emails = validEntries.map((e) => e.email);
+      const emails = filteredEntries.map((e) => e.email);
+
+      if (emails.length === 0) {
+        setErrorMessage("No valid emails to invite after filtering.");
+        setState("error");
+        return;
+      }
 
       if (onSubmit) {
         await onSubmit(emails);
@@ -224,24 +236,44 @@ export default function EmailInviteUploader({
       setErrorMessage(message);
       setState("error");
     }
-  }, [validEntries, onSubmit, tripId, apiUrl, getToken]);
+  }, [filteredEntries, onSubmit, tripId, apiUrl, getToken]);
 
   const handleSubmit = useCallback(async () => {
-    if (validEntries.length === 0) return;
+    if (filteredEntries.length === 0 && organizerFilteredCount === 0 && invalidEntries.length === 0) {
+      Alert.alert("No emails", "Please add email addresses to invite.");
+      return;
+    }
 
-    if (invalidEntries.length > 0) {
+    // Special case: only organizer's email was entered
+    if (filteredEntries.length === 0 && organizerFilteredCount > 0 && invalidEntries.length === 0) {
       Alert.alert(
-        "Invalid emails detected",
-        `${invalidEntries.length} row(s) have invalid email addresses and will be skipped. Continue with ${validEntries.length} valid email(s)?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Continue", onPress: () => submitEmails() },
-        ]
+        "Can't invite yourself",
+        "You can't invite your own email to this trip. You're already a participant as the organizer.",
+        [{ text: "OK", style: "cancel" }]
       );
-    } else {
+      return;
+    }
+
+    let message = "";
+    if (organizerFilteredCount > 0) {
+      message += `${organizerFilteredCount} email(s) were filtered (you're already part of this trip as the organizer).\n\n`;
+    }
+    if (invalidEntries.length > 0) {
+      message += `${invalidEntries.length} row(s) have invalid email addresses and will be skipped.\n\n`;
+    }
+    if (filteredEntries.length > 0) {
+      message += `Continue with ${filteredEntries.length} valid email(s)?`;
+    }
+
+    if ((organizerFilteredCount > 0 || invalidEntries.length > 0) && filteredEntries.length > 0) {
+      Alert.alert("Review invitations", message, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Continue", onPress: () => submitEmails() },
+      ]);
+    } else if (filteredEntries.length > 0) {
       submitEmails();
     }
-  }, [validEntries, invalidEntries, submitEmails]);
+  }, [filteredEntries, organizerFilteredCount, invalidEntries, submitEmails]);
 
   const handleReset = () => {
     setState("idle");
@@ -263,6 +295,14 @@ export default function EmailInviteUploader({
       Alert.alert(
         "Invalid email",
         `"${trimmedEmail}" is not a valid email address.`,
+      );
+      return;
+    }
+
+    if (organizerEmail && trimmedEmail.toLowerCase() === organizerEmail.toLowerCase()) {
+      Alert.alert(
+        "Can't invite yourself",
+        "You can't invite your own email to this trip. You're already a participant as the organizer.",
       );
       return;
     }
