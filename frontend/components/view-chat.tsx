@@ -19,6 +19,8 @@ import {
 } from "react-native";
 import { useUser, useAuth } from "@clerk/expo";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { markChatAsRead } from '@/hooks/use-unread-chats';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:5118";
@@ -200,32 +202,33 @@ function MessageBubble({
           </View>
         )}
 
-        {/* */}
-        <View
-          style={[
-            styles.bubble,
-            isOwn ? styles.bubbleUser : styles.bubbleOther,
-          ]}
-        >
-          {isEditing ? (
-            <TextInput
-              style={[styles.editInput, isOwn && styles.editInputUser]}
-              value={editText}
-              onChangeText={setEditText}
-              multiline
-              maxLength={1000}
-              autoFocus
-            />
-          ) : (
-            <Text style={[styles.bubbleText, isOwn && styles.bubbleTextUser]}>
-              {message.content}
-            </Text>
-          )}
-        </View>
+        <View style={[styles.messageContent, isOwn && styles.messageContentUser]}>
+          <View
+            style={[
+              styles.bubble,
+              isOwn ? styles.bubbleUser : styles.bubbleOther,
+            ]}
+          >
+            {isEditing ? (
+              <TextInput
+                style={[styles.editInput, isOwn && styles.editInputUser]}
+                value={editText}
+                onChangeText={setEditText}
+                multiline
+                maxLength={1000}
+                autoFocus
+              />
+            ) : (
+              <Text style={[styles.bubbleText, isOwn && styles.bubbleTextUser]}>
+                {message.content}
+              </Text>
+            )}
+          </View>
 
-        <Text style={[styles.timestamp, isOwn && styles.timestampUser]}>
-          {formatTime(message.timestamp)}
-        </Text>
+          <Text style={[styles.timestamp, isOwn && styles.timestampUser]}>
+            {formatTime(message.timestamp)}
+          </Text>
+        </View>
 
         {isOwn && (
           <View style={styles.senderColumn}>
@@ -319,7 +322,6 @@ function ComposerBar({
         onChangeText={onChange}
         placeholder="Message…"
         placeholderTextColor="#7A9BB5"
-        multiline
         maxLength={1000}
         returnKeyType="send"
         onSubmitEditing={(e) => {
@@ -581,6 +583,8 @@ function ChatSidePanel({
 }
 
 export default function ChatScreen() {
+  const insets = useSafeAreaInsets();
+  const mobileNavbarOffset = 68 + Math.max(insets.bottom, 8);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useUser();
   const { getToken } = useAuth();
@@ -699,6 +703,14 @@ export default function ChatScreen() {
         }));
 
         setMessages(transformedMessages);
+        if (transformedMessages.length > 0) {
+          const latestMessage = transformedMessages.reduce((latest, current) => (
+            new Date(current.timestamp).getTime() > new Date(latest.timestamp).getTime()
+              ? current
+              : latest
+          ));
+          await markChatAsRead(chatID, latestMessage.timestamp);
+        }
       } catch (err) {
         console.error("Failed to fetch chat:", err);
         setError("Failed to load chat");
@@ -766,6 +778,7 @@ export default function ChatScreen() {
           timestamp: sentMessage.timestamp,
         },
       ]);
+      await markChatAsRead(chatID, sentMessage.timestamp);
       setDraft("");
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (err) {
@@ -850,12 +863,6 @@ export default function ChatScreen() {
   if (error && !chatData) {
     return (
       <SafeAreaView style={styles.screen}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backArrow}>‹</Text>
-        </TouchableOpacity>
         <View style={styles.loadingContainer}>
           <Text style={styles.errorMessage}>{error || "Chat not found"}</Text>
         </View>
@@ -892,7 +899,10 @@ export default function ChatScreen() {
           <ScrollView
             ref={scrollRef}
             style={styles.messageList}
-            contentContainerStyle={styles.messageListContent}
+            contentContainerStyle={[
+              styles.messageListContent,
+              { paddingBottom: mobileNavbarOffset + 12 },
+            ]}
             onContentSizeChange={() =>
               scrollRef.current?.scrollToEnd({ animated: false })
             }
@@ -921,12 +931,19 @@ export default function ChatScreen() {
             )}
           </ScrollView>
 
-          <ComposerBar
-            value={draft}
-            onChange={setDraft}
-            onSend={handleSend}
-            disabled={sending}
-          />
+          <View
+            style={[
+              styles.composerArea,
+              { paddingBottom: mobileNavbarOffset },
+            ]}
+          >
+            <ComposerBar
+              value={draft}
+              onChange={setDraft}
+              onSend={handleSend}
+              disabled={sending}
+            />
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
 
@@ -1004,16 +1021,6 @@ const styles = StyleSheet.create({
     borderBottomColor: C.border,
     gap: 10,
   },
-  backButton: {
-    width: 32,
-    alignItems: "center",
-  },
-  backArrow: {
-    fontSize: 32,
-    color: C.sky,
-    lineHeight: 36,
-    marginTop: -2,
-  },
   headerInfo: {
     flex: 1,
   },
@@ -1088,9 +1095,15 @@ const styles = StyleSheet.create({
   messageRowUser: {
     justifyContent: "flex-end",
   },
+  messageContent: {
+    maxWidth: "60%",
+    alignItems: "flex-start",
+  },
+  messageContentUser: {
+    alignItems: "flex-end",
+  },
 
   bubble: {
-    maxWidth: "60%",
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: BUBBLE_RADIUS,
@@ -1115,13 +1128,9 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 11,
     color: C.muted,
-    marginTop: 2,
-    marginLeft: 6,
-    minWidth: 35,
+    marginTop: 4,
   },
   timestampUser: {
-    marginLeft: 6,
-    marginRight: 0,
     alignSelf: "flex-end",
   },
 
@@ -1227,15 +1236,16 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
     gap: 8,
   },
+  composerArea: {
+    backgroundColor: C.surface,
+  },
   input: {
     flex: 1,
-    minHeight: 38,
-    maxHeight: 120,
+    height: 44,
     backgroundColor: C.background,
     borderRadius: 20,
     paddingHorizontal: 14,
-    paddingTop: Platform.OS === "ios" ? 9 : 7,
-    paddingBottom: Platform.OS === "ios" ? 9 : 7,
+    paddingVertical: 0,
     fontSize: 15,
     color: C.charcoal,
     lineHeight: 20,

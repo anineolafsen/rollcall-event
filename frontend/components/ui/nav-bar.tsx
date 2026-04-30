@@ -3,20 +3,23 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { PlatformPressable } from '@react-navigation/elements';
-import { CalendarDays, House, User } from 'lucide-react-native';
+import { CalendarDays, House, MessageCircle, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useUnreadChats } from '@/hooks/use-unread-chats';
 
 export function AppNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { hasUnreadChats } = useUnreadChats();
   const isCalendarActive = pathname === '/events' || pathname.startsWith('/trips');
   const isHomeActive = pathname === '/' || pathname === '/index';
+  const isChatsActive = pathname === '/chats' || pathname.startsWith('/chats/');
   const isProfileActive = pathname.startsWith('/profile');
   const shouldHideNavbar = pathname === '/trips' || pathname === '/trips/create';
   const isTablet = width >= 768;
-  const navHeight = 68 + insets.bottom;
+  const navHeight = 58 + insets.bottom;
 
   if (shouldHideNavbar) {
     return null;
@@ -36,21 +39,6 @@ export function AppNavbar() {
       >
         <PlatformPressable
           accessibilityRole="tab"
-          accessibilityLabel="Calendar"
-          accessibilityState={{ selected: isCalendarActive }}
-          onPress={() => router.navigate('/events')}
-          style={[styles.tabButton, isCalendarActive && styles.tabButtonActive]}
-        >
-          <View style={styles.iconScaleUp}>
-            <CalendarDays
-              size={isTablet ? 46 : 35}
-              strokeWidth={2.4}
-              color={isCalendarActive ? '#0b0b0b' : '#ffffff'}
-            />
-          </View>
-        </PlatformPressable>
-        <PlatformPressable
-          accessibilityRole="tab"
           accessibilityLabel="Home"
           accessibilityState={{ selected: isHomeActive }}
           onPress={() => router.navigate('/')}
@@ -58,10 +46,43 @@ export function AppNavbar() {
         >
           <View style={styles.iconScaleUp}>
             <House
-              size={isTablet ? 54 : 40}
+              size={isTablet ? 47 : 34}
               strokeWidth={2.6}
               color={isHomeActive ? '#0b0b0b' : '#ffffff'}
             />
+          </View>
+        </PlatformPressable>
+        <PlatformPressable
+          accessibilityRole="tab"
+          accessibilityLabel="Upcoming events"
+          accessibilityState={{ selected: isCalendarActive }}
+          onPress={() => router.navigate('/events')}
+          style={[styles.tabButton, isCalendarActive && styles.tabButtonActive]}
+        >
+          <View style={styles.iconScaleUp}>
+            <CalendarDays
+              size={isTablet ? 40 : 30}
+              strokeWidth={2.4}
+              color={isCalendarActive ? '#0b0b0b' : '#ffffff'}
+            />
+          </View>
+        </PlatformPressable>
+        <PlatformPressable
+          accessibilityRole="tab"
+          accessibilityLabel="Chats"
+          accessibilityState={{ selected: isChatsActive }}
+          onPress={() => router.navigate('/chats')}
+          style={[styles.tabButton, isChatsActive && styles.tabButtonActive]}
+        >
+          <View style={styles.iconWrapper}>
+            <View style={styles.iconScaleUp}>
+              <MessageCircle
+                size={isTablet ? 42 : 31}
+                strokeWidth={2.4}
+                color={isChatsActive ? '#0b0b0b' : '#ffffff'}
+              />
+            </View>
+            {hasUnreadChats ? <View style={styles.badge} /> : null}
           </View>
         </PlatformPressable>
         <PlatformPressable
@@ -73,7 +94,7 @@ export function AppNavbar() {
         >
           <View style={styles.iconScaleUp}>
             <User
-              size={isTablet ? 52 : 40}
+              size={isTablet ? 45 : 34}
               strokeWidth={2.4}
               color={isProfileActive ? '#0b0b0b' : '#ffffff'}
             />
@@ -89,7 +110,9 @@ const styles = StyleSheet.create<{
   navbar: ViewStyle;
   tabButton: ViewStyle;
   tabButtonActive: ViewStyle;
+  iconWrapper: ViewStyle;
   iconScaleUp: ViewStyle;
+  badge: ViewStyle;
 }>({
   container: {
     position: 'absolute',
@@ -107,7 +130,7 @@ const styles = StyleSheet.create<{
     flexDirection: 'row',
     backgroundColor: '#rgba(74, 124, 168, 1.00)',
     borderTopColor: 'transparent',
-    paddingTop: 8,
+    paddingTop: 4,
     shadowColor: '#ffffffff',
     shadowOpacity: 0.28,
     shadowRadius: 18,
@@ -127,7 +150,23 @@ const styles = StyleSheet.create<{
   tabButtonActive: {
     transform: [{ translateY: -2 }],
   },
+  iconWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   iconScaleUp: {
-    transform: [{ scale: 1.15 }, { translateY: 3 }],
+    transform: [{ scale: 1.04 }, { translateY: 1 }],
+  },
+  badge: {
+    position: 'absolute',
+    top: 1,
+    right: -1,
+    width: 12,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: '#ff3040',
+    borderWidth: 2,
+    borderColor: 'rgba(74, 124, 168, 1)',
   },
 });
