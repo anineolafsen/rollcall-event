@@ -196,6 +196,21 @@ export default function TripHomeScreen() {
             </View>
 
             <View style={styles.organizerInlineSection}>
+              {trip.isOrganizer ? (
+                <View style={styles.organizerActionSection}>
+                  <TripActionButton
+                    label="+ Add Organizer"
+                    backgroundColor="#fbbf24"
+                    textColor="#1a3d5c"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/trips/[id]/organizers',
+                        params: { id: String(trip.id), tripName: trip.name },
+                      })
+                    }
+                  />
+                </View>
+              ) : null}
               <Text style={styles.infoLabel}>Organizer phone</Text>
               <Text style={styles.organizerPhoneValue}>
                 {trip.organizerPhone?.trim() ? trip.organizerPhone : 'Not added'}
@@ -252,7 +267,7 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: 'row',
-    flexWrap: 'nowrap',
+    flexWrap: 'wrap',
     gap: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -314,6 +329,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginLeft: 10,
     maxWidth: '38%',
+  },
+  organizerActionSection: {
+    marginBottom: 12,
+    alignSelf: 'stretch',
   },
   organizerPhoneValue: {
     fontSize: 16,

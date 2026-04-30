@@ -6,6 +6,8 @@ using MyApp.API.Extensions;
 
 namespace MyApp.API.Controllers
 {
+  public record AddOrganizerRequest(int UserId);
+
   [ApiController]
   [Route("api/trips")]
   [Authorize] // Enforce authentication for all trip actions
@@ -228,6 +230,51 @@ namespace MyApp.API.Controllers
 
       var needs = _participantService.GetNeedsByTrip(id);
       return Ok(needs);
+    }
+
+    [HttpGet("{id}/participants")]
+    public IActionResult GetTripParticipants(int id)
+    {
+      var user = GetAuthenticatedUser();
+
+      if (!_tripService.UserIsOrganizer(id, user.Id))
+      {
+        return Forbid();
+      }
+
+      var trip = _tripService.GetTripById(id);
+      if (trip == null)
+      {
+        return NotFound();
+      }
+
+      var participants = _participantService.GetTripParticipants(id);
+      return Ok(participants);
+    }
+
+    [HttpPost("{id}/organizers")]
+    public IActionResult AddOrganizer(int id, [FromBody] AddOrganizerRequest request)
+    {
+      var user = GetAuthenticatedUser();
+
+      if (!_tripService.UserIsOrganizer(id, user.Id))
+      {
+        return Forbid();
+      }
+
+      var trip = _tripService.GetTripById(id);
+      if (trip == null)
+      {
+        return NotFound();
+      }
+
+      var participant = _participantService.PromoteToOrganizer(id, request.UserId);
+      if (participant == null)
+      {
+        return NotFound(new { error = "Participant not found in this trip." });
+      }
+
+      return Ok(participant);
     }
   }
 }
