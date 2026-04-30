@@ -17,8 +17,9 @@ export function TripsBackButton() {
   const isEventDetailsRoute = Boolean(pathname?.match(/^\/events\/[^/]+$/));
   const isCheckInRoute = pathname === '/checkIn';
   const isProfileRoute = pathname === '/profile';
+  const isChatsRoute = Boolean(pathname?.match(/^\/chats(?:\/|$)/));
 
-  if (!pathname || pathname === '/trips' || isEventsRoute || isDesktopWeb || isCheckInRoute || isProfileRoute) {
+  if (!pathname || pathname === '/trips' || isEventsRoute || isDesktopWeb || isCheckInRoute || isProfileRoute || isChatsRoute) {
     return null;
   }
 

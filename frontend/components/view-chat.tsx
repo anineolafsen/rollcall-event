@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { useUser, useAuth } from "@clerk/expo";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:5118";
@@ -319,7 +320,6 @@ function ComposerBar({
         onChangeText={onChange}
         placeholder="Message…"
         placeholderTextColor="#7A9BB5"
-        multiline
         maxLength={1000}
         returnKeyType="send"
         onSubmitEditing={(e) => {
@@ -581,6 +581,8 @@ function ChatSidePanel({
 }
 
 export default function ChatScreen() {
+  const insets = useSafeAreaInsets();
+  const mobileNavbarOffset = 68 + Math.max(insets.bottom, 8);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useUser();
   const { getToken } = useAuth();
@@ -850,12 +852,6 @@ export default function ChatScreen() {
   if (error && !chatData) {
     return (
       <SafeAreaView style={styles.screen}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backArrow}>‹</Text>
-        </TouchableOpacity>
         <View style={styles.loadingContainer}>
           <Text style={styles.errorMessage}>{error || "Chat not found"}</Text>
         </View>
@@ -892,7 +888,10 @@ export default function ChatScreen() {
           <ScrollView
             ref={scrollRef}
             style={styles.messageList}
-            contentContainerStyle={styles.messageListContent}
+            contentContainerStyle={[
+              styles.messageListContent,
+              { paddingBottom: mobileNavbarOffset + 12 },
+            ]}
             onContentSizeChange={() =>
               scrollRef.current?.scrollToEnd({ animated: false })
             }
@@ -921,12 +920,19 @@ export default function ChatScreen() {
             )}
           </ScrollView>
 
-          <ComposerBar
-            value={draft}
-            onChange={setDraft}
-            onSend={handleSend}
-            disabled={sending}
-          />
+          <View
+            style={[
+              styles.composerArea,
+              { paddingBottom: mobileNavbarOffset },
+            ]}
+          >
+            <ComposerBar
+              value={draft}
+              onChange={setDraft}
+              onSend={handleSend}
+              disabled={sending}
+            />
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
 
@@ -1003,16 +1009,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.border,
     gap: 10,
-  },
-  backButton: {
-    width: 32,
-    alignItems: "center",
-  },
-  backArrow: {
-    fontSize: 32,
-    color: C.sky,
-    lineHeight: 36,
-    marginTop: -2,
   },
   headerInfo: {
     flex: 1,
@@ -1227,15 +1223,16 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
     gap: 8,
   },
+  composerArea: {
+    backgroundColor: C.surface,
+  },
   input: {
     flex: 1,
-    minHeight: 38,
-    maxHeight: 120,
+    height: 44,
     backgroundColor: C.background,
     borderRadius: 20,
     paddingHorizontal: 14,
-    paddingTop: Platform.OS === "ios" ? 9 : 7,
-    paddingBottom: Platform.OS === "ios" ? 9 : 7,
+    paddingVertical: 0,
     fontSize: 15,
     color: C.charcoal,
     lineHeight: 20,

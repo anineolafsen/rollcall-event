@@ -37,6 +37,7 @@ export default function CreateChatScreen() {
   const { width } = useWindowDimensions();
   const getTokenRef = React.useRef(getToken);
   const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
+  const isMobileLayout = !showDesktopBackButton;
 
   React.useEffect(() => {
     getTokenRef.current = getToken;
@@ -294,7 +295,7 @@ export default function CreateChatScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, isMobileLayout && styles.mobileContainer]}>
         <View style={styles.header}>
           {showDesktopBackButton ? (
             <TouchableOpacity style={styles.backButton} onPress={goToChats}>
@@ -455,12 +456,17 @@ export default function CreateChatScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#eef5fb',
+    backgroundColor: '#edf4fa',
   },
   container: {
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 24,
+  },
+  mobileContainer: {
+    backgroundColor: '#edf4fa',
+    paddingHorizontal: 22,
+    paddingTop: 64,
   },
   centered: {
     flex: 1,
@@ -468,6 +474,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
     marginBottom: 20,
   },
   backButton: {
@@ -481,15 +490,18 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
+    lineHeight: 34,
     fontWeight: '700',
     color: '#090909',
     textAlign: 'center',
+    marginBottom: 2,
   },
   titleDivider: {
+    alignSelf: 'stretch',
     height: 3,
     backgroundColor: '#76b6ee',
     borderRadius: 999,
-    marginTop: 14,
+    marginTop: 8,
     marginBottom: 28,
     marginHorizontal: 28,
   },

@@ -3,7 +3,7 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { PlatformPressable } from '@react-navigation/elements';
-import { CalendarDays, House, User } from 'lucide-react-native';
+import { CalendarDays, House, MessageCircle, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function AppNavbar() {
@@ -13,6 +13,7 @@ export function AppNavbar() {
   const { width } = useWindowDimensions();
   const isCalendarActive = pathname === '/events' || pathname.startsWith('/trips');
   const isHomeActive = pathname === '/' || pathname === '/index';
+  const isChatsActive = pathname === '/chats' || pathname.startsWith('/chats/');
   const isProfileActive = pathname.startsWith('/profile');
   const shouldHideNavbar = pathname === '/trips' || pathname === '/trips/create';
   const isTablet = width >= 768;
@@ -36,7 +37,22 @@ export function AppNavbar() {
       >
         <PlatformPressable
           accessibilityRole="tab"
-          accessibilityLabel="Calendar"
+          accessibilityLabel="Home"
+          accessibilityState={{ selected: isHomeActive }}
+          onPress={() => router.navigate('/')}
+          style={[styles.tabButton, isHomeActive && styles.tabButtonActive]}
+        >
+          <View style={styles.iconScaleUp}>
+            <House
+              size={isTablet ? 54 : 40}
+              strokeWidth={2.6}
+              color={isHomeActive ? '#0b0b0b' : '#ffffff'}
+            />
+          </View>
+        </PlatformPressable>
+        <PlatformPressable
+          accessibilityRole="tab"
+          accessibilityLabel="Upcoming events"
           accessibilityState={{ selected: isCalendarActive }}
           onPress={() => router.navigate('/events')}
           style={[styles.tabButton, isCalendarActive && styles.tabButtonActive]}
@@ -51,16 +67,16 @@ export function AppNavbar() {
         </PlatformPressable>
         <PlatformPressable
           accessibilityRole="tab"
-          accessibilityLabel="Home"
-          accessibilityState={{ selected: isHomeActive }}
-          onPress={() => router.navigate('/')}
-          style={[styles.tabButton, isHomeActive && styles.tabButtonActive]}
+          accessibilityLabel="Chats"
+          accessibilityState={{ selected: isChatsActive }}
+          onPress={() => router.navigate('/chats')}
+          style={[styles.tabButton, isChatsActive && styles.tabButtonActive]}
         >
           <View style={styles.iconScaleUp}>
-            <House
-              size={isTablet ? 54 : 40}
-              strokeWidth={2.6}
-              color={isHomeActive ? '#0b0b0b' : '#ffffff'}
+            <MessageCircle
+              size={isTablet ? 48 : 36}
+              strokeWidth={2.4}
+              color={isChatsActive ? '#0b0b0b' : '#ffffff'}
             />
           </View>
         </PlatformPressable>

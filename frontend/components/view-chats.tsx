@@ -14,6 +14,7 @@ import {
   RefreshControl,
   ToastAndroid,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconButton } from '@/components/ui/icon-button';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
@@ -51,6 +52,8 @@ interface CacheData {
 }
 
 export function ViewChatsScreen() {
+  const insets = useSafeAreaInsets();
+  const mobileNavbarOffset = 68 + Math.max(insets.bottom, 8);
   const router = useRouter();
   const { getToken } = useAuth();
   const [chatsWithTrips, setChatsWithTrips] = useState<ChatWithTrip[]>([]);
@@ -311,9 +314,9 @@ export function ViewChatsScreen() {
               style={styles.createChatButton}
             />
           </View>
-          <Text style={styles.lastUpdatedText}>Updated: {formatLastUpdated()}</Text>
         </View>
         <View style={styles.titleDivider} />
+        <Text style={styles.lastUpdatedText}>Updated: {formatLastUpdated()}</Text>
 
         {loading && !refreshing ? (
           <View style={styles.centered}>
@@ -338,7 +341,10 @@ export function ViewChatsScreen() {
             data={chatsWithTrips}
             keyExtractor={(item) => item.chat.id.toString()}
             renderItem={renderChat}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[
+              styles.listContent,
+              { paddingBottom: mobileNavbarOffset + 16 },
+            ]}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
@@ -358,47 +364,54 @@ export function ViewChatsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#eef5fb',
+    backgroundColor: '#edf4fa',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: '#edf4fa',
+    paddingHorizontal: 22,
+    paddingTop: 64,
+    paddingBottom: 12,
   },
   header: {
-    marginBottom: 4,
-  },
-  titleRow: {
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    minHeight: 40,
+  },
+  titleRow: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    minHeight: 44,
   },
   title: {
     fontSize: 28,
+    lineHeight: 34,
     fontWeight: '700',
     color: '#090909',
     textAlign: 'center',
+    marginBottom: 2,
   },
   createChatButton: {
     position: 'absolute',
     right: 0,
     top: 0,
   },
-  lastUpdatedText: {
-    fontSize: 11,
-    color: '#7a9bb5',
-    fontWeight: '500',
-    textAlign: 'right',
-    marginTop: 6,
-  },
   titleDivider: {
     height: 3,
     backgroundColor: '#76b6ee',
     borderRadius: 999,
-    marginTop: 14,
-    marginBottom: 28,
+    marginTop: 8,
+    marginBottom: 10,
     marginHorizontal: 28,
+  },
+  lastUpdatedText: {
+    fontSize: 11,
+    color: '#7a9bb5',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 18,
   },
   centered: {
     flex: 1,
