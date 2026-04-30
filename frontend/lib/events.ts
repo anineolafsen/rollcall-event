@@ -13,6 +13,7 @@ export type EventRecord = {
   capacity?: number | null;
   hasUnlimitedCapacity?: boolean;
   attendanceMode?: string;
+  isEmergency?: boolean;
   tripId: number;
   participantCount?: number;
   tripParticipantCount?: number;
@@ -31,6 +32,7 @@ export type EventPayload = {
   capacity: number | null;
   hasUnlimitedCapacity: boolean;
   attendanceMode: AttendanceMode;
+  isEmergency: boolean;
   tripId: number;
 };
 
@@ -59,6 +61,7 @@ function normalizeEvent(raw: any): EventRecord {
     capacity: raw.capacity ?? null,
     hasUnlimitedCapacity: raw.hasUnlimitedCapacity,
     attendanceMode: raw.attendanceMode,
+    isEmergency: raw.isEmergency ?? false,
     tripId: raw.tripId ?? raw.tripID,
     participantCount: raw.participantCount,
     tripParticipantCount: raw.tripParticipantCount,

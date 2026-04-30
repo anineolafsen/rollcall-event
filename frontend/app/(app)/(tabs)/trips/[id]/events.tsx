@@ -1,10 +1,11 @@
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { useAuth } from '@clerk/expo';
 
 import { NotifyButton } from '@/components/NotifyButton';
 import { UpcomingEventsScreen } from '@/components/upcoming-events';
+import { TripActionButton } from '@/components/ui/trip-action-button';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
@@ -82,6 +83,26 @@ export default function TripEventsScreen() {
         trip.isOrganizer ? (
           <View style={styles.buttonRow}>
             <NotifyButton tripId={trip.id} tripName={trip.name} />
+
+            <TripActionButton
+              label="+ Create event"
+              backgroundColor="#ffffff"
+              textColor="#1a3d5c"
+              onPress={() => router.push(`/events/create?tripId=${trip.id}`)}
+            />
+
+            <TouchableOpacity
+              style={styles.emergencyButton}
+              onPress={() =>
+                router.push(`/events/create?tripId=${trip.id}&emergency=true`)
+              }
+            >
+              <Image
+                source={require('@/assets/images/siren.png')}
+                style={styles.emergencyImage}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
           </View>
         ) : undefined
       }
@@ -110,5 +131,16 @@ const styles = StyleSheet.create({
     gap: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+    emergencyButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+
+  emergencyImage: {
+    width: '100%',
+    height: '100%',
   },
 });
