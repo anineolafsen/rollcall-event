@@ -8,7 +8,7 @@ type FormFieldProps = {
   onChangeText?: (value: string) => void;
   error?: string;
   multiline?: boolean;
-  keyboardType?: 'default' | 'number-pad';
+  keyboardType?: 'default' | 'number-pad' | 'phone-pad';
   editable?: boolean;
   onPress?: () => void;
   rightAdornment?: ReactNode;

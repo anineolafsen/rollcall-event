@@ -3,6 +3,7 @@ using MyApp.API.Services;
 using MyApp.API.Models;
 using Microsoft.AspNetCore.Authorization;
 using MyApp.API.Extensions;
+using System.Text.RegularExpressions;
 
 namespace MyApp.API.Controllers
 {
@@ -13,6 +14,7 @@ namespace MyApp.API.Controllers
   [Authorize] // Enforce authentication for user actions
   public class UserController : ControllerBase
   {
+    private static readonly Regex NorwegianPhoneRegex = new(@"^(?:\+47)?\d{8}$", RegexOptions.Compiled);
     private readonly UserService _userService;
 
     public UserController(UserService userService)
@@ -40,6 +42,13 @@ namespace MyApp.API.Controllers
     public IActionResult UpdateCurrentUser([FromBody] UpdateUserRequest request)
     {
       var user = GetAuthenticatedUser();
+
+      var phone = request.Phone?.Trim();
+      if (!string.IsNullOrWhiteSpace(phone) && !NorwegianPhoneRegex.IsMatch(phone))
+      {
+        return BadRequest("Phone number must be either 8 digits or +47 followed by 8 digits.");
+      }
+
       var updated = _userService.UpdateUser(user.Id, request.FirstName, request.LastName, request.Phone);
       if (updated == null) return NotFound();
       return Ok(new { updated.Id, updated.FirstName, updated.LastName, updated.Email, updated.Phone });
