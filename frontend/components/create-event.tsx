@@ -352,8 +352,13 @@ export function CreateEventScreen() {
             </TouchableOpacity>
           ) : null}
 
-          <Text style={styles.title}>
-            {isEmergency ? '🚨 Emergency Event 🚨' : isEditing ? 'Edit Event' : 'Create New Event'}
+          <Text
+            style={[
+              styles.title,
+              isEmergency ? styles.emergencyTitle : styles.normalTitle,
+            ]}
+          >
+            {isEmergency ? 'Emergency Event' : isEditing ? 'Edit Event' : 'Create New Event'}
           </Text>
           <View style={styles.titleDivider} />
 
@@ -367,6 +372,7 @@ export function CreateEventScreen() {
             value={formValues.title}
             onChangeText={(value) => updateField('title', value)}
             error={formErrors.title}
+            highlightColor={isEmergency ? '#c92a2a' : undefined}
           />
           </>)}
 
@@ -376,6 +382,7 @@ export function CreateEventScreen() {
             value={formValues.location}
             onChangeText={(value) => updateField('location', value)}
             error={formErrors.location}
+            highlightColor={isEmergency ? '#c92a2a' : undefined}
           />
 
           <FormField
@@ -385,6 +392,7 @@ export function CreateEventScreen() {
             onChangeText={(value) => updateField('description', value)}
             error={formErrors.description}
             multiline
+            highlightColor={isEmergency ? '#c92a2a' : undefined}
           />
 
         {/* Only show extra fields if NOT emergency */}
@@ -460,7 +468,7 @@ export function CreateEventScreen() {
           {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
 
           <AppButton
-            variant="edit"
+            variant={isEmergency ? undefined : 'edit'}
             label={
               isSubmitting
                 ? isEditing ? 'Saving event...' : 'Creating event...'
@@ -468,7 +476,8 @@ export function CreateEventScreen() {
             }
             onPress={handleSubmit}
             disabled={isSubmitting || isLoadingEvent}
-            style={isEmergency ? { backgroundColor: '#c92a2a' } : undefined}
+            style={isEmergency ? [styles.emergencyButton] : undefined}
+            textStyle={isEmergency ? [styles.emergencyLabel] : undefined}
           />
         </View>
       </ScrollView>
@@ -479,7 +488,7 @@ export function CreateEventScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f4f1ec',
+    backgroundColor: '#eef5fb',
   },
   scrollContent: {
     flexGrow: 1,
@@ -499,7 +508,7 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     fontWeight: '700',
     textAlign: 'center',
-    color: '#090909',
+    // color will be set dynamically
   },
   titleDivider: {
     height: 3,
@@ -578,5 +587,20 @@ const styles = StyleSheet.create({
     color: '#246b3f',
     fontSize: 14,
     lineHeight: 20,
+  },
+  emergencyTitle: {
+    color: '#c92a2a',
+  },
+  normalTitle: {
+    color: '#090909',
+  },
+  emergencyButton: {
+    backgroundColor: '#c92a2a',
+    borderWidth: 1.5,
+    borderColor: '#c92a2a',
+  },
+  emergencyLabel: {
+    color: '#ffffff',
+    fontWeight: '600',
   },
 });

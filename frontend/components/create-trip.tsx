@@ -467,7 +467,7 @@ export function CreateTripScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#f4f1ec",
+    backgroundColor: "#eef5fb",
   },
   scrollContent: {
     flexGrow: 1,

@@ -13,6 +13,7 @@ type FormFieldProps = {
   onPress?: () => void;
   rightAdornment?: ReactNode;
   inputStyle?: StyleProp<TextStyle>;
+  highlightColor?: string; // NEW
 };
 
 export function FormField({
@@ -27,6 +28,7 @@ export function FormField({
   onPress,
   rightAdornment,
   inputStyle,
+  highlightColor, // NEW
 }: FormFieldProps) {
   const isPressable = typeof onPress === 'function';
 
@@ -46,6 +48,7 @@ export function FormField({
           !editable ? styles.inputDisabled : undefined,
           rightAdornment ? styles.inputWithAdornment : undefined,
           error ? styles.inputError : undefined,
+          highlightColor ? { borderColor: highlightColor } : undefined, // NEW
           inputStyle,
         ]}
         value={value}

@@ -213,6 +213,8 @@ export default function NotifyScreen() {
                   ? 'Sending...'
                   : `Send to ${contacts.length} participant${contacts.length !== 1 ? 's' : ''}`
               }
+              variant="edit"
+              style={{ backgroundColor: '#76b6ee', minWidth: '100%' }}
               onPress={handleSend}
               disabled={!canSend}
             />

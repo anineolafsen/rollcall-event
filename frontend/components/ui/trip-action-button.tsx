@@ -1,5 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import type { ReactNode } from 'react';
 
 type TripActionButtonProps = {
   label?: string;
@@ -7,6 +8,9 @@ type TripActionButtonProps = {
   icon?: React.ComponentProps<typeof MaterialIcons>['name'];
   backgroundColor?: string;
   textColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  rightIcon?: ReactNode;
 };
 
 export function TripActionButton({
@@ -15,12 +19,17 @@ export function TripActionButton({
   icon,
   backgroundColor = '#4a7ca8',
   textColor = '#ffffff',
+  borderColor,
+  borderWidth,
+  rightIcon,
 }: TripActionButtonProps) {
   return (
     <Pressable
       style={({ hovered, pressed }) => [
         styles.button,
         { backgroundColor },
+        borderColor !== undefined && { borderColor },
+        borderWidth !== undefined && { borderWidth },
         hovered && styles.hovered,
         pressed && styles.pressed,
       ]}
@@ -28,6 +37,7 @@ export function TripActionButton({
     >
       {icon && <MaterialIcons name={icon} size={16} color={textColor} />}
       {label ? <Text style={[styles.label, { color: textColor }]}>{label}</Text> : null}
+      {rightIcon ? <>{rightIcon}</> : null}
     </Pressable>
   );
 }
