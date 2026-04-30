@@ -76,6 +76,20 @@ namespace MyApp.API.Controllers
             return Ok();
         }
 
+        [HttpDelete("{invitationId:int}")]
+        public IActionResult IgnoreInvitation([FromRoute] int invitationId)
+        {
+            var user = GetAuthenticatedUser();
+
+            var success = _invitationService.IgnoreInvitation(invitationId, user.Email);
+            if (!success)
+            {
+                return NotFound("Invitation not found");
+            }
+
+            return NoContent();
+        }
+
         [HttpDelete]
         public IActionResult DeleteInvitation([FromQuery] int tripId, [FromQuery] string email)
         {
