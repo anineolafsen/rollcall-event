@@ -17,7 +17,7 @@ export function AppNavbar() {
   const isProfileActive = pathname.startsWith('/profile');
   const shouldHideNavbar = pathname === '/trips' || pathname === '/trips/create';
   const isTablet = width >= 768;
-  const navHeight = 68 + insets.bottom;
+  const navHeight = 58 + insets.bottom;
 
   if (shouldHideNavbar) {
     return null;
@@ -44,7 +44,7 @@ export function AppNavbar() {
         >
           <View style={styles.iconScaleUp}>
             <House
-              size={isTablet ? 54 : 40}
+              size={isTablet ? 47 : 34}
               strokeWidth={2.6}
               color={isHomeActive ? '#0b0b0b' : '#ffffff'}
             />
@@ -59,7 +59,7 @@ export function AppNavbar() {
         >
           <View style={styles.iconScaleUp}>
             <CalendarDays
-              size={isTablet ? 46 : 35}
+              size={isTablet ? 40 : 30}
               strokeWidth={2.4}
               color={isCalendarActive ? '#0b0b0b' : '#ffffff'}
             />
@@ -74,7 +74,7 @@ export function AppNavbar() {
         >
           <View style={styles.iconScaleUp}>
             <MessageCircle
-              size={isTablet ? 48 : 36}
+              size={isTablet ? 42 : 31}
               strokeWidth={2.4}
               color={isChatsActive ? '#0b0b0b' : '#ffffff'}
             />
@@ -89,7 +89,7 @@ export function AppNavbar() {
         >
           <View style={styles.iconScaleUp}>
             <User
-              size={isTablet ? 52 : 40}
+              size={isTablet ? 45 : 34}
               strokeWidth={2.4}
               color={isProfileActive ? '#0b0b0b' : '#ffffff'}
             />
@@ -123,7 +123,7 @@ const styles = StyleSheet.create<{
     flexDirection: 'row',
     backgroundColor: '#rgba(74, 124, 168, 1.00)',
     borderTopColor: 'transparent',
-    paddingTop: 8,
+    paddingTop: 4,
     shadowColor: '#ffffffff',
     shadowOpacity: 0.28,
     shadowRadius: 18,
@@ -144,6 +144,6 @@ const styles = StyleSheet.create<{
     transform: [{ translateY: -2 }],
   },
   iconScaleUp: {
-    transform: [{ scale: 1.15 }, { translateY: 3 }],
+    transform: [{ scale: 1.04 }, { translateY: 1 }],
   },
 });
