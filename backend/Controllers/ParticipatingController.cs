@@ -34,7 +34,7 @@ namespace MyApp.API.Controllers
     [HttpGet("trip/{tripId}")]
     public IActionResult GetParticipantsByTrip(int tripId)
     {
-      var participants = _participantService.GetByTrip(tripId);
+      var participants = _participantService.GetNeedsByTrip(tripId);
       return Ok(participants);
     }
 

@@ -1,5 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useState } from 'react';
+import { useUser } from '@clerk/expo';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,7 +14,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 
-import EmailInviteUploader from '@/components/invitationsFileUpload';
+import EmailInviteUploader, { UploadState } from '@/components/invitationsFileUpload';
 import { AppButton } from '@/components/ui/button';
 
 type InvitationsViewProps = {
@@ -34,6 +36,9 @@ export default function InvitationsView({
   const tripId = tripIdProp ?? (searchParams.tripId ? Number(searchParams.tripId) : null);
   const tripName = tripNameProp ?? (searchParams.tripName as string | undefined) ?? null;
   const showDesktopBackButton = !embedded && isDesktopWeb;
+  const { user, isLoaded } = useUser();
+  const [uploadState, setUploadState] = useState<UploadState>('idle');
+  const organizerEmail = isLoaded ? user?.emailAddresses[0]?.emailAddress || null : null;
 
   if (!tripId || !tripName) {
     return (
@@ -252,6 +257,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 0,
     paddingBottom: 24,
+  },
+  completeButton: {
+    minHeight: 52,
+    backgroundColor: '#4F46E5',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  completeButtonLoading: {
+    opacity: 0.7,
+  },
+  completeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   centered: {
     flex: 1,

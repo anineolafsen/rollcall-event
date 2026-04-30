@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAuth } from '@clerk/expo';
+import { useEffect, useRef, useState, useRef } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useAuth } from "@clerk/expo";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -11,11 +11,11 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
-} from 'react-native';
+} from "react-native";
 
-import { AppButton } from '@/components/ui/button';
+import { AppButton } from "@/components/ui/button";
 import { DateField, formatDateValue, parseDateValue } from '@/components/ui/date-field';
-import { FormField } from '@/components/ui/form-field';
+import { FormField } from "@/components/ui/form-field";
 
 type FormValues = {
   title: string;
@@ -40,6 +40,7 @@ const parseDate = (dateStr: string): Date | null => {
     return null;
   }
 
+  // Try ISO format (YYYY-MM-DD)
   const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
     const [, year, month, day] = isoMatch;
@@ -56,15 +57,15 @@ const parseDate = (dateStr: string): Date | null => {
 const formatDateToISO = (dateStr: string): string | null => {
   const date = parseDate(dateStr);
   if (!date) return null;
-  return date.toISOString().split('T')[0];
+  return date.toISOString().split("T")[0]; // Returns YYYY-MM-DD
 };
 
 const initialFormValues: FormValues = {
-  title: '',
-  destination: '',
-  dateFrom: '',
-  dateTo: '',
-  description: '',
+  title: "",
+  destination: "",
+  dateFrom: "",
+  dateTo: "",
+  description: "",
 };
 
 export function CreateTripScreen() {
@@ -72,12 +73,18 @@ export function CreateTripScreen() {
   const router = useRouter();
   const isEditing = Boolean(tripId);
   const { getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
   const { width } = useWindowDimensions();
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
+  const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTrip, setIsLoadingTrip] = useState(false);
   const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
@@ -94,25 +101,40 @@ export function CreateTripScreen() {
       setIsLoadingTrip(true);
       try {
         const token = await getToken({ template: 'RollCallAuth' });
-        const apiUrl = process.env.EXPO_PUBLIC_API_URL ? `${process.env.EXPO_PUBLIC_API_URL}/api` : 'http://localhost:5118/api';
+        const apiUrl = process.env.EXPO_PUBLIC_API_URL
+          ? `${process.env.EXPO_PUBLIC_API_URL}/api`
+          : "http://localhost:5118/api";
+        const token = await getTokenRef.current({ template: "RollCallAuth" });
         const response = await fetch(`${apiUrl}/trips/${tripId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
-        if (!response.ok) throw new Error('Failed to load trip');
+        if (!response.ok) throw new Error("Failed to load trip");
         const data = await response.json();
+        const formatISOToDisplay = (isoDate: string): string => {
+          const date = new Date(isoDate);
+          const day = String(date.getDate()).padStart(2, "0");
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const year = date.getFullYear();
+          return `${day}.${month}.${year}`;
+        };
         setFormValues({
-          title: data.name || '',
-          destination: data.destination || '',
-          dateFrom: data.startDate ? formatDateValue(parseDateValue(data.startDate)) : '',
-          dateTo: data.endDate ? formatDateValue(parseDateValue(data.endDate)) : '',
-          description: data.description || '',
+          title: data.name || "",
+          destination: data.destination || "",
+          dateFrom: data.startDate ? formatISOToDisplay(data.startDate) : "",
+          dateTo: data.endDate ? formatISOToDisplay(data.endDate) : "",
+          description: data.description || "",
         });
       } catch (error) {
         loadedTripIdRef.current = null;
-        const errorMessage = error instanceof Error ? error.message : 'Failed to load trip';
-        Alert.alert('Error', errorMessage);
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to load trip";
+        Alert.alert("Error", errorMessage);
         router.back();
       } finally {
         setIsLoadingTrip(false);
@@ -121,7 +143,10 @@ export function CreateTripScreen() {
     void fetchTrip();
   }, [getToken, tripId, router]);
 
-  const updateField = <K extends keyof FormValues>(field: K, value: FormValues[K]) => {
+  const updateField = <K extends keyof FormValues>(
+    field: K,
+    value: FormValues[K],
+  ) => {
     setFormValues((currentValues) => ({
       ...currentValues,
       [field]: value,
@@ -132,7 +157,7 @@ export function CreateTripScreen() {
       [field]: undefined,
     }));
 
-    setSuccessMessage('');
+    setSuccessMessage("");
   };
 
   const getDateErrors = (values: Pick<FormValues, 'dateFrom' | 'dateTo'>) => {
@@ -190,7 +215,7 @@ export function CreateTripScreen() {
       }),
     }));
 
-    setSuccessMessage('');
+    setSuccessMessage("");
   };
 
   const toggleDatePicker = (field: DateFieldName) => {
@@ -201,25 +226,43 @@ export function CreateTripScreen() {
     const nextErrors: FormErrors = {};
 
     if (!formValues.title.trim()) {
-      nextErrors.title = 'Add a trip name.';
+      nextErrors.title = "Add a trip name.";
     }
 
     if (!formValues.destination.trim()) {
-      nextErrors.destination = 'Add a destination.';
+      nextErrors.destination = "Add a destination.";
     }
 
     if (!formValues.dateFrom.trim()) {
-      nextErrors.dateFrom = 'Add a start date.';
+      nextErrors.dateFrom = "Add a start date.";
+    } else {
+      const startDate = parseDate(formValues.dateFrom);
+      if (!startDate) {
+        nextErrors.dateFrom =
+          "Invalid date format. Use DD.MM.YYYY (e.g., 15.05.2026).";
+      }
     }
 
     if (!formValues.dateTo.trim()) {
-      nextErrors.dateTo = 'Add an end date.';
+      nextErrors.dateTo = "Add an end date.";
+    } else {
+      const endDate = parseDate(formValues.dateTo);
+      if (!endDate) {
+        nextErrors.dateTo =
+          "Invalid date format. Use DD.MM.YYYY (e.g., 15.05.2026).";
+      }
     }
 
-    Object.assign(nextErrors, getDateErrors(formValues));
+    if (!nextErrors.dateFrom && !nextErrors.dateTo) {
+      const startDate = parseDate(formValues.dateFrom)!;
+      const endDate = parseDate(formValues.dateTo)!;
+      if (endDate <= startDate) {
+        nextErrors.dateTo = "End date must be after start date.";
+      }
+    }
 
     if (!formValues.description.trim()) {
-      nextErrors.description = 'Add a short description.';
+      nextErrors.description = "Add a short description.";
     }
 
     setFormErrors(nextErrors);
@@ -238,12 +281,13 @@ export function CreateTripScreen() {
       const endDateISO = formatDateToISO(formValues.dateTo);
 
       if (!startDateISO || !endDateISO) {
-        throw new Error('Failed to parse dates');
+        throw new Error("Failed to parse dates");
       }
 
       const apiUrl = process.env.EXPO_PUBLIC_API_URL
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL
         ? `${process.env.EXPO_PUBLIC_API_URL}/api`
-        : 'http://localhost:5118/api';
+        : "http://localhost:5118/api";
 
       const tripData = {
         name: formValues.title,
@@ -256,9 +300,9 @@ export function CreateTripScreen() {
       if (isEditing && tripId) {
         const token = await getToken({ template: 'RollCallAuth' });
         const response = await fetch(`${apiUrl}/trips/${tripId}`, {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(tripData),
@@ -266,19 +310,22 @@ export function CreateTripScreen() {
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`,
+          );
         }
 
-        setSuccessMessage('Trip updated successfully!');
-        Alert.alert('Success', 'Trip updated successfully!');
+        setSuccessMessage("Trip updated successfully!");
+        Alert.alert("Success", "Trip updated successfully!");
         router.replace(`/trips/${tripId}`);
       } else {
-        const token = await getToken({ template: 'RollCallAuth' });
+        const token = await getTokenRef.current({ template: "RollCallAuth" });
 
+        // Create new trip
         const response = await fetch(`${apiUrl}/trips`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(tripData),
@@ -286,23 +333,32 @@ export function CreateTripScreen() {
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`,
+          );
         }
 
         const result = await response.json();
-        setSuccessMessage('Trip created successfully!');
+        console.log("Trip creation response:", result);
+        setSuccessMessage("Trip created successfully!");
         const newTripId = result.id || result.tripID || result.tripId || 1;
+        console.log("Extracted tripId:", newTripId);
         router.push({
-          pathname: '/invite',
+          pathname: "/invite",
           params: {
-            tripId: newTripId,
+            id: newTripId,
             tripName: formValues.title,
           },
         });
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : isEditing ? 'Failed to update trip' : 'Failed to create trip';
-      Alert.alert('Error', errorMessage);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : isEditing
+            ? "Failed to update trip"
+            : "Failed to create trip";
+      Alert.alert("Error", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -310,31 +366,39 @@ export function CreateTripScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.screen}>
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.screen}
+    >
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           isMobileLayout && styles.mobileScrollContent,
         ]}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
-          {showDesktopBackButton ? (
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-              <Text style={styles.backButtonText}>← Go back</Text>
-            </TouchableOpacity>
-          ) : null}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Trip Creation Form */}
+        <View style={styles.content}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
 
-          <Text style={styles.title}>{isEditing ? 'Edit Trip' : 'Create New Trip'}</Text>
+          <Text style={styles.title}>
+            {isEditing ? "Edit Trip" : "Create New Trip"}
+          </Text>
           <View style={styles.titleDivider} />
-          {isLoadingTrip ? <Text style={styles.helperText}>Loading trip details...</Text> : null}
+          {isLoadingTrip ? (
+            <Text style={styles.helperText}>Loading trip details...</Text>
+          ) : null}
 
           <FormField
             label="Trip Name"
             placeholder="Add trip name"
             value={formValues.title}
-            onChangeText={(value) => updateField('title', value)}
+            onChangeText={(value) => updateField("title", value)}
             error={formErrors.title}
           />
 
@@ -342,7 +406,7 @@ export function CreateTripScreen() {
             label="Destination"
             placeholder="Add destination"
             value={formValues.destination}
-            onChangeText={(value) => updateField('destination', value)}
+            onChangeText={(value) => updateField("destination", value)}
             error={formErrors.destination}
           />
 
@@ -353,7 +417,7 @@ export function CreateTripScreen() {
                 value={formValues.dateFrom}
                 minValue={minimumStartValue}
                 onToggle={() => toggleDatePicker('dateFrom')}
-                onChange={(value) => updateDateField('dateFrom', value)}
+                onChange={(value) => updateDateField("dateFrom", value)}
                 onClose={() => setActiveDateField(null)}
                 isOpen={activeDateField === 'dateFrom'}
                 error={formErrors.dateFrom}
@@ -366,7 +430,7 @@ export function CreateTripScreen() {
                 value={formValues.dateTo}
                 minValue={formValues.dateFrom || minimumStartValue}
                 onToggle={() => toggleDatePicker('dateTo')}
-                onChange={(value) => updateDateField('dateTo', value)}
+                onChange={(value) => updateDateField("dateTo", value)}
                 onClose={() => setActiveDateField(null)}
                 isOpen={activeDateField === 'dateTo'}
                 error={formErrors.dateTo}
@@ -378,23 +442,25 @@ export function CreateTripScreen() {
             label="Description"
             placeholder="Add a short trip description"
             value={formValues.description}
-            onChangeText={(value) => updateField('description', value)}
+            onChangeText={(value) => updateField("description", value)}
             error={formErrors.description}
             multiline
           />
 
-          {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
+          {successMessage ? (
+            <Text style={styles.successMessage}>{successMessage}</Text>
+          ) : null}
 
           <AppButton
             variant="edit"
             label={
               isLoading
                 ? isEditing
-                  ? 'Saving trip...'
-                  : 'Creating trip...'
+                  ? "Saving trip..."
+                  : "Creating trip..."
                 : isEditing
-                  ? 'Save changes'
-                  : 'Create trip'
+                  ? "Save changes"
+                  : "Create trip"
             }
             onPress={handleSubmit}
             disabled={isLoading || isLoadingTrip}
@@ -408,7 +474,7 @@ export function CreateTripScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f4f1ec',
+    backgroundColor: "#f4f1ec",
   },
   scrollContent: {
     flexGrow: 1,
@@ -429,13 +495,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     lineHeight: 34,
-    fontWeight: '700',
-    textAlign: 'center',
-    color: '#090909',
+    fontWeight: "700",
+    textAlign: "center",
+    color: "#090909",
   },
   titleDivider: {
     height: 3,
-    backgroundColor: '#76b6ee',
+    backgroundColor: "#76b6ee",
     borderRadius: 999,
     marginTop: 14,
     marginBottom: 28,
@@ -447,11 +513,11 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 15,
-    color: '#4a7ca8',
-    fontWeight: '600',
+    color: "#4a7ca8",
+    fontWeight: "600",
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   rowField: {
@@ -459,7 +525,7 @@ const styles = StyleSheet.create({
   },
   successMessage: {
     marginBottom: 16,
-    color: '#246b3f',
+    color: "#246b3f",
     fontSize: 14,
     lineHeight: 20,
   },
@@ -467,6 +533,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontSize: 13,
     lineHeight: 18,
-    color: '#5a7a94',
+    color: "#5a7a94",
   },
 });
