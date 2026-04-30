@@ -144,19 +144,26 @@ export function ViewTripsScreen() {
           pressed && styles.cardPressed,
         ]}>
         <View style={styles.cardHeader}>
-          <Text style={styles.tripName}>{item.name}</Text>
-          {item.destination && (
-            <Text style={styles.destination}>{item.destination}</Text>
-          )}
+          <View style={styles.titleRow}>
+            <Text style={styles.tripName}>{item.name}</Text>
+            {item.isOrganizer ? (
+              <View style={styles.organizerBadge}>
+                <Text style={styles.organizerBadgeText}>Organizer</Text>
+              </View>
+            ) : null}
+          </View>
+          {item.destination && <Text style={styles.destination}>{item.destination}</Text>}
         </View>
         <View style={styles.cardBody}>
-          <View style={styles.dateBlock}>
-            <Text style={styles.dateLabel}>From</Text>
-            <Text style={styles.dateValue}>{item.startDate ? formatDate(item.startDate) : '-'}</Text>
-          </View>
-          <View style={styles.dateBlock}>
-            <Text style={styles.dateLabel}>To</Text>
-            <Text style={styles.dateValue}>{item.endDate ? formatDate(item.endDate) : '-'}</Text>
+          <View style={styles.dateRow}>
+            <View style={styles.dateBlock}>
+              <Text style={styles.dateLabel}>From</Text>
+              <Text style={styles.dateValue}>{item.startDate ? formatDate(item.startDate) : '-'}</Text>
+            </View>
+            <View style={styles.dateBlock}>
+              <Text style={styles.dateLabel}>To</Text>
+              <Text style={styles.dateValue}>{item.endDate ? formatDate(item.endDate) : '-'}</Text>
+            </View>
           </View>
         </View>
         {isDesktopWeb && item.description ? (
@@ -282,10 +289,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 14,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   tripName: {
     fontSize: 18,
     fontWeight: '500',
     color: '#ffffff',
+    flex: 1,
   },
   destination: {
     fontSize: 13,
@@ -293,10 +307,26 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cardBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: 12,
     paddingHorizontal: 18,
     paddingVertical: 14,
+  },
+  organizerBadge: {
+    borderWidth: 1.1,
+    borderColor: '#f0b43a',
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    backgroundColor: '#487CA8',
+  },
+  organizerBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffffff',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   dateBlock: {
     flex: 1,
