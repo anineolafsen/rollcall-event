@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconButton } from '@/components/ui/icon-button';
+import { useUnreadChats } from '@/hooks/use-unread-chats';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 const CACHE_TTL = 60 * 1000; // Cache for 60 seconds
@@ -56,6 +57,7 @@ export function ViewChatsScreen() {
   const mobileNavbarOffset = 68 + Math.max(insets.bottom, 8);
   const router = useRouter();
   const { getToken } = useAuth();
+  const { unreadChatIds } = useUnreadChats();
   const [chatsWithTrips, setChatsWithTrips] = useState<ChatWithTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -277,7 +279,10 @@ export function ViewChatsScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.chatInfo}>
-            <Text style={styles.chatTitle}>{item.chat.title}</Text>
+            <View style={styles.chatTitleRow}>
+              <Text style={styles.chatTitle}>{item.chat.title}</Text>
+              {unreadChatIds.includes(item.chat.id) ? <View style={styles.unreadDot} /> : null}
+            </View>
             {item.trip && (
               <Text style={styles.tripName}>
                 📌 {item.trip.name}
@@ -475,11 +480,22 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
+  chatTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
   chatTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#090909',
-    marginBottom: 4,
+  },
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#ff3040',
   },
   tripName: {
     fontSize: 13,

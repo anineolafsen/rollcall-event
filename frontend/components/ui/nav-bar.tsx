@@ -5,12 +5,14 @@ import { usePathname, useRouter } from 'expo-router';
 import { PlatformPressable } from '@react-navigation/elements';
 import { CalendarDays, House, MessageCircle, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useUnreadChats } from '@/hooks/use-unread-chats';
 
 export function AppNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { hasUnreadChats } = useUnreadChats();
   const isCalendarActive = pathname === '/events' || pathname.startsWith('/trips');
   const isHomeActive = pathname === '/' || pathname === '/index';
   const isChatsActive = pathname === '/chats' || pathname.startsWith('/chats/');
@@ -72,12 +74,15 @@ export function AppNavbar() {
           onPress={() => router.navigate('/chats')}
           style={[styles.tabButton, isChatsActive && styles.tabButtonActive]}
         >
-          <View style={styles.iconScaleUp}>
-            <MessageCircle
-              size={isTablet ? 42 : 31}
-              strokeWidth={2.4}
-              color={isChatsActive ? '#0b0b0b' : '#ffffff'}
-            />
+          <View style={styles.iconWrapper}>
+            <View style={styles.iconScaleUp}>
+              <MessageCircle
+                size={isTablet ? 42 : 31}
+                strokeWidth={2.4}
+                color={isChatsActive ? '#0b0b0b' : '#ffffff'}
+              />
+            </View>
+            {hasUnreadChats ? <View style={styles.badge} /> : null}
           </View>
         </PlatformPressable>
         <PlatformPressable
@@ -105,7 +110,9 @@ const styles = StyleSheet.create<{
   navbar: ViewStyle;
   tabButton: ViewStyle;
   tabButtonActive: ViewStyle;
+  iconWrapper: ViewStyle;
   iconScaleUp: ViewStyle;
+  badge: ViewStyle;
 }>({
   container: {
     position: 'absolute',
@@ -143,7 +150,23 @@ const styles = StyleSheet.create<{
   tabButtonActive: {
     transform: [{ translateY: -2 }],
   },
+  iconWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   iconScaleUp: {
     transform: [{ scale: 1.04 }, { translateY: 1 }],
+  },
+  badge: {
+    position: 'absolute',
+    top: 1,
+    right: -1,
+    width: 12,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: '#ff3040',
+    borderWidth: 2,
+    borderColor: 'rgba(74, 124, 168, 1)',
   },
 });

@@ -2,6 +2,9 @@ import React from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 
+import { usePendingInvitationsCount } from '@/hooks/use-pending-invitations-count';
+import { useUnreadChats } from '@/hooks/use-unread-chats';
+
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 type NavItem = {
@@ -20,9 +23,11 @@ const navItems: NavItem[] = [
 export function AppSidebar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { pendingInvitationsCount } = usePendingInvitationsCount();
+  const { hasUnreadChats } = useUnreadChats();
 
   const isActive = (href: string) => {
-    const routeName = href.split('/').pop(); // "trips", "profile", etc.
+    const routeName = href.split('/').pop();
     return pathname.startsWith(`/${routeName}`);
   };
 
@@ -34,42 +39,51 @@ export function AppSidebar() {
         <View style={styles.divider} />
         {navItems.map((item) => {
           const active = isActive(item.href);
+          const shouldShowBadge = item.href === '/(app)/(tabs)/my-invitations' && pendingInvitationsCount > 0;
+          const shouldShowChatBadge = item.href === '/(app)/(tabs)/chats' && hasUnreadChats;
+
           return (
-              <Pressable
-                key={item.href}
-                onPress={() => router.push(item.href)}
-                style={({ hovered }) => [
-                  styles.navItem,
-                  active && styles.navItemActive,
-                  hovered && !active && styles.navItemHovered,
-                ]}
-              >
-                  {({ hovered }) => (
-                    <>
+            <Pressable
+              key={item.href}
+              onPress={() => router.push(item.href)}
+              style={({ hovered }) => [
+                styles.navItem,
+                active && styles.navItemActive,
+                hovered && !active && styles.navItemHovered,
+              ]}
+            >
+              {({ hovered }) => (
+                <>
+                  <View style={styles.iconWrapper}>
                     <IconSymbol
-                      size={18}                                         
+                      size={18}
                       name={item.icon}
-                      color={active ? '#76b6ee' : hovered ? '#ffffff' : 'rgba(255,255,255,0.45)'} 
+                      color={active ? '#76b6ee' : hovered ? '#ffffff' : 'rgba(255,255,255,0.45)'}
                     />
-                    <Text style={[styles.navLabel, active && styles.navLabelActive,  hovered && !active && styles.navLabelHovered,]}>
-                      {item.name}
-                    </Text>
-                  </>
-                  )}
-              </Pressable>
+                    {shouldShowBadge || shouldShowChatBadge ? (
+                      <View style={styles.badge} />
+                    ) : null}
+                  </View>
+                  <Text
+                    style={[
+                      styles.navLabel,
+                      active && styles.navLabelActive,
+                      hovered && !active && styles.navLabelHovered,
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+                </>
+              )}
+            </Pressable>
           );
         })}
       </View>
       <View pointerEvents="none" style={styles.mountainScene}>
-        {/* Large back triangle */}
         <View style={[styles.triangle, styles.triangleBack]} />
-        {/* Mid triangle left */}
         <View style={[styles.triangle, styles.triangleMidLeft]} />
-        {/* Mid triangle right */}
         <View style={[styles.triangle, styles.triangleMidRight]} />
-        {/* Small front triangle */}
         <View style={[styles.triangle, styles.triangleFront]} />
-        {/* Right-side triangle mountain */}
         <View style={[styles.triangle, styles.triangleRight]} />
       </View>
     </View>
@@ -119,6 +133,23 @@ const styles = StyleSheet.create({
     gap: 10,
     borderLeftWidth: 3,
     borderLeftColor: 'transparent',
+  },
+  iconWrapper: {
+    position: 'relative',
+    width: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -1,
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#ff3040',
+    borderWidth: 2,
+    borderColor: '#1a2e44',
   },
   navLabel: {
     fontSize: 16,

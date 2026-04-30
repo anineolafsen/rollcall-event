@@ -20,6 +20,7 @@ import {
 import { useUser, useAuth } from "@clerk/expo";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { markChatAsRead } from '@/hooks/use-unread-chats';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:5118";
@@ -201,32 +202,33 @@ function MessageBubble({
           </View>
         )}
 
-        {/* */}
-        <View
-          style={[
-            styles.bubble,
-            isOwn ? styles.bubbleUser : styles.bubbleOther,
-          ]}
-        >
-          {isEditing ? (
-            <TextInput
-              style={[styles.editInput, isOwn && styles.editInputUser]}
-              value={editText}
-              onChangeText={setEditText}
-              multiline
-              maxLength={1000}
-              autoFocus
-            />
-          ) : (
-            <Text style={[styles.bubbleText, isOwn && styles.bubbleTextUser]}>
-              {message.content}
-            </Text>
-          )}
-        </View>
+        <View style={[styles.messageContent, isOwn && styles.messageContentUser]}>
+          <View
+            style={[
+              styles.bubble,
+              isOwn ? styles.bubbleUser : styles.bubbleOther,
+            ]}
+          >
+            {isEditing ? (
+              <TextInput
+                style={[styles.editInput, isOwn && styles.editInputUser]}
+                value={editText}
+                onChangeText={setEditText}
+                multiline
+                maxLength={1000}
+                autoFocus
+              />
+            ) : (
+              <Text style={[styles.bubbleText, isOwn && styles.bubbleTextUser]}>
+                {message.content}
+              </Text>
+            )}
+          </View>
 
-        <Text style={[styles.timestamp, isOwn && styles.timestampUser]}>
-          {formatTime(message.timestamp)}
-        </Text>
+          <Text style={[styles.timestamp, isOwn && styles.timestampUser]}>
+            {formatTime(message.timestamp)}
+          </Text>
+        </View>
 
         {isOwn && (
           <View style={styles.senderColumn}>
@@ -701,6 +703,14 @@ export default function ChatScreen() {
         }));
 
         setMessages(transformedMessages);
+        if (transformedMessages.length > 0) {
+          const latestMessage = transformedMessages.reduce((latest, current) => (
+            new Date(current.timestamp).getTime() > new Date(latest.timestamp).getTime()
+              ? current
+              : latest
+          ));
+          await markChatAsRead(chatID, latestMessage.timestamp);
+        }
       } catch (err) {
         console.error("Failed to fetch chat:", err);
         setError("Failed to load chat");
@@ -768,6 +778,7 @@ export default function ChatScreen() {
           timestamp: sentMessage.timestamp,
         },
       ]);
+      await markChatAsRead(chatID, sentMessage.timestamp);
       setDraft("");
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (err) {
@@ -1084,9 +1095,15 @@ const styles = StyleSheet.create({
   messageRowUser: {
     justifyContent: "flex-end",
   },
+  messageContent: {
+    maxWidth: "60%",
+    alignItems: "flex-start",
+  },
+  messageContentUser: {
+    alignItems: "flex-end",
+  },
 
   bubble: {
-    maxWidth: "60%",
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: BUBBLE_RADIUS,
@@ -1111,13 +1128,9 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 11,
     color: C.muted,
-    marginTop: 2,
-    marginLeft: 6,
-    minWidth: 35,
+    marginTop: 4,
   },
   timestampUser: {
-    marginLeft: 6,
-    marginRight: 0,
     alignSelf: "flex-end",
   },
 
