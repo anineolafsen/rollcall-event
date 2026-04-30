@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@clerk/expo";
 import {
@@ -84,7 +84,6 @@ export function CreateTripScreen() {
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [activeDateField, setActiveDateField] = useState<DateFieldName | null>(null);
-  const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTrip, setIsLoadingTrip] = useState(false);
   const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
@@ -100,16 +99,11 @@ export function CreateTripScreen() {
       loadedTripIdRef.current = tripId;
       setIsLoadingTrip(true);
       try {
-        const token = await getToken({ template: 'RollCallAuth' });
         const apiUrl = process.env.EXPO_PUBLIC_API_URL
           ? `${process.env.EXPO_PUBLIC_API_URL}/api`
           : "http://localhost:5118/api";
         const token = await getTokenRef.current({ template: "RollCallAuth" });
         const response = await fetch(`${apiUrl}/trips/${tripId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -284,7 +278,6 @@ export function CreateTripScreen() {
         throw new Error("Failed to parse dates");
       }
 
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL
       const apiUrl = process.env.EXPO_PUBLIC_API_URL
         ? `${process.env.EXPO_PUBLIC_API_URL}/api`
         : "http://localhost:5118/api";
