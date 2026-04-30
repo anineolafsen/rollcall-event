@@ -1,9 +1,17 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useAuth } from '@clerk/expo';
 
 import { TripActionButton } from '@/components/ui/trip-action-button';
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
@@ -19,12 +27,14 @@ interface Trip {
 }
 
 export default function TripHomeScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
+  const { getToken } = useAuth();
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
+
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { getToken } = useAuth();
 
   const formatDateValue = (value?: string | null) => {
     if (!value) {
@@ -59,6 +69,7 @@ export default function TripHomeScreen() {
 
         const data: Trip = await response.json();
         setTrip(data);
+        setSelectedTrip({ id: data.id, name: data.name, isOrganizer: data.isOrganizer });
       } catch {
         setError('Could not load trip details.');
       } finally {
@@ -70,7 +81,7 @@ export default function TripHomeScreen() {
       void fetchTrip();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, setSelectedTrip]);
 
   if (loading) {
     return (
@@ -86,7 +97,7 @@ export default function TripHomeScreen() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.screen}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.push('/trips')}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/trips')}>
             <Text style={styles.backButtonText}>← Go back</Text>
           </TouchableOpacity>
           <View style={styles.centered}>
@@ -97,12 +108,20 @@ export default function TripHomeScreen() {
     );
   }
 
+  const formattedStartDate = formatDateValue(trip.startDate);
+  const formattedEndDate = formatDateValue(trip.endDate);
+  const dateRangeText =
+    formattedStartDate && formattedEndDate
+      ? `${formattedStartDate} - ${formattedEndDate}`
+      : 'Not added';
+
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/trips')}>
           <Text style={styles.backButtonText}>← Go back</Text>
         </TouchableOpacity>
+
         <Text style={styles.title}>{trip.name}</Text>
         <View style={styles.titleDivider} />
 
@@ -142,9 +161,9 @@ export default function TripHomeScreen() {
             </>
           ) : null}
           <TripActionButton
-            label="Events"
-            backgroundColor="#eaf7ec"
-            textColor="#1a3d1a"
+            label="See Events"
+            backgroundColor="#4a7ca8"
+            textColor="#fff"
             onPress={() =>
               router.push({
                 pathname: '/trips/[id]/events',
@@ -162,31 +181,48 @@ export default function TripHomeScreen() {
               <View>
                 <Text style={styles.infoLabel}>Location</Text>
                 <View style={styles.locationPill}>
-                  <Text style={styles.locationPillText}>{trip.destination?.trim() ? trip.destination : 'Not added'}</Text>
+                  <Text style={styles.locationPillText}>
+                    {trip.destination?.trim() ? trip.destination : 'Not added'}
+                  </Text>
                 </View>
               </View>
 
               <View>
                 <Text style={styles.infoLabel}>Date</Text>
                 <View style={styles.datePill}>
-                  <Text style={styles.datePillText}>
-                    {formatDateValue(trip.startDate) && formatDateValue(trip.endDate)
-                      ? `${formatDateValue(trip.startDate)} - ${formatDateValue(trip.endDate)}`
-                      : 'Not added'}
-                  </Text>
+                  <Text style={styles.datePillText}>{dateRangeText}</Text>
                 </View>
               </View>
             </View>
 
             <View style={styles.organizerInlineSection}>
+              {trip.isOrganizer ? (
+                <View style={styles.organizerActionSection}>
+                  <TripActionButton
+                    label="+ Add Organizer"
+                    backgroundColor="#fbbf24"
+                    textColor="#1a3d5c"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/trips/[id]/organizers',
+                        params: { id: String(trip.id), tripName: trip.name },
+                      })
+                    }
+                  />
+                </View>
+              ) : null}
               <Text style={styles.infoLabel}>Organizer phone</Text>
-              <Text style={styles.organizerPhoneValue}>{trip.organizerPhone?.trim() ? trip.organizerPhone : 'Not added'}</Text>
+              <Text style={styles.organizerPhoneValue}>
+                {trip.organizerPhone?.trim() ? trip.organizerPhone : 'Not added'}
+              </Text>
             </View>
           </View>
 
           <View style={styles.descriptionSection}>
             <Text style={styles.infoLabel}>Description</Text>
-            <Text style={styles.infoValue}>{trip.description?.trim() ? trip.description : 'Not added'}</Text>
+            <Text style={styles.infoValue}>
+              {trip.description?.trim() ? trip.description : 'Not added'}
+            </Text>
           </View>
         </View>
       </View>
@@ -231,7 +267,7 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: 'row',
-    flexWrap: 'nowrap',
+    flexWrap: 'wrap',
     gap: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -263,10 +299,10 @@ const styles = StyleSheet.create({
   },
   locationPill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#dff0ff',
+    backgroundColor: '#ffffff',
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#8ebfe8',
+    borderColor: '#fbbf24',
     paddingHorizontal: 14,
     paddingVertical: 7,
   },
@@ -277,10 +313,10 @@ const styles = StyleSheet.create({
   },
   datePill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#f0f6fc',
+    backgroundColor: '#ffffff',
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#b6cede',
+    borderColor: '#fbbf24',
     paddingHorizontal: 14,
     paddingVertical: 7,
   },
@@ -293,6 +329,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginLeft: 10,
     maxWidth: '38%',
+  },
+  organizerActionSection: {
+    marginBottom: 12,
+    alignSelf: 'stretch',
   },
   organizerPhoneValue: {
     fontSize: 16,

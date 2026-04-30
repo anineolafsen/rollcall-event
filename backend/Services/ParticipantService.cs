@@ -28,6 +28,14 @@ namespace MyApp.API.Services
     public string Phone { get; set; } = string.Empty;
   }
 
+  public class TripParticipantDto
+  {
+    public int UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public bool IsOrganizer { get; set; }
+  }
+
   public class ParticipantService
   {
     private readonly AppDbContext _context;
@@ -76,6 +84,23 @@ namespace MyApp.API.Services
           Name = (p.User!.FirstName + " " + p.User.LastName).Trim(),
           Phone = p.User!.Phone!
         })
+        .ToList();
+    }
+
+    public List<TripParticipantDto> GetTripParticipants(int tripId)
+    {
+      return _context.Participants
+        .Include(p => p.User)
+        .Where(p => p.TripId == tripId)
+        .Select(p => new TripParticipantDto
+        {
+          UserId = p.UserId,
+          Name = (p.User!.FirstName + " " + p.User.LastName).Trim(),
+          Email = p.User!.Email,
+          IsOrganizer = p.IsOrganizer
+        })
+        .OrderByDescending(p => p.IsOrganizer)
+        .ThenBy(p => p.Name == string.Empty ? p.Email : p.Name)
         .ToList();
     }
 
@@ -128,6 +153,32 @@ namespace MyApp.API.Services
       _context.Participants.Add(participant);
       _context.SaveChanges();
       return participant;
+    }
+
+    public TripParticipantDto? PromoteToOrganizer(int tripId, int userId)
+    {
+      var participant = _context.Participants
+        .Include(p => p.User)
+        .FirstOrDefault(p => p.TripId == tripId && p.UserId == userId);
+
+      if (participant == null || participant.User == null)
+      {
+        return null;
+      }
+
+      if (!participant.IsOrganizer)
+      {
+        participant.IsOrganizer = true;
+        _context.SaveChanges();
+      }
+
+      return new TripParticipantDto
+      {
+        UserId = participant.UserId,
+        Name = (participant.User.FirstName + " " + participant.User.LastName).Trim(),
+        Email = participant.User.Email,
+        IsOrganizer = participant.IsOrganizer
+      };
     }
   }
 }

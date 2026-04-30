@@ -1,3 +1,4 @@
+// (Removed duplicate/stray stopCheckinSession definition that caused syntax error)
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5118';
 
 export type CheckinSessionType = 'self' | 'qr';
@@ -51,6 +52,13 @@ async function readJsonOrThrow<T>(response: Response): Promise<T> {
 }
 
 export const checkinService = {
+    async stopCheckinSession(eventId: string | number, sessionType: CheckinSessionType, token?: string | null): Promise<void> {
+      const response = await fetch(`${API_BASE_URL}/api/checkins/sessions/stop/${eventId}/${sessionType}`, {
+        method: 'POST',
+        headers: buildHeaders(token),
+      });
+      await readJsonOrThrow(response);
+    },
   async startSession(
     eventId: string | number,
     sessionType: CheckinSessionType,

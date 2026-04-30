@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Linking } from "react-native";
+import { AppButton } from "@/components/ui/button";
 import type { Participant } from "@/types/participantType";
 import { useState } from "react";
 
@@ -76,13 +77,12 @@ export function ParticipantItem({ participant, isOrganizer, onToggle }: Omit<Par
             <Text style={styles.phoneNumber}>
               {participant.phone ?? 'Not available'}
             </Text>
-            <TouchableOpacity
-              style={[styles.contactBtn, !participant.phone && { opacity: 0.4 }]}
+            <AppButton
+              label="Contact"
               onPress={handleCall}
               disabled={!participant.phone}
-            >
-              <Text style={styles.contactBtnText}>CONTACT</Text>
-            </TouchableOpacity>
+              style={{ width: '100%', marginTop: 8 }}
+            />
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
@@ -184,47 +184,66 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: {
-    backgroundColor: '#d6eaf8',
-    borderRadius: 16,
-    padding: 24,
-    width: '75%',
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 32,
+    width: 380,
+    maxWidth: '90%',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d0e5f7',
+    shadowColor: '#4a7ca8',
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   cardName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#111',
+    color: '#1a3d5c',
     marginBottom: 8,
   },
   divider: {
     width: '80%',
-    height: 1.5,
-    backgroundColor: '#111',
-    marginBottom: 16,
+    height: 2,
+    backgroundColor: '#4a7ca8',
+    borderRadius: 2,
+    marginBottom: 18,
   },
   phoneLabel: {
     fontSize: 15,
-    color: '#333',
+    color: '#4a7ca8',
     alignSelf: 'flex-start',
     marginBottom: 4,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   phoneNumber: {
-    fontSize: 15,
-    color: '#111',
+    fontSize: 16,
+    color: '#1a3d5c',
     alignSelf: 'flex-start',
     marginBottom: 28,
+    fontWeight: '500',
   },
   contactBtn: {
-    backgroundColor: '#111',
-    borderRadius: 30,
+    backgroundColor: '#4a7ca8',
+    borderRadius: 999,
     paddingVertical: 14,
     width: '100%',
     alignItems: 'center',
+    marginTop: 8,
+    shadowColor: '#4a7ca8',
+    shadowOpacity: 0.13,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   contactBtnText: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 });
