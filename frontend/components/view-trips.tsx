@@ -101,7 +101,7 @@ export function ViewTripsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [getToken, setTripsCache]); // getToken is stable
+  }, [setTripsCache]);
 
   useEffect(() => {
     if (!tripsLoaded) {
