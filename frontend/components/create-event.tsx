@@ -76,7 +76,7 @@ export function CreateEventScreen() {
       }
     : null;
 
-  const isEmergency = emergency === 'true' || formValues.isEmergency || isLoadingEvent;
+  const isEmergency = emergency === 'true' || formValues.isEmergency;
 
     useEffect(() => {
     if (!isEmergency) return;
