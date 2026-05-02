@@ -149,7 +149,7 @@ export function ParticipationView() {
     }
   };
 
-  const handleIgnore = async (invitationId: number, tripId: number, email: string) => {
+  const handleIgnore = async (invitationId: number) => {
     try {
       const token = await getTokenRef.current({ template: "RollCallAuth" });
       if (!token) {
@@ -160,7 +160,7 @@ export function ParticipationView() {
       setActionInProgress(invitationId);
 
       const response = await fetch(
-        `${API_BASE_URL}/api/invitations?tripId=${tripId}&email=${encodeURIComponent(email)}`,
+        `${API_BASE_URL}/api/invitations/${invitationId}`,
         {
           method: 'DELETE',
           headers: {
@@ -249,7 +249,7 @@ export function ParticipationView() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.button, styles.ignoreButton, actionInProgress === invitation.id && styles.buttonDisabled]}
-            onPress={() => handleIgnore(invitation.id, invitation.tripId, invitation.email)}
+            onPress={() => handleIgnore(invitation.id)}
             disabled={actionInProgress !== null}
           >
             {actionInProgress === invitation.id ? (
