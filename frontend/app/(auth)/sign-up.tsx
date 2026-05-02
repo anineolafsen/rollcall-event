@@ -1,11 +1,13 @@
-import { View, StyleSheet, Alert } from "react-native";
+import { View, StyleSheet, Alert, TouchableOpacity } from "react-native";
 import { useState } from "react";
 import { useSignUp, useAuth } from "@clerk/expo";
-import { useRouter, Redirect } from "expo-router";
+import { useRouter, Redirect, Link } from "expo-router";
 
 import AuthInput from "@/components/AuthInput";
 import AuthButton from "@/components/AuthButton";
+import SocialLoginButtons from "@/components/SocialLoginButtons";
 import ThemedText from "@/components/ThemedText";
+import AuthContainer from "@/components/AuthContainer";
 
 export default function SignUpPage() {
   const { signUp } = useSignUp();
@@ -34,12 +36,17 @@ export default function SignUpPage() {
   }
 
   const onSignUpPress = async () => {
+    console.log("[SignUp] Attempting sign up...");
     if (!signUp || loading) return;
+
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please fill in all fields.");
+      return;
+    }
 
     try {
       setLoading(true);
       setError("");
-      console.log("Starting sign up...");
 
       await signUp.create({
         emailAddress: email.trim(),
@@ -49,30 +56,22 @@ export default function SignUpPage() {
         password,
       });
 
-      console.log("signUp.create and password success");
-
       await signUp.verifications.sendEmailCode();
-
-      console.log("sendEmailCode success");
-
+      
       setPendingVerification(true);
+      console.log("[SignUp] Verification email sent.");
     } catch (err: any) {
-      console.log("Sign up error:", JSON.stringify(err, null, 2));
-
-      const message = getErrorMessage(
-        err,
-        "Something went wrong during sign up."
-      );
-
+      console.error("[SignUp] Sign up error:", JSON.stringify(err, null, 2));
+      const message = getErrorMessage(err, "Something went wrong during sign up.");
       setError(message);
       Alert.alert("Sign Up Failed", message);
     } finally {
-      console.log("Ending sign up request");
       setLoading(false);
     }
   };
 
   const onVerifyPress = async () => {
+    console.log("[SignUp] Verifying code...");
     if (!signUp) return;
 
     try {
@@ -85,10 +84,11 @@ export default function SignUpPage() {
 
       if (signUp.status === "complete") {
         await signUp.finalize();
-
-        // This is for fetching Clerk user info after signing up
+        console.log("[SignUp] Success! Syncing with backend and finalizing session...");
+        
+        // Manual Sync using new /sync endpoint which calls GetOrCreateUser
         try {
-          await fetch("http://localhost:5118/api/users", {
+          await fetch("http://localhost:5118/api/users/sync", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -96,31 +96,21 @@ export default function SignUpPage() {
             body: JSON.stringify({
               email: email.trim(),
               clerkId: signUp.createdUserId,
+              // First Name, Last Name, and Phone are null here at this stage 
             }),
           });
         } catch (e) {
-          console.log("Failed to sync user to backend", e);
+          console.log("[SignUp] Sync error (handled by AppLayout later):", e);
         }
 
         router.replace("/");
       } else {
-        console.log(
-          "Sign up not complete:",
-          JSON.stringify(signUp, null, 2)
-        );
-
-        const message = "Verification was not completed. Please try again.";
-        setError(message);
-        Alert.alert("Verification Failed", message);
+        console.log("[SignUp] Verification status not complete:", signUp.status);
+        setError("Verification was not completed. Please try again.");
       }
     } catch (err: any) {
-      console.log("Verification error:", JSON.stringify(err, null, 2));
-
-      const message = getErrorMessage(
-        err,
-        "Invalid or expired verification code."
-      );
-
+      console.error("[SignUp] Verification error:", err);
+      const message = getErrorMessage(err, "Invalid or expired verification code.");
       setError(message);
       Alert.alert("Verification Failed", message);
     } finally {
@@ -129,42 +119,59 @@ export default function SignUpPage() {
   };
 
   return (
-    <View style={styles.container}>
+    <AuthContainer>
+      {/* Mandatory hidden captcha anchor */}
       <View id="clerk-captcha" />
+
       <ThemedText style={styles.title}>
-        {pendingVerification ? "Verify your email" : "Create Account"}
+        {pendingVerification ? "Check your email" : "Create Account"}
+      </ThemedText>
+      <ThemedText style={styles.subtitle}>
+        {pendingVerification 
+          ? `We sent a code to ${email}` 
+          : "Sign up to see your trips and events"}
       </ThemedText>
 
       {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
       {!pendingVerification ? (
         <>
-          <AuthInput
-            placeholder="Email"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
+          <View style={styles.form}>
+            <AuthInput
+              placeholder="Email"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
 
-          <AuthInput
-            placeholder="Password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+            <AuthInput
+              placeholder="Password"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
 
-          <AuthButton
-            title={loading ? "Signing Up..." : "Sign Up"}
-            onPress={onSignUpPress}
-          />
+            <AuthButton
+              title={loading ? "Creating Account..." : "Sign Up"}
+              onPress={onSignUpPress}
+            />
+          </View>
+
+          <SocialLoginButtons />
+
+          <View style={styles.footer}>
+            <Link href="/sign-in" asChild>
+              <TouchableOpacity>
+                <ThemedText style={styles.link}>
+                  Already have an account? <ThemedText style={styles.linkBold}>Sign in</ThemedText>
+                </ThemedText>
+              </TouchableOpacity>
+            </Link>
+          </View>
         </>
       ) : (
-        <>
-          <ThemedText style={styles.subtitle}>
-            We sent a verification code to {email}
-          </ThemedText>
-
+        <View style={styles.form}>
           <AuthInput
             placeholder="Verification code"
             value={code}
@@ -176,28 +183,24 @@ export default function SignUpPage() {
             title={loading ? "Verifying..." : "Verify Email"}
             onPress={onVerifyPress}
           />
-        </>
+          
+          <TouchableOpacity onPress={() => setPendingVerification(false)} style={styles.backButton}>
+            <ThemedText style={styles.backButtonText}>Back to Sign Up</ThemedText>
+          </TouchableOpacity>
+        </View>
       )}
-    </View>
+    </AuthContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "600",
-    marginBottom: 20,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  error: {
-    color: "red",
-    marginBottom: 12,
-  },
+  title: { fontSize: 28, fontWeight: "700", textAlign: "center", marginBottom: 8 },
+  subtitle: { fontSize: 16, textAlign: "center", marginBottom: 32, opacity: 0.6 },
+  form: { width: "100%", gap: 4 },
+  error: { color: "#ef4444", marginBottom: 16, textAlign: "center", backgroundColor: "rgba(239, 68, 68, 0.1)", padding: 10, borderRadius: 8, overflow: "hidden" },
+  footer: { marginTop: 24, alignItems: "center", paddingBottom: 5 },
+  link: { fontSize: 15 },
+  linkBold: { fontWeight: "700", color: "#4f46e5", paddingLeft: 1 },
+  backButton: { marginTop: 16, alignItems: 'center' },
+  backButtonText: { color: '#6b7280', fontSize: 14 }
 });
