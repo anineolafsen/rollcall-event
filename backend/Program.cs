@@ -50,6 +50,7 @@ builder.Services.AddScoped<CheckinService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<ChatMessageService>();
 builder.Services.AddScoped<ChatParticipantService>();
+builder.Services.AddScoped<MessageService>();
 
 var app = builder.Build();
 

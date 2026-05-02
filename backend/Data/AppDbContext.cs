@@ -27,6 +27,7 @@ namespace MyApp.API.Data
     public DbSet<Chat> Chats { get; set; }
     public DbSet<ChatParticipant> ChatParticipants { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<Message> Messages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -139,6 +140,15 @@ namespace MyApp.API.Data
         .WithMany()
         .HasForeignKey(cp => cp.UserId)
         .OnDelete(DeleteBehavior.Cascade);
+
+      modelBuilder.Entity<Message>()
+        .HasOne<Event>()
+        .WithMany()
+        .HasForeignKey(m => m.EventId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      modelBuilder.Entity<Message>()
+        .HasIndex(m => m.EventId);
     }
   }
 }
