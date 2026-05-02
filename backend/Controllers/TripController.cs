@@ -6,6 +6,8 @@ using MyApp.API.Extensions;
 
 namespace MyApp.API.Controllers
 {
+  public record AddOrganizerRequest(int UserId);
+
   [ApiController]
   [Route("api/trips")]
   [Authorize] // Enforce authentication for all trip actions
@@ -55,6 +57,28 @@ namespace MyApp.API.Controllers
       return Ok(result);
     }
 
+    // DEBUG endpoint - shows current user info
+    [HttpGet("debug/user-info")]
+    public IActionResult GetUserInfo()
+    {
+      try
+      {
+        var user = GetAuthenticatedUser();
+        var userTrips = _tripService.GetTripsByUser(user.Id);
+        return Ok(new {
+          userId = user.Id,
+          userEmail = user.Email,
+          clerkId = User.FindFirst("sub")?.Value,
+          tripCount = userTrips.Count,
+          trips = userTrips.Select(t => new { t.Id, t.Name }).ToList()
+        });
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = ex.Message });
+      }
+    }
+
     [HttpGet("{id}")]
     public IActionResult GetTripById(int id)
     {
@@ -84,6 +108,33 @@ namespace MyApp.API.Controllers
         IsOrganizer = isParticipant && _tripService.UserIsOrganizer(id, user.Id),
         OrganizerPhone = _participantService.GetOrganizerPhoneByTrip(id)
       });
+    }
+
+    // DEBUG endpoint - checks access to a specific trip
+    [HttpGet("{id}/debug/access")]
+    public IActionResult CheckTripAccess(int id)
+    {
+      try
+      {
+        var user = GetAuthenticatedUser();
+        bool isParticipant = _tripService.UserHasAccessToTrip(id, user.Id);
+        bool isInvited = _invitationService.UserHasPendingInvitation(id, user.Email);
+        bool isOrganizer = isParticipant && _tripService.UserIsOrganizer(id, user.Id);
+        
+        return Ok(new {
+          userId = user.Id,
+          userEmail = user.Email,
+          tripId = id,
+          isParticipant,
+          isInvited,
+          isOrganizer,
+          hasAccess = isParticipant || isInvited
+        });
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { error = ex.Message });
+      }
     }
 
     [HttpGet("{id}/events")]
@@ -179,6 +230,51 @@ namespace MyApp.API.Controllers
 
       var needs = _participantService.GetNeedsByTrip(id);
       return Ok(needs);
+    }
+
+    [HttpGet("{id}/participants")]
+    public IActionResult GetTripParticipants(int id)
+    {
+      var user = GetAuthenticatedUser();
+
+      if (!_tripService.UserIsOrganizer(id, user.Id))
+      {
+        return Forbid();
+      }
+
+      var trip = _tripService.GetTripById(id);
+      if (trip == null)
+      {
+        return NotFound();
+      }
+
+      var participants = _participantService.GetTripParticipants(id);
+      return Ok(participants);
+    }
+
+    [HttpPost("{id}/organizers")]
+    public IActionResult AddOrganizer(int id, [FromBody] AddOrganizerRequest request)
+    {
+      var user = GetAuthenticatedUser();
+
+      if (!_tripService.UserIsOrganizer(id, user.Id))
+      {
+        return Forbid();
+      }
+
+      var trip = _tripService.GetTripById(id);
+      if (trip == null)
+      {
+        return NotFound();
+      }
+
+      var participant = _participantService.PromoteToOrganizer(id, request.UserId);
+      if (participant == null)
+      {
+        return NotFound(new { error = "Participant not found in this trip." });
+      }
+
+      return Ok(participant);
     }
   }
 }

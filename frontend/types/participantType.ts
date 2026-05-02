@@ -6,4 +6,5 @@ export type Participant = {
   phone?: string | null;
   checkedIn: boolean;
   checkedInAt?: string | null;
+  message?: string | null;
 };

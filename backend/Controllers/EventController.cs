@@ -32,6 +32,49 @@ namespace MyApp.API.Controllers
       return _userService.GetOrCreateUser(clerkId, email);
     }
 
+    private IActionResult? ValidateEvent(Event appEvent)
+    {
+      if (appEvent == null)
+      {
+        return BadRequest("Event is required.");
+      }
+
+      if (string.IsNullOrWhiteSpace(appEvent.StartDate) || string.IsNullOrWhiteSpace(appEvent.EndDate))
+      {
+        return BadRequest("Start and end date are required.");
+      }
+
+      if (!DateTime.TryParse(appEvent.StartDate, out var startDate) || !DateTime.TryParse(appEvent.EndDate, out var endDate))
+      {
+        return BadRequest("Invalid date format.");
+      }
+
+      if (endDate <= startDate)
+      {
+        return BadRequest("End date must be after start date.");
+      }
+
+      if (!appEvent.IsEmergency)
+      {
+        if (string.IsNullOrWhiteSpace(appEvent.Name))
+        {
+          return BadRequest("Event name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(appEvent.Location))
+        {
+          return BadRequest("Event location is required.");
+        }
+
+        if (!appEvent.HasUnlimitedCapacity && (!appEvent.Capacity.HasValue || appEvent.Capacity.Value <= 0))
+        {
+          return BadRequest("Capacity must be a whole number above 0.");
+        }
+      }
+
+      return null;
+    }
+
     [HttpGet("{id}")]
     public IActionResult GetEventById(int id)
     {
@@ -59,6 +102,7 @@ namespace MyApp.API.Controllers
         appEvent.Capacity,
         appEvent.HasUnlimitedCapacity,
         appEvent.AttendanceMode,
+        appEvent.IsEmergency,
         appEvent.TripId,
         appEvent.ParticipantCount,
         appEvent.TripParticipantCount,
@@ -110,6 +154,12 @@ namespace MyApp.API.Controllers
     {
       var user = GetAuthenticatedUser();
 
+      var validationError = ValidateEvent(appEvent);
+      if (validationError != null)
+      {
+        return validationError;
+      }
+
       // SECURITY: Restrict so only trip organizers can create events in the trip
       if (!_tripService.UserIsOrganizer(appEvent.TripId, user.Id))
       {
@@ -131,6 +181,12 @@ namespace MyApp.API.Controllers
       if (existingEvent == null) return NotFound();
 
       var user = GetAuthenticatedUser();
+
+      var validationError = ValidateEvent(appEvent);
+      if (validationError != null)
+      {
+        return validationError;
+      }
 
       // SECURITY: Only trip organizers can update events
       if (!_tripService.UserIsOrganizer(existingEvent.TripId, user.Id) ||

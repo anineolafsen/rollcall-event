@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle } from 'react-native';
 
 type FormFieldProps = {
   label: string;
@@ -8,10 +8,12 @@ type FormFieldProps = {
   onChangeText?: (value: string) => void;
   error?: string;
   multiline?: boolean;
-  keyboardType?: 'default' | 'number-pad';
+  keyboardType?: 'default' | 'number-pad' | 'phone-pad';
   editable?: boolean;
   onPress?: () => void;
   rightAdornment?: ReactNode;
+  inputStyle?: StyleProp<TextStyle>;
+  highlightColor?: string; // NEW
 };
 
 export function FormField({
@@ -25,6 +27,8 @@ export function FormField({
   editable = true,
   onPress,
   rightAdornment,
+  inputStyle,
+  highlightColor, // NEW
 }: FormFieldProps) {
   const isPressable = typeof onPress === 'function';
 
@@ -44,6 +48,8 @@ export function FormField({
           !editable ? styles.inputDisabled : undefined,
           rightAdornment ? styles.inputWithAdornment : undefined,
           error ? styles.inputError : undefined,
+          highlightColor ? { borderColor: highlightColor } : undefined, // NEW
+          inputStyle,
         ]}
         value={value}
       />
@@ -86,7 +92,7 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 48,
     borderRadius: 12,
-    backgroundColor: '#fbf5f4',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e9e1df',
     paddingHorizontal: 14,

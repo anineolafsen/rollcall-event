@@ -56,6 +56,19 @@ namespace MyApp.API.Services
         var invitation = _context.Invitations.Find(invitationId);
         if (invitation == null) return false;
 
+        // Check if user is already a participant (handles edge case where they accepted twice)
+        var existingParticipant = _context.Participants
+          .FirstOrDefault(p => p.TripId == invitation.TripId && p.UserId == userId);
+        
+        if (existingParticipant != null)
+        {
+          // User is already a participant, just delete the invitation and return success
+          _context.Invitations.Remove(invitation);
+          _context.SaveChanges();
+          transaction.Commit();
+          return true;
+        }
+
         // Transform invitation into Participant record
         var participant = new Participant
         {
@@ -76,6 +89,21 @@ namespace MyApp.API.Services
         transaction.Rollback();
         throw; // Re-throw exception after rollback
       }
+    }
+
+    public bool IgnoreInvitation(int invitationId, string email)
+    {
+      var invitation = _context.Invitations
+        .FirstOrDefault(i => i.Id == invitationId && i.Email == email);
+
+      if (invitation == null)
+      {
+        return false;
+      }
+
+      _context.Invitations.Remove(invitation);
+      _context.SaveChanges();
+      return true;
     }
 
     public bool RemoveInvitation(int tripId, string email)

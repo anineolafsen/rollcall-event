@@ -11,12 +11,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@clerk/expo';
+import { useAuth, useClerk, useUser } from '@clerk/expo';
+import { Pencil } from 'lucide-react-native';
 
 import { AppButton } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const NORWEGIAN_PHONE_REGEX = /^(?:\+47)?\d{8}$/;
 
 type TripNeeds = {
   tripId: number;
@@ -27,16 +30,25 @@ type TripNeeds = {
 
 export default function ProfileScreen() {
   const { getToken } = useAuth();
+  const { signOut } = useClerk();
+  const { user } = useUser();
   const router = useRouter();
   const getTokenRef = useRef(getToken);
+  const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
+  const clearTrips = useMobileTripStore((state) => state.clearTrips);
+  const clearTripEvents = useMobileTripStore((state) => state.clearTripEvents);
 
+  const [userId, setUserId] = useState<number | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [tripNeeds, setTripNeeds] = useState<TripNeeds[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const [editingTripId, setEditingTripId] = useState<number | null>(null);
   const [draftAllergies, setDraftAllergies] = useState('');
@@ -57,9 +69,11 @@ export default function ProfileScreen() {
       ]);
 
       const userData = await userRes.json();
+      setUserId(userData.id ?? null);
       setFirstName(userData.firstName ?? '');
       setLastName(userData.lastName ?? '');
       setPhone(userData.phone ?? '');
+      setPhoneError('');
 
       const needs = await needsRes.json();
       setTripNeeds(needs);
@@ -80,6 +94,12 @@ export default function ProfileScreen() {
       return;
     }
 
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && !NORWEGIAN_PHONE_REGEX.test(trimmedPhone)) {
+      setPhoneError('Phone number must be 8 digits or +47 followed by 8 digits.');
+      return;
+    }
+
     try {
       setIsSavingProfile(true);
       const token = await getToken({ template: 'RollCallAuth' });
@@ -89,7 +109,7 @@ export default function ProfileScreen() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ firstName: firstName || null, lastName: lastName || null, phone: phone || null }),
+        body: JSON.stringify({ firstName: firstName || null, lastName: lastName || null, phone: trimmedPhone || null }),
       });
 
       if (!response.ok) {
@@ -98,6 +118,7 @@ export default function ProfileScreen() {
       }
 
       await fetchData();
+      setPhoneError('');
       setIsEditingProfile(false);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -105,6 +126,11 @@ export default function ProfileScreen() {
     } finally {
       setIsSavingProfile(false);
     }
+  };
+
+  const handleCancelProfileEditing = () => {
+    setIsEditingProfile(false);
+    void fetchData();
   };
 
   const startEditing = (item: TripNeeds) => {
@@ -142,6 +168,105 @@ export default function ProfileScreen() {
     setEditingTripId(null);
   };
 
+  const performSignOut = useCallback(async () => {
+    setIsSigningOut(true);
+    setSelectedTrip({ id: null });
+    clearTrips();
+    clearTripEvents();
+    await signOut();
+  }, [clearTripEvents, clearTrips, setSelectedTrip, signOut]);
+
+  const clearLocalUserState = useCallback(() => {
+    setSelectedTrip({ id: null });
+    clearTrips();
+    clearTripEvents();
+  }, [clearTripEvents, clearTrips, setSelectedTrip]);
+
+  const handleSignOut = useCallback(() => {
+    if (Platform.OS === 'web') {
+      void performSignOut();
+      return;
+    }
+
+    Alert.alert('Sign out', 'Do you want to sign out of your account?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: async () => {
+          await performSignOut();
+        },
+      },
+    ]);
+  }, [performSignOut]);
+
+  const performDeleteAccount = useCallback(async () => {
+    if (!userId) {
+      Alert.alert('Could not delete account', 'User information is missing. Please try again.');
+      return;
+    }
+
+    if (!user) {
+      Alert.alert('Could not delete account', 'Clerk user session is missing. Please sign in again.');
+      return;
+    }
+
+    try {
+      setIsDeletingAccount(true);
+      const token = await getToken({ template: 'RollCallAuth' });
+
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to delete app user (${response.status})`);
+      }
+
+      const deletableUser = user as typeof user & { delete?: () => Promise<void> };
+      if (typeof deletableUser?.delete !== 'function') {
+        throw new Error('Current Clerk user cannot be deleted from this client.');
+      }
+
+      await deletableUser.delete();
+      clearLocalUserState();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      Alert.alert('Could not delete account', 'Please try again.');
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  }, [clearLocalUserState, getToken, user, userId]);
+
+  const handleDeleteAccount = useCallback(() => {
+    const title = 'Delete account';
+    const message = 'This permanently deletes your account and removes your data. This action cannot be undone.';
+
+    if (Platform.OS === 'web') {
+      const confirmed =
+        typeof window !== 'undefined' ? window.confirm(`${title}\n\n${message}`) : true;
+      if (confirmed) {
+        void performDeleteAccount();
+      }
+      return;
+    }
+
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await performDeleteAccount();
+        },
+      },
+    ]);
+  }, [performDeleteAccount]);
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -161,7 +286,20 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>My Profile</Text>
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>My Profile</Text>
+            {!isEditingProfile ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Edit profile"
+                activeOpacity={0.8}
+                onPress={() => setIsEditingProfile(true)}
+                style={styles.editIconButton}
+              >
+                <Pencil size={20} color="#4a7ca8" strokeWidth={2.2} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
           <View style={styles.titleDivider} />
 
           <FormField
@@ -185,33 +323,31 @@ export default function ProfileScreen() {
             placeholder="Add phone number"
             value={phone}
             onChangeText={setPhone}
-            keyboardType="number-pad"
+            keyboardType="phone-pad"
+            error={phoneError}
             editable={isEditingProfile}
           />
 
-          <View style={styles.buttonRow}>
-            {isEditingProfile && (
+          {isEditingProfile ? (
+            <View style={styles.buttonRow}>
               <View style={{ flex: 1 }}>
                 <AppButton
                   label="Cancel"
-                  onPress={() => {
-                      setIsEditingProfile(false);
-                    void fetchData();
-                  }}
+                  onPress={handleCancelProfileEditing}
                   style={styles.cancelButton}
                   textStyle={styles.cancelButtonText}
                 />
               </View>
-            )}
-            <View style={{ flex: 1 }}>
-              <AppButton
-                variant="edit"
-                label={isEditingProfile ? (isSavingProfile ? 'Saving...' : 'Save') : 'Edit profile'}
-                onPress={handleEditProfile}
-                disabled={isSavingProfile}
-              />
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  variant="edit"
+                  label={isSavingProfile ? 'Saving...' : 'Save'}
+                  onPress={handleEditProfile}
+                  disabled={isSavingProfile}
+                />
+              </View>
             </View>
-          </View>
+          ) : null}
 
           {tripNeeds.length > 0 && (
             <>
@@ -293,6 +429,28 @@ export default function ProfileScreen() {
               )}
             </>
           )}
+
+          <View style={styles.signOutSection}>
+            <View style={styles.signOutActionsRow}>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label={isDeletingAccount ? 'Deleting...' : 'Delete account'}
+                  onPress={handleDeleteAccount}
+                  disabled={isSigningOut || isDeletingAccount}
+                  variant="delete"
+                  style={styles.deleteAccountButton}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton
+                  label={isSigningOut ? 'Signing out...' : 'Sign out'}
+                  onPress={handleSignOut}
+                  disabled={isSigningOut || isDeletingAccount}
+                  style={styles.signOutButton}
+                />
+              </View>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -319,12 +477,27 @@ const styles = StyleSheet.create({
     paddingTop: 64,
     paddingBottom: 80,
   },
+  titleSection: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
   title: {
     fontSize: 28,
     lineHeight: 34,
     fontWeight: '700',
     textAlign: 'center',
     color: '#090909',
+  },
+  editIconButton: {
+    position: 'absolute',
+    top: 2,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ddeaf7',
   },
   titleDivider: {
     height: 3,
@@ -405,5 +578,19 @@ const styles = StyleSheet.create({
     color: '#777777',
     fontStyle: 'italic',
     marginBottom: 14,
+  },
+  signOutSection: {
+    marginTop: 28,
+  },
+  signOutActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  deleteAccountButton: {
+    minHeight: 56,
+    borderRadius: 14,
+  },
+  signOutButton: {
+    backgroundColor: '#4a7ca8',
   },
 });

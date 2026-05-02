@@ -12,6 +12,7 @@ import {
   Platform,
   TextInput,
   Modal,
+  useWindowDimensions,
   Pressable,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
@@ -26,16 +27,24 @@ import {
 } from '@/lib/events';
 import { CheckInMethodModal } from '@/components/ui/checkin/Checkin-method-modal';
 import { checkinService } from '@/services/checkinService';
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 interface SecureEventRecord extends EventRecord {
   isOrganizer: boolean;
 }
 
 export default function EventDetailsScreen() {
-  const { id, tripId } = useLocalSearchParams<{ id?: string; tripId?: string }>();
+  const { id, tripId, tripName: tripNameParam } = useLocalSearchParams<{
+    id?: string;
+    tripId?: string;
+    tripName?: string;
+  }>();
   const router = useRouter();
   const { getToken } = useAuth();
   const { user } = useUser();
+  const { width } = useWindowDimensions();
+  const selectedTripId = useMobileTripStore((state) => state.selectedTripId);
+  const selectedTripName = useMobileTripStore((state) => state.selectedTripName);
 
   const [event, setEvent] = useState<SecureEventRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +57,11 @@ export default function EventDetailsScreen() {
 
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [leaveReason, setLeaveReason] = useState('');
+  const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
+  const isMobileLayout = !showDesktopBackButton;
+  const resolvedTripName =
+    tripNameParam ??
+    (event?.tripId != null && selectedTripId === event.tripId ? selectedTripName : null);
 
   const applyEventState = useCallback(async (nextEvent: SecureEventRecord, token?: string | null) => {
     setEvent(nextEvent);
@@ -120,7 +134,13 @@ export default function EventDetailsScreen() {
   const handleGoBack = () => {
     const targetTripId = event?.tripId ?? tripId;
     if (targetTripId) {
-      router.replace(`/trips/${targetTripId}` as any);
+      router.replace({
+        pathname: '/trips/[id]/events',
+        params: {
+          id: String(targetTripId),
+          tripName: resolvedTripName ?? '',
+        },
+      });
       return;
     }
 
@@ -172,10 +192,12 @@ export default function EventDetailsScreen() {
   if (error || !event) {
     return (
       <SafeAreaView style={styles.screen}>
-        <View style={styles.screen}>
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
+        <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
+          {showDesktopBackButton ? (
+            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error || 'Event not found'}</Text>
           </View>
@@ -302,29 +324,36 @@ export default function EventDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView style={styles.content}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-          <Text style={styles.backButtonText}>← Go back</Text>
-        </TouchableOpacity>
-
+      <View style={[styles.header, isMobileLayout && styles.mobileHeader]}>
+        {showDesktopBackButton ? (
+          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+            <Text style={styles.backButtonText}>← Go back</Text>
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.title}>{event.name}</Text>
+        {resolvedTripName ? <Text style={styles.tripName}>{resolvedTripName}</Text> : null}
         <View style={styles.titleDivider} />
+      </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Date And Time</Text>
-          <View style={styles.dateContainer}>
-            <View style={styles.dateBlock}>
-              <Text style={styles.dateLabel}>From</Text>
-              <Text style={styles.dateValue}>{formatEventDate(event.startDate)}</Text>
-              <Text style={styles.timeValue}>{formatEventTime(event.startDate)}</Text>
-            </View>
-            <View style={styles.dateBlock}>
-              <Text style={styles.dateLabel}>To</Text>
-              <Text style={styles.dateValue}>{formatEventDate(event.endDate)}</Text>
-              <Text style={styles.timeValue}>{formatEventTime(event.endDate)}</Text>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+
+        {!event.isEmergency && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Date And Time</Text>
+            <View style={styles.dateContainer}>
+              <View style={styles.dateBlock}>
+                <Text style={styles.dateLabel}>From</Text>
+                <Text style={styles.dateValue}>{formatEventDate(event.startDate)}</Text>
+                <Text style={styles.timeValue}>{formatEventTime(event.startDate)}</Text>
+              </View>
+              <View style={styles.dateBlock}>
+                <Text style={styles.dateLabel}>To</Text>
+                <Text style={styles.dateValue}>{formatEventDate(event.endDate)}</Text>
+                <Text style={styles.timeValue}>{formatEventTime(event.endDate)}</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {event.location && (
           <View style={styles.section}>
@@ -333,15 +362,19 @@ export default function EventDetailsScreen() {
           </View>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Attendance</Text>
-          <Text style={styles.sectionValue}>{formatAttendanceMode(event.attendanceMode)}</Text>
-        </View>
+        {!event.isEmergency && (
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Attendance</Text>
+              <Text style={styles.sectionValue}>{formatAttendanceMode(event.attendanceMode)}</Text>
+            </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Capacity</Text>
-          <Text style={styles.sectionValue}>{capacityText}</Text>
-        </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Capacity</Text>
+              <Text style={styles.sectionValue}>{capacityText}</Text>
+            </View>
+          </>
+        )}
 
         {event.description && (
           <View style={styles.section}>
@@ -479,17 +512,33 @@ export default function EventDetailsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f4f1ec',
-  },
-  content: {
-    // flex: 1, -- (forslag) jeg kommenterte ut så man kan scrolle helt ned, men bare å ta bort igjen
     backgroundColor: '#eef5fb',
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 0,
+    backgroundColor: '#eef5fb',
+  },
+  mobileHeader: {
     paddingHorizontal: 22,
     paddingTop: 64,
+  },
+  content: {
+    backgroundColor: '#eef5fb',
+    flex: 1,
+  },
+  mobileContent: {
+    paddingHorizontal: 22,
+    paddingTop: 64,
+  },
+  contentContainer: {
+    paddingHorizontal: 22,
+    paddingTop: 0,
     paddingBottom: 80,
   },
   backButton: {
-    marginBottom: 24,
+    marginBottom: 12,
     alignSelf: 'flex-start',
   },
   backButtonText: {
@@ -503,13 +552,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#090909',
     textAlign: 'center',
+    marginBottom: 2,
+  },
+  tripName: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+    textAlign: 'center',
   },
   titleDivider: {
     height: 3,
     backgroundColor: '#76b6ee',
     borderRadius: 999,
     marginTop: 14,
-    marginBottom: 32,
+    marginBottom: 28,
+    marginHorizontal: 28,
   },
   section: {
     marginBottom: 24,

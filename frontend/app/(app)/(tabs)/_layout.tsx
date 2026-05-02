@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState, type AppStateStatus, Platform, View } from 'react-native';
+import { Alert, AppState, type AppStateStatus, Platform, View, useWindowDimensions } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { AppNavbar } from '@/components/ui/nav-bar';
 import { AppSidebar } from '@/components/ui/side-bar';
@@ -7,13 +7,16 @@ import { useAuth } from '@clerk/expo';
 import { checkinService, type EventParticipantStatus } from '@/services/checkinService';
 import { getEventById } from '@/lib/events';
 import { CheckinSessionModal } from '@/components/ui/checkin/checkin-session-modal';
+import { ContactMessageModal } from '@/components/ui/checkin/contact-message-modal';
+import { messageService } from '@/services/messageService';
 
 export default function TabLayout() {
   const POLL_BACKOFF_MS = 60000;
   const ACTIVE_POLL_MS = 5000;
   const IDLE_POLL_MS = 15000;
 
-  const isWeb = Platform.OS === 'web';
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === 'web' && width >= 900;
   const router = useRouter();
   const { userId, getToken, isLoaded, isSignedIn } = useAuth();
   const getTokenRef = useRef(getToken);
@@ -21,9 +24,11 @@ export default function TabLayout() {
   const [modalVisible, setModalVisible] = useState(false);
   const [activeEventId, setActiveEventId] = useState<number | null>(null);
   const [activeEventName, setActiveEventName] = useState<string>('');
-  const [activeTripId, setActiveTripId] = useState<number | null>(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [dismissedEventId, setDismissedEventId] = useState<number | null>(null);
+  const [contactModalVisible, setContactModalVisible] = useState(false);
+  const [activeParticipantId, setActiveParticipantId] = useState<number | null>(null);
+  const [activeSenderName, setActiveSenderName] = useState<string>('');
   const [isPageVisible, setIsPageVisible] = useState(true);
   const dismissedEventIdRef = useRef<number | null>(null);
   const modalVisibleRef = useRef(false);
@@ -109,7 +114,6 @@ export default function TabLayout() {
       if (!nextEventId) {
         setActiveEventId(null);
         setActiveEventName('');
-        setActiveTripId(null);
         setModalVisible(false);
         setDismissedEventId(null);
         return;
@@ -122,7 +126,10 @@ export default function TabLayout() {
 
       setActiveEventId(nextEventId);
       setActiveEventName(eventDetails.name);
-      setActiveTripId(eventDetails.tripId ?? null);
+      if (me) {
+        setActiveParticipantId(me.participantID);
+        setActiveSenderName(me.name);
+      }
 
       if (alreadyCheckedIn) {
         setDismissedEventId(nextEventId);
@@ -212,14 +219,19 @@ export default function TabLayout() {
   }, [activeEventId, clearPollBackoff, isLoaded, isSignedIn, userId]);
 
   const handleContact = useCallback(() => {
-    if (activeTripId) {
-      router.push(`/trips/${activeTripId}` as any);
-    }
-    if (activeEventId) {
-      setDismissedEventId(activeEventId);
-    }
+    setContactModalVisible(true);
+  }, []);
+
+  const handleSendMessage = useCallback(async (body: string) => {
+    if (!activeEventId || !activeParticipantId) throw new Error('Missing event or participant');
+    const token = await getTokenRef.current({ template: 'RollCallAuth' });
+    if (!token) throw new Error('Not authenticated');
+    await messageService.send(activeEventId, activeParticipantId, activeSenderName, body, token);
+    setContactModalVisible(false);
+    if (activeEventId) setDismissedEventId(activeEventId);
     setModalVisible(false);
-  }, [activeEventId, activeTripId, router]);
+    Alert.alert('Message sent', 'The organizer has been notified.');
+  }, [activeEventId, activeParticipantId, activeSenderName]);
 
   const handleCloseModal = useCallback(() => {
     if (activeEventId) {
@@ -228,7 +240,7 @@ export default function TabLayout() {
     setModalVisible(false);
   }, [activeEventId]);
 
-  if (isWeb) {
+  if (isDesktopWeb) {
     return (
       <View style={{ flex: 1, flexDirection: 'row' }}>
         <AppSidebar />
@@ -246,6 +258,11 @@ export default function TabLayout() {
             onClose={handleCloseModal}
             checkingIn={isCheckingIn}
           />
+          <ContactMessageModal
+            visible={contactModalVisible}
+            onSend={handleSendMessage}
+            onClose={() => setContactModalVisible(false)}
+          />
         </View>
       </View>
     );
@@ -253,6 +270,11 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1 }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
       <AppNavbar />
       <CheckinSessionModal
         visible={modalVisible}
@@ -261,6 +283,11 @@ export default function TabLayout() {
         onContact={handleContact}
         onClose={handleCloseModal}
         checkingIn={isCheckingIn}
+      />
+      <ContactMessageModal
+        visible={contactModalVisible}
+        onSend={handleSendMessage}
+        onClose={() => setContactModalVisible(false)}
       />
     </View>
   );

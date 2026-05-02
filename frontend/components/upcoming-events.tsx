@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   View,
@@ -12,6 +13,7 @@ import {
   Platform,
   Modal,
   TextInput,
+  useWindowDimensions,
   Pressable,
 } from 'react-native';
 import { useAuth, useUser } from "@clerk/expo";
@@ -21,41 +23,47 @@ import { EventCard } from '@/components/event-card';
 import { AppButton } from '@/components/ui/button';
 import { CheckInMethodModal } from '@/components/ui/checkin/Checkin-method-modal';
 import { getUpcomingEvents } from '@/lib/event-format';
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
 import { checkinService } from '@/services/checkinService';
 import { getEvents, joinEvent, leaveEvent, type EventRecord } from '@/lib/events';
 
 type UpcomingEventsScreenProps = {
   tripId?: string | number;
   title?: string;
+  tripName?: string;
   showBackButton?: boolean;
   isOrganizer?: boolean;
   actionsBelowHeader?: React.ReactNode;
-  titleTopOffset?: number;
-  titleDividerHorizontalMargin?: number;
-  titleDividerTopMargin?: number;
 };
 
 export function UpcomingEventsScreen({
   tripId,
   title = 'Upcoming Events',
+  tripName,
   showBackButton = false,
   isOrganizer = false,
   actionsBelowHeader,
-  titleTopOffset,
-  titleDividerHorizontalMargin,
-  titleDividerTopMargin,
 }: UpcomingEventsScreenProps) {
   const POLL_BACKOFF_MS = 60000;
   const ACTIVE_POLL_MS = 5000;
   const IDLE_POLL_MS = 30000;
 
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const { getToken, userId } = useAuth();
   const { user } = useUser();
   const getTokenRef = useRef(getToken);
+  const eventsByTrip = useMobileTripStore((state) => state.eventsByTrip);
+  const setTripEvents = useMobileTripStore((state) => state.setTripEvents);
+  const tripCacheKey = tripId == null ? null : String(tripId);
+  const cachedEvents = useMemo(
+    () => (tripCacheKey ? eventsByTrip[tripCacheKey] ?? [] : []),
+    [eventsByTrip, tripCacheKey]
+  );
+  const cachedEventsRef = useRef(cachedEvents);
 
-  const [events, setEvents] = useState<EventRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState<EventRecord[]>(cachedEvents);
+  const [loading, setLoading] = useState(cachedEvents.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingEventId, setIsUpdatingEventId] = useState<number | null>(null);
@@ -65,16 +73,24 @@ export function UpcomingEventsScreen({
   const [activeParticipantEventIds, setActiveParticipantEventIds] = useState<number[]>([]);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const isFetchingEventsRef = useRef(false);
+  const activeRequestIdRef = useRef(0);
   const pausedUntilRef = useRef(0);
   const failureCountRef = useRef(0);
 
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [leaveReason, setLeaveReason] = useState('');
   const [eventToLeave, setEventToLeave] = useState<EventRecord | null>(null);
+  const showDesktopBackButton = Platform.OS === 'web' && width >= 900;
+  const isMobileLayout = !showDesktopBackButton;
+  const showEventLocation = showDesktopBackButton;
 
   useEffect(() => {
     getTokenRef.current = getToken;
   }, [getToken]);
+
+  useEffect(() => {
+    cachedEventsRef.current = cachedEvents;
+  }, [cachedEvents]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -110,6 +126,41 @@ export function UpcomingEventsScreen({
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
+
+  useEffect(() => {
+    activeRequestIdRef.current += 1;
+    isFetchingEventsRef.current = false;
+    setEvents(cachedEventsRef.current);
+    setLoading(cachedEventsRef.current.length === 0);
+    setRefreshing(false);
+    setError(null);
+    setCheckedInEventIds([]);
+    setActiveParticipantEventIds([]);
+    setIsUpdatingEventId(null);
+    setSelectedEvent(null);
+    setCheckinMethodModalVisible(false);
+    setShowLeaveModal(false);
+    setLeaveReason('');
+    setEventToLeave(null);
+  }, [isOrganizer, tripCacheKey]);
+
+  useEffect(() => {
+    if (tripCacheKey == null) {
+      return;
+    }
+
+    setEvents((currentEvents) => {
+      if (currentEvents === cachedEvents || cachedEvents.length === 0) {
+        return currentEvents;
+      }
+
+      return currentEvents.length === 0 ? cachedEvents : currentEvents;
+    });
+
+    if (cachedEvents.length > 0) {
+      setLoading(false);
+    }
+  }, [cachedEvents, tripCacheKey]);
 
   const isAuthOrNetworkError = useCallback((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
@@ -211,6 +262,8 @@ export function UpcomingEventsScreen({
   }, [clearPollBackoff, events, isOrganizer, isPageVisible, recordPollFailure, refreshParticipantCheckins, shouldPausePolling, userId]);
 
   const fetchEvents = useCallback(async (force = false) => {
+    const requestId = activeRequestIdRef.current;
+
     if (!force && !isPageVisible) {
       return;
     }
@@ -231,23 +284,39 @@ export function UpcomingEventsScreen({
       const token = await getTokenRef.current({ template: "RollCallAuth" });
       const data = await getEvents(tripId, token);
       const upcoming = getUpcomingEvents(data);
+
+      if (requestId !== activeRequestIdRef.current) {
+        return;
+      }
+
       setEvents(upcoming);
+      if (tripCacheKey) {
+        setTripEvents(tripCacheKey, upcoming);
+      }
       if (!isOrganizer && userId) {
         const activeLookup = await checkinService.getActiveSessionsForUser(userId, token);
         const activeIdsInView = activeLookup.eventIds.filter((eventId) => upcoming.some((eventItem) => eventItem.id === eventId));
+        if (requestId !== activeRequestIdRef.current) {
+          return;
+        }
         setActiveParticipantEventIds(activeIdsInView);
         await refreshParticipantCheckins(upcoming, activeIdsInView, token);
       }
       clearPollBackoff();
     } catch (error) {
+      if (requestId !== activeRequestIdRef.current) {
+        return;
+      }
       recordPollFailure(error);
       setError('Could not load events for this trip.');
     } finally {
-      isFetchingEventsRef.current = false;
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === activeRequestIdRef.current) {
+        isFetchingEventsRef.current = false;
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, [clearPollBackoff, isOrganizer, isPageVisible, recordPollFailure, refreshParticipantCheckins, shouldPausePolling, tripId, userId]);
+  }, [clearPollBackoff, isOrganizer, isPageVisible, recordPollFailure, refreshParticipantCheckins, setTripEvents, shouldPausePolling, tripCacheKey, tripId, userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -346,6 +415,17 @@ export function UpcomingEventsScreen({
     setCheckinMethodModalVisible(true);
   };
 
+  const handleOpenNotify = () => {
+    if (!tripId) {
+      return;
+    }
+
+    router.push({
+      pathname: '/trips/[id]/notify',
+      params: { id: String(tripId) },
+    });
+  };
+
   const startSelfCheckin = async () => {
     if (!selectedEvent) {
       return;
@@ -428,12 +508,14 @@ export function UpcomingEventsScreen({
     return (
       <EventCard
         event={item}
+        showLocation={showEventLocation}
         onPress={() =>
           router.push({
             pathname: '/events/[id]',
             params: {
               id: String(item.id),
               tripId: String(item.tripId),
+              tripName: tripName ?? '',
             },
           })
         }
@@ -458,47 +540,80 @@ export function UpcomingEventsScreen({
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.content}>
-        {showBackButton ? (
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Go back</Text>
-          </TouchableOpacity>
-        ) : null}
+      <View style={[styles.content, isMobileLayout && styles.mobileContent]}>
+        <View style={styles.headerBlock}>
+          {showBackButton && !isMobileLayout ? (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => {
+                if (tripId != null) {
+                  router.replace({
+                    pathname: '/trips/[id]',
+                    params: { id: String(tripId) },
+                  });
+                  return;
+                }
 
-        
-        <View style={styles.header}>
-          <Text style={[styles.title, typeof titleTopOffset === 'number' ? { marginTop: titleTopOffset } : null]}>{title}</Text>
-          {/* SECURITY: Only show Create button if user is an organizer */}
-          {tripId && isOrganizer && !actionsBelowHeader ? (
-            <Pressable
-              onPress={() => router.push(`/events/create?tripId=${tripId}`)}
-              style={({ pressed, hovered }) => [
-                styles.createButton,
-                hovered && styles.createButtonHovered,
-                pressed && { opacity: 0.8 },
-              ]}>
-              {({ hovered }) => (
-                <Plus size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
-              )}
-            </Pressable>
-          ) :null}
+                router.back();
+              }}
+            >
+              <Text style={styles.backButtonText}>← Go back</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          <View style={styles.header}>
+            <Text style={styles.title}>{title}</Text>
+            {tripName ? <Text style={styles.tripName}>{tripName}</Text> : null}
+            {tripId && isOrganizer && !isMobileLayout ? (
+              <Pressable
+                onPress={() => router.push(`/events/create?tripId=${tripId}`)}
+                style={({ pressed, hovered }) => [
+                  styles.createButton,
+                  hovered && styles.createButtonHovered,
+                  pressed && { opacity: 0.8 },
+                ]}>
+                {({ hovered }) => (
+                  <Plus size={20} color={hovered ? '#ffffff' : '#4a7ca8'} />
+                )}
+              </Pressable>
+            ) : null}
+          </View>
+          <View style={styles.divider} />
+          {tripId && isOrganizer && !actionsBelowHeader && isMobileLayout ? (
+            <View style={styles.mobileCreateButtonRow}>
+              <Pressable
+                onPress={handleOpenNotify}
+                style={({ pressed, hovered }) => [
+                  styles.mobileCreateButton,
+                  hovered && styles.createButtonHovered,
+                  pressed && { opacity: 0.8 },
+                ]}>
+                {({ hovered }) => (
+                  <MaterialIcons
+                    name="notifications"
+                    size={18}
+                    color={hovered ? '#ffffff' : '#4a7ca8'}
+                  />
+                )}
+              </Pressable>
+              <Pressable
+                onPress={() => router.push(`/events/create?tripId=${tripId}`)}
+                style={({ pressed, hovered }) => [
+                  styles.mobileCreateButton,
+                  hovered && styles.createButtonHovered,
+                  pressed && { opacity: 0.8 },
+                ]}>
+                {({ hovered }) => (
+                  <>
+                    <Plus size={16} color={hovered ? '#ffffff' : '#4a7ca8'} />
+                  </>
+                )}
+              </Pressable>
+            </View>
+          ) : null}
         </View>
-        <View
-          style={[
-            styles.titleDivider,
-            actionsBelowHeader ? styles.titleDividerWithActions : null,
-            typeof titleDividerTopMargin === 'number'
-              ? { marginTop: titleDividerTopMargin }
-              : null,
-            typeof titleDividerHorizontalMargin === 'number'
-              ? { marginHorizontal: titleDividerHorizontalMargin }
-              : null,
-          ]}
-        />
-        {actionsBelowHeader ? <View style={styles.actionsBelowHeader}>{actionsBelowHeader}</View> : null}
-
+        {actionsBelowHeader ? <View style={styles.actionsRow}>{actionsBelowHeader}</View> : null}
         <View style={styles.timelineSection}>
-          <View style={styles.timelineRail} />
           <View style={styles.timelineContent}>
             {loading && !refreshing ? (
               <View style={styles.centered}>
@@ -595,11 +710,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#edf4fa',
     paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 28,
+    paddingTop: 16,
+    paddingBottom: 36,
+  },
+  mobileContent: {
+    paddingHorizontal: 22,
+    paddingTop: 64,
+  },
+  headerBlock: {
+    backgroundColor: '#edf4fa',
   },
   backButton: {
-    marginBottom: 24,
+    marginBottom: 12,
     alignSelf: 'flex-start',
   },
   backButtonText: {
@@ -607,24 +729,27 @@ const styles = StyleSheet.create({
     color: '#4a7ca8',
     fontWeight: '600',
   },
+  actionsRow: {
+    marginBottom: 20,
+  },
+  mobileCreateButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: -12,
+    marginBottom: 8,
+  },
   timelineSection: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'stretch',
-  },
-  timelineRail: {
-    width: 16,
-    backgroundColor: '#75baf0',
-    marginRight: 22,
-    marginBottom: -28,
   },
   timelineContent: {
     flex: 1,
   },
   listContent: {
     gap: 22,
-    paddingTop: 2,
-    paddingBottom: 48,
+    paddingTop: 8,
+    paddingBottom: 72,
   },
   centered: {
     flex: 1,
@@ -693,54 +818,79 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },  
   header: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 18,
-  position: 'relative',
-},
-title: {
-  fontSize: 28,
-  lineHeight: 34,
-  fontWeight: '700',
-  textAlign: 'center',
-  color: '#090909',
-},
-titleDivider: {
-  height: 3,
-  backgroundColor: '#76b6ee',
-  borderRadius: 999,
-  marginTop: 14,
-  marginBottom: 28,
-  marginHorizontal: 28,
-  
-},
-titleDividerWithActions: {
-  marginBottom: 12,
-},
-actionsBelowHeader: {
-  alignItems: 'center',
-  marginBottom: 18,
-},
-createButton: {
-  position: 'absolute',
-  right: 0,
-  backgroundColor: '#ffffff',
-  borderWidth: 1,
-  borderColor: '#4a7ca8',
-  borderRadius: 10,
-  width: 40,
-  height: 40,
-  alignItems: 'center',
-  justifyContent: 'center',
-  shadowColor: '#4a7ca8',
-  shadowOpacity: 0.15,
-  shadowRadius: 4,
-  shadowOffset: { width: 0, height: 2 },
-  elevation: 2,
-},
-createButtonHovered: {
-  backgroundColor: '#4a7ca8',
-  borderColor: '#4a7ca8',
-},
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  title: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#090909',
+    marginBottom: 2,
+  },
+  tripName: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  divider: {
+    height: 3,
+    backgroundColor: '#76b6ee',
+    borderRadius: 999,
+    marginTop: 14,
+    marginBottom: 28,
+    marginHorizontal: 28,
+  },
+  createButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#4a7ca8',
+    borderRadius: 10,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4a7ca8',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  mobileCreateButton: {
+    minWidth: 40,
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#4a7ca8',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    shadowColor: '#4a7ca8',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  mobileCreateButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4a7ca8',
+  },
+  mobileCreateButtonTextHovered: {
+    color: '#ffffff',
+  },
+  createButtonHovered: {
+    backgroundColor: '#4a7ca8',
+    borderColor: '#4a7ca8',
+  },
 });
