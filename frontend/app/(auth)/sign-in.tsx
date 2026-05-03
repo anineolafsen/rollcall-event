@@ -5,7 +5,9 @@ import { Link, Redirect, useRouter } from "expo-router";
 
 import AuthInput from "@/components/AuthInput";
 import AuthButton from "@/components/AuthButton";
+import SocialLoginButtons from "@/components/SocialLoginButtons";
 import ThemedText from "@/components/ThemedText";
+import AuthContainer from "@/components/AuthContainer";
 
 export default function SignInPage() {
   const { signIn } = useSignIn();
@@ -23,9 +25,8 @@ export default function SignInPage() {
     err?.message ||
     fallback;
 
-  // Redirect away if already signed in
   if (authLoaded && isSignedIn) {
-    return <Redirect href="/trips" />;
+    return <Redirect href="/" />;
   }
 
   const onSignInPress = async () => {
@@ -43,20 +44,15 @@ export default function SignInPage() {
         password,
       });
 
-      
       if (signIn.status !== "complete") {
         const message = "Sign in was not completed. Please try again.";
-        console.log("Sign in incomplete:", JSON.stringify(signIn, null, 2));
         setError(message);
-        Alert.alert("Sign In Failed", message);
         return;
       }
 
       await signIn.finalize();
-
-      router.replace("/trips");
+      router.replace("/");
     } catch (err: any) {
-      console.log("Sign in error:", JSON.stringify(err, null, 2));
       const message = getErrorMessage(err, "Something went wrong during sign in.");
       setError(message);
       Alert.alert("Sign In Failed", message);
@@ -66,55 +62,83 @@ export default function SignInPage() {
   };
 
   return (
-    <View style={styles.container}>
+    <AuthContainer>
       <ThemedText style={styles.title}>Sign In</ThemedText>
+      <ThemedText style={styles.subtitle}>Sign in to see your trips and events</ThemedText>
 
       {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-      <AuthInput
-        placeholder="Email"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <AuthInput
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <AuthButton
-        title={loading ? "Signing In..." : "Sign In"}
-        onPress={onSignInPress}
-      />
-      <Link href="/sign-up" asChild>
-        <TouchableOpacity>
-          <ThemedText style={styles.link}>
-            Don&apos;t have an account? Sign up
-          </ThemedText>
-        </TouchableOpacity>
-      </Link>
-    </View>
+      <View style={styles.form}>
+        <AuthInput
+          placeholder="Email"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <AuthInput
+          placeholder="Password"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+        <AuthButton
+          title={loading ? "Signing In..." : "Sign In"}
+          onPress={onSignInPress}
+        />
+      </View>
+
+      <SocialLoginButtons />
+
+      <View style={styles.footer}>
+        <Link href="/sign-up" asChild>
+          <TouchableOpacity>
+            <ThemedText style={styles.link}>
+              Don&apos;t have an account? <ThemedText style={styles.linkBold}>Sign up</ThemedText>
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </View>
+    </AuthContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    //justifyContent: "center",
-  },
   title: {
     fontSize: 28,
-    marginBottom: 20,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 32,
+    opacity: 0.6,
+  },
+  form: {
+    width: "100%",
+    gap: 4,
   },
   error: {
-    color: "red",
-    marginBottom: 12,
+    color: "#ef4444",
+    marginBottom: 16,
+    textAlign: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    padding: 10,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  footer: {
+    marginTop: 24,
+    alignItems: "center",
+    paddingBottom: 5,
   },
   link: {
-    marginTop: 16,
-    textAlign: "center",
+    fontSize: 15,
+  },
+  linkBold: {
+    fontWeight: "700",
+    color: "#4f46e5",
   },
 });
