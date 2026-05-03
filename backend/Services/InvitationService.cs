@@ -91,6 +91,21 @@ namespace MyApp.API.Services
       }
     }
 
+    public bool IgnoreInvitation(int invitationId, string email)
+    {
+      var invitation = _context.Invitations
+        .FirstOrDefault(i => i.Id == invitationId && i.Email == email);
+
+      if (invitation == null)
+      {
+        return false;
+      }
+
+      _context.Invitations.Remove(invitation);
+      _context.SaveChanges();
+      return true;
+    }
+
     public bool RemoveInvitation(int tripId, string email)
     {
       var invitation = _context.Invitations

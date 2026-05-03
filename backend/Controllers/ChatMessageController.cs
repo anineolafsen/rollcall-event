@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using MyApp.API.Models;
 using MyApp.API.Services;
 
 namespace MyApp.API.Controllers
 {
+  [Authorize]
   [ApiController]
   [Route("api/chat-messages")]
   public class ChatMessageController : ControllerBase

@@ -19,6 +19,7 @@ import { FormField } from '@/components/ui/form-field';
 import { useMobileTripStore } from '@/lib/mobile-trip-store';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const NORWEGIAN_PHONE_REGEX = /^(?:\+47)?\d{8}$/;
 
 type TripNeeds = {
   tripId: number;
@@ -41,6 +42,7 @@ export default function ProfileScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [tripNeeds, setTripNeeds] = useState<TripNeeds[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,6 +73,7 @@ export default function ProfileScreen() {
       setFirstName(userData.firstName ?? '');
       setLastName(userData.lastName ?? '');
       setPhone(userData.phone ?? '');
+      setPhoneError('');
 
       const needs = await needsRes.json();
       setTripNeeds(needs);
@@ -91,6 +94,12 @@ export default function ProfileScreen() {
       return;
     }
 
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && !NORWEGIAN_PHONE_REGEX.test(trimmedPhone)) {
+      setPhoneError('Phone number must be 8 digits or +47 followed by 8 digits.');
+      return;
+    }
+
     try {
       setIsSavingProfile(true);
       const token = await getToken({ template: 'RollCallAuth' });
@@ -100,7 +109,7 @@ export default function ProfileScreen() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ firstName: firstName || null, lastName: lastName || null, phone: phone || null }),
+        body: JSON.stringify({ firstName: firstName || null, lastName: lastName || null, phone: trimmedPhone || null }),
       });
 
       if (!response.ok) {
@@ -109,6 +118,7 @@ export default function ProfileScreen() {
       }
 
       await fetchData();
+      setPhoneError('');
       setIsEditingProfile(false);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -313,7 +323,8 @@ export default function ProfileScreen() {
             placeholder="Add phone number"
             value={phone}
             onChangeText={setPhone}
-            keyboardType="number-pad"
+            keyboardType="phone-pad"
+            error={phoneError}
             editable={isEditingProfile}
           />
 

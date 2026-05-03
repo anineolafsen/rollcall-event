@@ -3,6 +3,7 @@ using MyApp.API.Services;
 using MyApp.API.Models;
 using Microsoft.AspNetCore.Authorization;
 using MyApp.API.Extensions;
+using System.Text.RegularExpressions;
 
 namespace MyApp.API.Controllers
 {
@@ -13,6 +14,7 @@ namespace MyApp.API.Controllers
   [Authorize] // Enforce authentication for user actions
   public class UserController : ControllerBase
   {
+    private static readonly Regex NorwegianPhoneRegex = new(@"^(?:\+47)?\d{8}$", RegexOptions.Compiled);
     private readonly UserService _userService;
 
     public UserController(UserService userService)
@@ -20,26 +22,67 @@ namespace MyApp.API.Controllers
       _userService = userService;
     }
 
-    private User GetAuthenticatedUser()
+    private User? GetAuthenticatedUser()
     {
-      var clerkId = User.GetClerkId();
-      var email = User.GetEmail();
-      if (string.IsNullOrEmpty(clerkId) || string.IsNullOrEmpty(email))
-        throw new UnauthorizedAccessException("Identity claims missing from token.");
-      return _userService.GetOrCreateUser(clerkId, email);
+      try 
+      {
+        var clerkId = User.GetClerkId();
+        if (string.IsNullOrEmpty(clerkId))
+        {
+            Console.WriteLine("[UserController] Missing ClerkId claim.");
+            return null;
+        }
+
+        // Only find existing user by ID. Do not auto-create here to avoid race conditions.
+        return _userService.GetByClerkId(clerkId);
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"[UserController] Error in GetAuthenticatedUser: {ex.Message}");
+        return null;
+      }
     }
 
     [HttpGet("me")]
     public IActionResult GetCurrentUser()
     {
       var user = GetAuthenticatedUser();
+      if (user == null) return NotFound("User record not synced with local database yet.");
       return Ok(new { user.Id, user.FirstName, user.LastName, user.Email, user.Phone });
+    }
+
+    [HttpPost("sync")]
+    [AllowAnonymous] // To allow creating the record if it doesn't exist
+    public IActionResult SyncUser([FromBody] UserSyncRequest request)
+    {
+        if (string.IsNullOrEmpty(request.ClerkId) || string.IsNullOrEmpty(request.Email))
+        {
+            return BadRequest("ClerkId and Email are required for sync.");
+        }
+
+        var user = _userService.GetOrCreateUser(
+            request.ClerkId, 
+            request.Email, 
+            request.FirstName, 
+            request.LastName, 
+            request.Phone
+        );
+        return Ok(user);
     }
 
     [HttpPut("me")]
     public IActionResult UpdateCurrentUser([FromBody] UpdateUserRequest request)
     {
       var user = GetAuthenticatedUser();
+      if (user == null) return Unauthorized();
+
+
+      var phone = request.Phone?.Trim();
+      if (!string.IsNullOrWhiteSpace(phone) && !NorwegianPhoneRegex.IsMatch(phone))
+      {
+        return BadRequest("Phone number must be either 8 digits or +47 followed by 8 digits.");
+      }
+
       var updated = _userService.UpdateUser(user.Id, request.FirstName, request.LastName, request.Phone);
       if (updated == null) return NotFound();
       return Ok(new { updated.Id, updated.FirstName, updated.LastName, updated.Email, updated.Phone });
@@ -48,9 +91,23 @@ namespace MyApp.API.Controllers
     [HttpGet]
     public IActionResult GetUsers()
     {
-      // SECURITY: limit who can see the full user list
-      // For now, only require authentication
       return Ok(_userService.GetAllUsers());
+    }
+
+    [HttpPost]
+    [AllowAnonymous] 
+    public IActionResult CreateUser([FromBody] UserSyncRequest request)
+    {
+        return SyncUser(request); // Redirect to new sync logic
+    }
+
+    public class UserSyncRequest
+    {
+        public string ClerkId { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Phone { get; set; }
     }
 
     [HttpGet("clerk/{clerkId}")]

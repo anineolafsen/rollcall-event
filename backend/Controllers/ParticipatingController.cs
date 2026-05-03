@@ -15,11 +15,13 @@ namespace MyApp.API.Controllers
   {
     private readonly ParticipantService _participantService;
     private readonly UserService _userService;
+    private readonly TripService _tripService;
 
-    public ParticipantController(ParticipantService participantService, UserService userService)
+    public ParticipantController(ParticipantService participantService, UserService userService, TripService tripService)
     {
       _participantService = participantService;
       _userService = userService;
+      _tripService = tripService;
     }
 
     private User GetAuthenticatedUser()
@@ -34,6 +36,13 @@ namespace MyApp.API.Controllers
     [HttpGet("trip/{tripId}")]
     public IActionResult GetParticipantsByTrip(int tripId)
     {
+      var user = GetAuthenticatedUser();
+
+      if (!_tripService.UserHasAccessToTrip(tripId, user.Id))
+      {
+        return Forbid();
+      }
+
       var participants = _participantService.GetNeedsByTrip(tripId);
       return Ok(participants);
     }
@@ -41,6 +50,13 @@ namespace MyApp.API.Controllers
     [HttpGet("trip/{tripId}/contact")]
     public IActionResult GetContactsByTrip(int tripId)
     {
+      var user = GetAuthenticatedUser();
+
+      if (!_tripService.UserHasAccessToTrip(tripId, user.Id))
+      {
+        return Forbid();
+      }
+
       var contacts = _participantService.GetContactsByTrip(tripId);
       return Ok(contacts);
     }

@@ -3,10 +3,13 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import * as SecureStore from 'expo-secure-store';
+import * as WebBrowser from 'expo-web-browser';
 
 import { ClerkProvider, ClerkLoaded } from '@clerk/expo';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const tokenCache = {
   async getToken(key: string) {

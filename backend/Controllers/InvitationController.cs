@@ -3,6 +3,7 @@ using MyApp.API.Services;
 using MyApp.API.Models;
 using Microsoft.AspNetCore.Authorization;
 using MyApp.API.Extensions;
+using System.Text.RegularExpressions;
 
 namespace MyApp.API.Controllers
 {
@@ -11,6 +12,7 @@ namespace MyApp.API.Controllers
     [Authorize] // Enforce authentication for all invitation actions
     public class InvitationController : ControllerBase
     {
+        private static readonly Regex EmailRegex = new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.Compiled);
         private readonly InvitationService _invitationService;
         private readonly UserService _userService;
         private readonly TripService _tripService;
@@ -46,6 +48,11 @@ namespace MyApp.API.Controllers
         {
             var user = GetAuthenticatedUser();
 
+            if (string.IsNullOrWhiteSpace(invitation.Email) || !EmailRegex.IsMatch(invitation.Email.Trim()))
+            {
+                return BadRequest(new { error = "Invalid email address." });
+            }
+
             // SECURITY: Only trip organizers can invite others
             if (!_tripService.UserIsOrganizer(invitation.TripId, user.Id))
             {
@@ -74,6 +81,20 @@ namespace MyApp.API.Controllers
                 return NotFound("Invitation not found");
             }
             return Ok();
+        }
+
+        [HttpDelete("{invitationId:int}")]
+        public IActionResult IgnoreInvitation([FromRoute] int invitationId)
+        {
+            var user = GetAuthenticatedUser();
+
+            var success = _invitationService.IgnoreInvitation(invitationId, user.Email);
+            if (!success)
+            {
+                return NotFound("Invitation not found");
+            }
+
+            return NoContent();
         }
 
         [HttpDelete]
