@@ -51,6 +51,7 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<ChatMessageService>();
 builder.Services.AddScoped<ChatParticipantService>();
 builder.Services.AddScoped<MessageService>();
+builder.Services.AddHostedService<TripCleanupService>();
 
 var app = builder.Build();
 
