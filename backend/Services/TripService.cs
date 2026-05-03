@@ -177,7 +177,8 @@ namespace MyApp.API.Services
     {
       var cutoff = DateTime.UtcNow.AddDays(-7);
       var expired = _context.Trips
-        .Where(t => t.EndDate != null && DateTime.Parse(t.EndDate) < cutoff)
+        .AsEnumerable()
+        .Where(t => t.EndDate != null && DateTime.TryParse(t.EndDate, out var d) && d < cutoff)
         .ToList();
 
       _context.Trips.RemoveRange(expired);
