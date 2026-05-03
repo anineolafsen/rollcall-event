@@ -2,11 +2,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import { useAuth } from '@clerk/expo';
 
@@ -35,6 +37,7 @@ export default function TripHomeScreen() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const formatDateValue = (value?: string | null) => {
     if (!value) {
@@ -82,6 +85,44 @@ export default function TripHomeScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, setSelectedTrip]);
+
+const handleDeleteTrip = () => {
+  if (Platform.OS === 'web') {
+    if (!window.confirm(`Are you sure you want to delete "${trip?.name}"? This will permanently remove the trip, all participants, and all associated data.`)) {
+      return;
+    }
+    void performDelete();
+  } else {
+    Alert.alert(
+      'Delete Trip',
+      `Are you sure you want to delete "${trip?.name}"? This will permanently remove the trip, all participants, and all associated data.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => void performDelete() },
+      ]
+    );
+  }
+};
+
+const performDelete = async () => {
+  setDeleting(true);
+  try {
+    const token = await getToken({ template: 'RollCallAuth' });
+    const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+    router.replace('/trips');
+  } catch {
+    if (Platform.OS === 'web') {
+      window.alert('Could not delete the trip. Please try again.');
+    } else {
+      Alert.alert('Error', 'Could not delete the trip. Please try again.');
+    }
+    setDeleting(false);
+  }
+};
 
   if (loading) {
     return (
@@ -225,6 +266,18 @@ export default function TripHomeScreen() {
             </Text>
           </View>
         </View>
+
+        {trip.isOrganizer && (
+          <TouchableOpacity
+            style={[styles.deleteButton, deleting && styles.deleteButtonDisabled]}
+            onPress={handleDeleteTrip}
+            disabled={deleting}
+          >
+            <Text style={styles.deleteButtonText}>
+              {deleting ? 'Deleting…' : 'Delete Trip'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -368,5 +421,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#b0413e',
     textAlign: 'center',
+  },
+  deleteButton: {
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e8b4b4',
+    backgroundColor: '#fdf0f0',
+    alignItems: 'center',
+  },
+  deleteButtonDisabled: {
+    opacity: 0.5,
+  },
+  deleteButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#b0413e',
   },
 });
