@@ -6,6 +6,7 @@ import AuthInput from "@/components/AuthInput";
 import AuthButton from "@/components/AuthButton";
 import ThemedText from "@/components/ThemedText";
 import AuthContainer from "@/components/AuthContainer";
+import Mountains from '@/components/ui/mountains';
 
 export default function CompleteProfileScreen() {
   const { getToken, signOut } = useAuth();
@@ -49,7 +50,7 @@ export default function CompleteProfileScreen() {
       });
 
       if (response.ok) {
-        router.replace("/");
+        router.replace("/trips");
       } else {
         const errorData = await response.text();
         console.error("Failed to update profile", errorData);

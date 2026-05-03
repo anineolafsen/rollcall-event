@@ -141,7 +141,7 @@ export function ViewTripsScreen() {
             router.push(`/trips/${item.id}`);
             return;
           }
-          router.push('/');
+          router.push('/trips');
         }}
         style={({ hovered, pressed }) => [
           styles.card,

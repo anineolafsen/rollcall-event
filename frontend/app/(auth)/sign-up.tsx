@@ -1,3 +1,4 @@
+import Mountains from '@/components/ui/mountains';
 import { View, StyleSheet, Alert, TouchableOpacity } from "react-native";
 import { useState } from "react";
 import { useSignUp, useAuth } from "@clerk/expo";
@@ -103,7 +104,7 @@ export default function SignUpPage() {
           console.log("[SignUp] Sync error (handled by AppLayout later):", e);
         }
 
-        router.replace("/");
+        router.replace("/trips");
       } else {
         console.log("[SignUp] Verification status not complete:", signUp.status);
         setError("Verification was not completed. Please try again.");
