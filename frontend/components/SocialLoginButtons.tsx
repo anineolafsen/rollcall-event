@@ -48,7 +48,7 @@ export default function SocialLoginButtons() {
 
         if (sessionId && setActive) {
           await setActive({ session: sessionId });
-          router.replace("/");
+          router.replace("/trips");
         }
       })
       .catch((err: any) => {

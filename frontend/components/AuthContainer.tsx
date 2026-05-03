@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import Mountains from './ui/mountains';
 
 interface AuthContainerProps {
   children: React.ReactNode;
@@ -7,26 +8,29 @@ interface AuthContainerProps {
 
 export default function AuthContainer({ children }: AuthContainerProps) {
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <View style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
       >
-        <View style={styles.card}>
-          {children}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            {children}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <Mountains />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent', // Let layout handle background
+    backgroundColor: '#1a2e44', 
   },
   scrollContent: {
     flexGrow: 1,
@@ -39,10 +43,10 @@ const styles = StyleSheet.create({
     maxWidth: 400, // Standard modern web width for auth cards
     padding: 24,
     borderRadius: 16,
+    backgroundColor: '#eef5fb', 
     // On web we'll have a subtle shadow/border
     ...Platform.select({
       web: {
-        backgroundColor: 'rgba(255, 255, 255, 0.03)', // Subtle for dark, will adjust in pages if needed
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
       },

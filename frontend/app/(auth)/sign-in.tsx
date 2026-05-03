@@ -1,3 +1,4 @@
+import Mountains from '@/components/ui/mountains';
 import { View, Alert, StyleSheet, TouchableOpacity } from "react-native";
 import { useState } from "react";
 import { useSignIn, useAuth } from "@clerk/expo";
@@ -51,7 +52,7 @@ export default function SignInPage() {
       }
 
       await signIn.finalize();
-      router.replace("/");
+      router.replace("/trips");
     } catch (err: any) {
       const message = getErrorMessage(err, "Something went wrong during sign in.");
       setError(message);
