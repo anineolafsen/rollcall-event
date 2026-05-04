@@ -38,6 +38,7 @@ test.describe("Trips", () => {
 
     await page.waitForTimeout(3000);
 
+    // Duplicate due to bug, remove after fix
     if (await page.locator("text=Complete Your Profile").isVisible()) {
       await page.fill('input[placeholder="First Name"]', "Bob");
       await page.fill('input[placeholder="Last Name"]', "Smith");

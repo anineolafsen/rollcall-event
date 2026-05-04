@@ -101,10 +101,61 @@ export default function EmailInviteUploader({
   const [submittedEmails, setSubmittedEmails] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [manualEmail, setManualEmail] = useState<string>("");
+  const [emailFeedback, setEmailFeedback] = useState<{
+    type: "error" | "warning" | "success" | null;
+    message: string;
+  }>({ type: null, message: "" });
 
   useEffect(() => {
     onStateChange?.(state);
   }, [state, onStateChange]);
+
+  // Validate email input in real-time
+  const handleEmailChange = (text: string) => {
+    setManualEmail(text);
+    const trimmed = text.trim();
+
+    if (!trimmed) {
+      setEmailFeedback({ type: null, message: "" });
+      return;
+    }
+
+    // Check if email is valid
+    if (!validateEmail(trimmed)) {
+      setEmailFeedback({
+        type: "error",
+        message: "Invalid email format. Please use a valid email address (e.g., user@example.com)",
+      });
+      return;
+    }
+
+    // Check if organizer's own email
+    if (
+      organizerEmail &&
+      trimmed.toLowerCase() === organizerEmail.toLowerCase()
+    ) {
+      setEmailFeedback({
+        type: "warning",
+        message: "This is your email. You're already a participant as the organizer.",
+      });
+      return;
+    }
+
+    // Check if email already exists
+    if (entries.some((e) => e.email.toLowerCase() === trimmed.toLowerCase())) {
+      setEmailFeedback({
+        type: "warning",
+        message: "This email is already in the list.",
+      });
+      return;
+    }
+
+    // Email is valid and ready to add
+    setEmailFeedback({
+      type: "success",
+      message: "Email looks good. Click Add to include it.",
+    });
+  };
 
   const validEntries = entries.filter((e) => e.valid);
   const invalidEntries = entries.filter((e) => !e.valid);
@@ -282,6 +333,7 @@ export default function EmailInviteUploader({
     setSubmittedEmails([]);
     setErrorMessage(null);
     setManualEmail("");
+    setEmailFeedback({ type: null, message: "" });
   };
 
   const handleAddManualEmail = () => {
@@ -326,6 +378,7 @@ export default function EmailInviteUploader({
     const updatedEntries = [...entries, newEntry];
     setEntries(updatedEntries);
     setManualEmail("");
+    setEmailFeedback({ type: null, message: "" });
 
     if (state === "idle") {
       setState("ready");
@@ -358,11 +411,15 @@ export default function EmailInviteUploader({
         <View style={styles.manualInputSection}>
           <View style={styles.manualInputRow}>
             <TextInput
-              style={styles.emailInput}
+              style={[
+                styles.emailInput,
+                emailFeedback.type === "error" && styles.emailInputError,
+                emailFeedback.type === "success" && styles.emailInputSuccess,
+              ]}
               placeholder="Type an email address"
               placeholderTextColor="#9CA3AF"
               value={manualEmail}
-              onChangeText={setManualEmail}
+              onChangeText={handleEmailChange}
               keyboardType="email-address"
               editable={!isSubmitting}
             />
@@ -375,10 +432,22 @@ export default function EmailInviteUploader({
                 style={styles.addButton}
                 label="Add"
                 onPress={handleAddManualEmail}
-                disabled={!manualEmail.trim() || isSubmitting}
+                disabled={!manualEmail.trim() || isSubmitting || emailFeedback.type === "error"}
               />
             </TouchableOpacity>
           </View>
+          {emailFeedback.message && (
+            <Text
+              style={[
+                styles.emailFeedback,
+                emailFeedback.type === "error" && styles.emailFeedbackError,
+                emailFeedback.type === "warning" && styles.emailFeedbackWarning,
+                emailFeedback.type === "success" && styles.emailFeedbackSuccess,
+              ]}
+            >
+              {emailFeedback.message}
+            </Text>
+          )}
         </View>
       )}
 
@@ -584,6 +653,29 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     color: "#111827",
+  },
+  emailInputError: {
+    borderColor: "#EF4444",
+    backgroundColor: "#FFF5F5",
+  },
+  emailInputSuccess: {
+    borderColor: "#10B981",
+    backgroundColor: "#F0FDF4",
+  },
+  emailFeedback: {
+    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 16,
+    paddingHorizontal: 12,
+  },
+  emailFeedbackError: {
+    color: "#DC2626",
+  },
+  emailFeedbackWarning: {
+    color: "#D97706",
+  },
+  emailFeedbackSuccess: {
+    color: "#059669",
   },
   addButton: {
     minHeight: 52,
