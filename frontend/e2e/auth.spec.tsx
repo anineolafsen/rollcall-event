@@ -22,19 +22,25 @@ test.describe("Authentication", () => {
 
     await page.waitForTimeout(3000);
 
-    // Input user details
-    await page.fill('input[placeholder="First Name"]', "Bob");
-    await page.fill('input[placeholder="Last Name"]', "Smith");
-    await page.fill('input[placeholder="Phone Number"]', "12345678");
-    await page.click('div[tabindex="0"]:has-text("Continue")');
+    // Input user details if profile completion screen is shown
+    if (await page.locator("text=Complete Your Profile").isVisible()) {
+      await page.fill('input[placeholder="First Name"]', "Bob");
+      await page.fill('input[placeholder="Last Name"]', "Smith");
+      await page.fill('input[placeholder="Phone Number"]', "12345678");
+      await page.click('div[tabindex="0"]:has-text("Continue")');
+
+      await page.waitForTimeout(3000);
+
+      // Confirm user details if profile confirmation screen is shown
+      if (await page.locator("text=Complete Your Profile").isVisible()) {
+        await page.fill('input[placeholder="First Name"]', "Bob");
+        await page.fill('input[placeholder="Last Name"]', "Smith");
+        await page.fill('input[placeholder="Phone Number"]', "12345678");
+        await page.click('div[tabindex="0"]:has-text("Continue")');
+      }
+    }
 
     await page.waitForTimeout(3000);
-
-    // Confirm user details
-    await page.fill('input[placeholder="First Name"]', "Bob");
-    await page.fill('input[placeholder="Last Name"]', "Smith");
-    await page.fill('input[placeholder="Phone Number"]', "12345678");
-    await page.click('div[tabindex="0"]:has-text("Continue")');
 
     // Verify that the user is signed in
     await expect(page.locator("text=Rollcall Event")).toBeVisible();
@@ -71,10 +77,7 @@ test.describe("Authentication", () => {
   
     // Delete user after
     await page.goto("/profile");
-
-    // Listen for and accept the confirmation dialog
     page.once("dialog", (dialog) => dialog.accept());
-
     await page.click('div[tabindex="0"]:has-text("Delete Account")');
     await page.waitForTimeout(3000);
     await page.reload();
