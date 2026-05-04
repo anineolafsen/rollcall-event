@@ -101,7 +101,7 @@ export default function QrCheckinScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#c7e2f8',
+    backgroundColor: '#eef5fb',
     paddingHorizontal: 24,
     paddingTop: 80,
     alignItems: 'center',

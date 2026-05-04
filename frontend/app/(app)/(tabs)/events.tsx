@@ -11,5 +11,5 @@ export default function EventsScreen() {
     return <Redirect href="/trips" />;
   }
 
-  return <UpcomingEventsScreen tripId={selectedTripId} isOrganizer={selectedTripIsOrganizer} />;
+  return <UpcomingEventsScreen tripId={selectedTripId} isOrganizer={selectedTripIsOrganizer} showBackButton={true} />;
 }

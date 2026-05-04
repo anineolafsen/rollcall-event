@@ -58,7 +58,10 @@ const parseDate = (dateStr: string): Date | null => {
 const formatDateToISO = (dateStr: string): string | null => {
   const date = parseDate(dateStr);
   if (!date) return null;
-  return date.toISOString().split("T")[0]; // Returns YYYY-MM-DD
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
 const initialFormValues: FormValues = {
@@ -115,10 +118,7 @@ export function CreateTripScreen() {
         if (!response.ok) throw new Error("Failed to load trip");
         const data = await response.json();
         const formatISOToDisplay = (isoDate: string): string => {
-          const date = new Date(isoDate);
-          const day = String(date.getDate()).padStart(2, "0");
-          const month = String(date.getMonth() + 1).padStart(2, "0");
-          const year = date.getFullYear();
+          const [year, month, day] = isoDate.split("T")[0].split("-");
           return `${day}.${month}.${year}`;
         };
         setFormValues({

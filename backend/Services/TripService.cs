@@ -172,5 +172,18 @@ namespace MyApp.API.Services
       _context.SaveChanges();
       return true;
     }
+
+    public int DeleteExpiredTrips()
+    {
+      var cutoff = DateTime.UtcNow.AddDays(-7);
+      var expired = _context.Trips
+        .AsEnumerable()
+        .Where(t => t.EndDate != null && DateTime.TryParse(t.EndDate, out var d) && d < cutoff)
+        .ToList();
+
+      _context.Trips.RemoveRange(expired);
+      _context.SaveChanges();
+      return expired.Count;
+    }
   }
 }
