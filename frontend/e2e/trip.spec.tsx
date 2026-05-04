@@ -111,17 +111,15 @@ test.describe("Trips", () => {
     await page.fill('textarea[placeholder="Add a short trip description"]', "This is a test trip.");
 
     await page.click('div[tabindex="0"]:has-text("Create Trip")');
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1000);
 
     // Navigate back to trips
     await page.click(
       'div[tabindex="0"][class*="r-cursor-1loqt21"]:has-text("My Trips")',
     );
-    await page.waitForTimeout(2000);
     await page.click(
       'div[tabindex="0"][class*="r-cursor-1loqt21"][class*="r-overflow-1udh08x"]',
     );
-    await page.waitForTimeout(1000);
 
     // Edit
     await page.click('div[tabindex="0"]:has-text("✎ Edit")');
@@ -143,12 +141,33 @@ test.describe("Trips", () => {
     await expect(page.locator(`text=${editedDestination}`)).toBeVisible();
   });
 
-  // Delete user after success or fail
+  // Delete trip and user after each test
   test.afterEach(async ({ page }) => {
+    try {
+      await page.goto("/trips");
+      await page.waitForTimeout(1000);
+
+      const tripCards = await page.locator(
+        'div[tabindex="0"][class*="r-cursor-1loqt21"][class*="r-overflow-1udh08x"]',
+      ).all();
+
+      if (tripCards.length > 0) {
+        await tripCards[0].click();
+        await page.waitForTimeout(500);
+
+        page.once("dialog", (dialog) => dialog.accept());
+        await page.click('div[tabindex="0"]:has-text("Delete")');
+        await page.waitForTimeout(1000);
+      }
+    } catch (e) {
+      console.log("Trip deletion failed, proceeding to delete account", e);
+    }
+
+    // Delete user
     await page.goto("/profile");
     page.once("dialog", (dialog) => dialog.accept());
     await page.click('div[tabindex="0"]:has-text("Delete Account")');
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1000);
     await page.reload();
     await expect(
       page.locator("text=Sign in to see your trips and events"),

@@ -79,7 +79,7 @@ test.describe("Authentication", () => {
     await page.goto("/profile");
     page.once("dialog", (dialog) => dialog.accept());
     await page.click('div[tabindex="0"]:has-text("Delete Account")');
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1000);
     await page.reload();
     await expect(
       page.locator("text=Sign in to see your trips and events"),
