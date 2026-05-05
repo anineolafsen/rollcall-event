@@ -137,11 +137,7 @@ export function ViewTripsScreen() {
       <Pressable
         onPress={() => {
           setSelectedTrip({ id: item.id, name: item.name, isOrganizer: Boolean(item.isOrganizer) });
-          if (isDesktopWeb) {
-            router.push(`/trips/${item.id}`);
-            return;
-          }
-          router.push('/trips');
+          router.push(`/trips/${item.id}`);
         }}
         style={({ hovered, pressed }) => [
           styles.card,
