@@ -12,6 +12,7 @@ export function TripsBackButton() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
+  const selectedTripId = useMobileTripStore((state) => state.selectedTripId);
   const isDesktopWeb = Platform.OS === 'web' && width >= 900;
   const isEventsRoute = pathname === '/events';
   const isEventDetailsRoute = Boolean(pathname?.match(/^\/events\/[^/]+$/));
@@ -19,7 +20,9 @@ export function TripsBackButton() {
   const isProfileRoute = pathname === '/profile';
   const isChatsRoute = Boolean(pathname?.match(/^\/chats(?:\/|$)/));
 
-  if (!pathname || pathname === '/trips' || isEventsRoute || isDesktopWeb || isCheckInRoute || isProfileRoute || isChatsRoute) {
+  const isTripHome = /^\/trips\/[^/]+$/.test(pathname);
+
+  if (!pathname || pathname === '/trips' || isTripHome || isEventsRoute || isDesktopWeb || isCheckInRoute || isProfileRoute || isChatsRoute) {
     return null;
   }
 
@@ -32,6 +35,10 @@ export function TripsBackButton() {
       return;
     }
 
+    if (selectedTripId) {
+      router.replace(`/trips/${selectedTripId}`);
+      return;
+    }
     router.replace('/trips');
   };
 

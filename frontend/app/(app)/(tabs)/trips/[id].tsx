@@ -4,13 +4,16 @@ import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useAuth } from '@clerk/expo';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { TripActionButton } from '@/components/ui/trip-action-button';
 import { useMobileTripStore } from '@/lib/mobile-trip-store';
@@ -32,6 +35,8 @@ export default function TripHomeScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const { getToken } = useAuth();
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === 'web' && width >= 900;
   const setSelectedTrip = useMobileTripStore((state) => state.setSelectedTrip);
 
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -40,15 +45,9 @@ export default function TripHomeScreen() {
   const [deleting, setDeleting] = useState(false);
 
   const formatDateValue = (value?: string | null) => {
-    if (!value) {
-      return null;
-    }
-
+    if (!value) return null;
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return null;
-    }
-
+    if (Number.isNaN(date.getTime())) return null;
     return date.toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
@@ -61,15 +60,9 @@ export default function TripHomeScreen() {
       try {
         const token = await getToken({ template: 'RollCallAuth' });
         const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (!response.ok) {
-          throw new Error(`Server responded with ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`Server responded with ${response.status}`);
         const data: Trip = await response.json();
         setTrip(data);
         setSelectedTrip({ id: data.id, name: data.name, isOrganizer: data.isOrganizer });
@@ -79,50 +72,45 @@ export default function TripHomeScreen() {
         setLoading(false);
       }
     };
-
-    if (id) {
-      void fetchTrip();
-    }
+    if (id) void fetchTrip();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, setSelectedTrip]);
 
-const handleDeleteTrip = () => {
-  if (Platform.OS === 'web') {
-    if (!window.confirm(`Are you sure you want to delete "${trip?.name}"? This will permanently remove the trip, all participants, and all associated data.`)) {
-      return;
-    }
-    void performDelete();
-  } else {
-    Alert.alert(
-      'Delete Trip',
-      `Are you sure you want to delete "${trip?.name}"? This will permanently remove the trip, all participants, and all associated data.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => void performDelete() },
-      ]
-    );
-  }
-};
-
-const performDelete = async () => {
-  setDeleting(true);
-  try {
-    const token = await getToken({ template: 'RollCallAuth' });
-    const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-    router.replace('/trips');
-  } catch {
+  const handleDeleteTrip = () => {
     if (Platform.OS === 'web') {
-      window.alert('Could not delete the trip. Please try again.');
+      if (!window.confirm(`Are you sure you want to delete "${trip?.name}"? This will permanently remove the trip, all participants, and all associated data.`)) return;
+      void performDelete();
     } else {
-      Alert.alert('Error', 'Could not delete the trip. Please try again.');
+      Alert.alert(
+        'Delete Trip',
+        `Are you sure you want to delete "${trip?.name}"? This will permanently remove the trip, all participants, and all associated data.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => void performDelete() },
+        ]
+      );
     }
-    setDeleting(false);
-  }
-};
+  };
+
+  const performDelete = async () => {
+    setDeleting(true);
+    try {
+      const token = await getToken({ template: 'RollCallAuth' });
+      const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+      router.replace('/trips');
+    } catch {
+      if (Platform.OS === 'web') {
+        window.alert('Could not delete the trip. Please try again.');
+      } else {
+        Alert.alert('Error', 'Could not delete the trip. Please try again.');
+      }
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -149,6 +137,120 @@ const performDelete = async () => {
     );
   }
 
+  // ── Mobile: standalone info card, no events list ──────────────────────────
+  if (!isDesktopWeb) {
+    const formattedStart = formatDateValue(trip.startDate);
+    const formattedEnd = formatDateValue(trip.endDate);
+    const mobileDateText =
+      formattedStart && formattedEnd
+        ? `${formattedStart} – ${formattedEnd}`
+        : 'Not added';
+
+    return (
+      <SafeAreaView style={styles.screen}>
+        <ScrollView contentContainerStyle={styles.mobileContent}>
+          <TouchableOpacity style={styles.mobileBackButton} onPress={() => router.replace('/trips')}>
+            <MaterialIcons name="arrow-back" size={22} color="#1a3d5c" />
+          </TouchableOpacity>
+
+          <Text style={styles.mobileTripName}>{trip.name}</Text>
+          <View style={styles.mobileTitleDivider} />
+
+          {trip.isOrganizer ? (
+            <View style={styles.mobileActionsContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.mobileButtonsScroll}
+                style={styles.mobileButtonsScrollView}
+              >
+                <TripActionButton
+                  label="+ Manage Invitations"
+                  onPress={() =>
+                    router.push({
+                      pathname: '/trips/[id]/manage-invitations',
+                      params: { id: String(trip.id), tripId: trip.id, tripName: trip.name },
+                    })
+                  }
+                />
+                <TripActionButton
+                  label="View Needs"
+                  backgroundColor="#d9e8f5"
+                  textColor="#1a3d5c"
+                  onPress={() =>
+                    router.push({
+                      pathname: '/trips/[id]/participant-needs',
+                      params: { id: String(trip.id), tripName: trip.name },
+                    })
+                  }
+                />
+                <TripActionButton
+                  label="✎ Edit"
+                  backgroundColor="#76b6ee"
+                  onPress={() =>
+                    router.push({
+                      pathname: '/trips/create',
+                      params: { id: trip.id },
+                    })
+                  }
+                />
+                <TripActionButton
+                  label="+ Add Organizer"
+                  backgroundColor="#fbbf24"
+                  textColor="#1a3d5c"
+                  onPress={() =>
+                    router.push({
+                      pathname: '/trips/[id]/organizers',
+                      params: { id: String(trip.id), tripName: trip.name },
+                    })
+                  }
+                />
+              </ScrollView>
+              <View style={styles.scrollIndicator} pointerEvents="none">
+                <MaterialIcons name="chevron-right" size={16} color="#4a7ca8" />
+              </View>
+            </View>
+          ) : null}
+
+          <View style={styles.mobileInfoCard}>
+            {trip.destination?.trim() ? (
+              <View style={styles.mobileInfoRow}>
+                <MaterialIcons name="place" size={15} color="#7a9ab8" />
+                <Text style={styles.mobileInfoText}>{trip.destination}</Text>
+              </View>
+            ) : null}
+            <View style={styles.mobileInfoRow}>
+              <MaterialIcons name="calendar-today" size={15} color="#7a9ab8" />
+              <Text style={styles.mobileInfoText}>{mobileDateText}</Text>
+            </View>
+            {trip.organizerPhone?.trim() ? (
+              <View style={styles.mobileInfoRow}>
+                <MaterialIcons name="phone" size={15} color="#7a9ab8" />
+                <Text style={styles.mobileInfoText}>{trip.organizerPhone}</Text>
+              </View>
+            ) : null}
+            {trip.description?.trim() ? (
+              <Text style={styles.mobileDescription}>{trip.description}</Text>
+            ) : null}
+          </View>
+
+          {trip.isOrganizer ? (
+            <TouchableOpacity
+              style={[styles.deleteButton, deleting && styles.deleteButtonDisabled]}
+              onPress={handleDeleteTrip}
+              disabled={deleting}
+            >
+              <Text style={styles.deleteButtonText}>
+                {deleting ? 'Deleting…' : 'Delete Trip'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Desktop: overview card with full details ──────────────────────────────
   const formattedStartDate = formatDateValue(trip.startDate);
   const formattedEndDate = formatDateValue(trip.endDate);
   const dateRangeText =
@@ -288,6 +390,97 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#eef5fb',
   },
+
+  // ── Mobile styles ──────────────────────────────────────────────────────────
+  mobileContent: {
+    paddingHorizontal: 22,
+    paddingTop: 56,
+    paddingBottom: 100,
+    gap: 16,
+  },
+  mobileBackButton: {
+    alignSelf: 'flex-start',
+    padding: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderWidth: 1,
+    borderColor: '#d9e8f5',
+    shadowColor: '#0b2540',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  mobileTripName: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#090909',
+    lineHeight: 32,
+    textAlign: 'center',
+  },
+  mobileTitleDivider: {
+    height: 3,
+    backgroundColor: '#76b6ee',
+    borderRadius: 999,
+    marginHorizontal: 28,
+  },
+  mobileInfoCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#d0e5f7',
+    padding: 16,
+    gap: 10,
+  },
+  mobileInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mobileInfoText: {
+    fontSize: 15,
+    color: '#1a3d5c',
+    fontWeight: '500',
+    flexShrink: 1,
+  },
+  mobileDescription: {
+    fontSize: 14,
+    color: '#1a3d5c',
+    lineHeight: 21,
+    marginTop: 4,
+  },
+  mobileActionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  mobileButtonsScrollView: {
+    flex: 1,
+  },
+  scrollIndicator: {
+    position: 'absolute',
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: '#eef5fb',
+    borderWidth: 1,
+    borderColor: '#d0e5f7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0b2540',
+    shadowOpacity: 0.10,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  mobileButtonsScroll: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingRight: 36,
+  },
+
+  // ── Desktop styles ─────────────────────────────────────────────────────────
   header: {
     backgroundColor: '#eef5fb',
     paddingHorizontal: 24,
@@ -340,14 +533,13 @@ const styles = StyleSheet.create({
   },
   topInfoRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: 18,
   },
   leftInfoGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    flexDirection: 'column',
+    gap: 12,
     flexShrink: 1,
   },
   locationPill: {
@@ -412,6 +604,8 @@ const styles = StyleSheet.create({
     color: '#1a3d5c',
     fontWeight: '500',
   },
+
+  // ── Shared ─────────────────────────────────────────────────────────────────
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -423,7 +617,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   deleteButton: {
-    marginTop: 20,
+    marginTop: 4,
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 1,
