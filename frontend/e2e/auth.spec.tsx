@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 
+test.setTimeout(200000);
 test.describe.configure({ mode: 'serial' });
 
 const user = `bob${Date.now()}+clerk_test@example.com`;

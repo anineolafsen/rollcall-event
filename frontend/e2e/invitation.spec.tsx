@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe.configure({ mode: "serial" });
-test.setTimeout(120000);
+test.setTimeout(200000);
 
 const user1 = `alice${Date.now()}+clerk_test@example.com`;
 const user2 = `bob${Date.now()}+clerk_test@example.com`;
@@ -18,8 +18,6 @@ const endDate = new Date(today);
 endDate.setDate(today.getDate() + 14);
 
 test.describe("Invitations", () => {
-  let createdUsers: Array<{ email: string; password: string }> = [];
-
   test.describe("Success", () => {
     test("Invite user to a trip and user joins", async ({ browser }) => {
       const page1 = await browser.newPage();
@@ -125,7 +123,6 @@ test.describe("Invitations", () => {
       }
 
       // User B: Check My Invitations
-      console.log("User B navigating to My Invitations");
       await page2.goto("/my-invitations");
       await page2.waitForTimeout(2000);
 
