@@ -61,11 +61,11 @@ The system aims to reduce manual coordination, improve safety, and give organize
 <a id="screenshots"></a>
 
 ### Authentication
-![Sign In Page](frontend\assets\docs\sign-in.png)
+![Sign In Page](frontend/assets/docs/sign-in.png)
 *User login with email/password and OAuth options (Google, Microsoft, Apple)*
 
 ### Main Application
-![My Invitations](frontend\assets\docs\after-login.png)
+![My Invitations](frontend/assets/docs/after-login.png)
 *Invitations dashboard with sidebar navigation*
 
 ---
