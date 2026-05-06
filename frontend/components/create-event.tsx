@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Alert,
@@ -55,7 +55,12 @@ export function CreateEventScreen() {
   const { id, tripId, emergency } = useLocalSearchParams<{ id?: string; tripId?: string; emergency?: string; }>();
   const router = useRouter();
   const { getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
   const { width } = useWindowDimensions();
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -143,7 +148,7 @@ export function CreateEventScreen() {
 
   const fetchTrip = useCallback(async (tripId: number) => {
     try {
-      const token = await getToken({ template: 'RollCallAuth' });
+      const token = await getTokenRef.current({ template: 'RollCallAuth' });
       const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -162,14 +167,14 @@ export function CreateEventScreen() {
     } catch {
       return;
     }
-  }, [getToken]);
+  }, []);
 
   const fetchEvent = useCallback(async () => {
     if (!id) return;
 
     setIsLoadingEvent(true);
     try {
-      const token = await getToken({ template: "RollCallAuth" });
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
       const event = await getEventById(id, token);
       setEventTripId(event.tripId);
       setFormValues({
@@ -327,7 +332,7 @@ export function CreateEventScreen() {
     setIsSubmitting(true);
 
     try {
-      const token = await getToken({ template: "RollCallAuth" });
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
 
       const payload: EventPayload = {
         name: formValues.title,

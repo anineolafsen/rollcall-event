@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Alert,
   View,
@@ -41,10 +41,15 @@ export default function EventDetailsScreen() {
   }>();
   const router = useRouter();
   const { getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
   const { user } = useUser();
   const { width } = useWindowDimensions();
   const selectedTripId = useMobileTripStore((state) => state.selectedTripId);
   const selectedTripName = useMobileTripStore((state) => state.selectedTripName);
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   const [event, setEvent] = useState<SecureEventRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,11 +94,11 @@ export default function EventDetailsScreen() {
   }, [id, user?.primaryEmailAddress?.emailAddress]);
 
   const loadEventDetails = useCallback(async () => {
-    const token = await getToken({ template: 'RollCallAuth' });
+    const token = await getTokenRef.current({ template: 'RollCallAuth' });
     const data = await getEventById(String(id), token);
     const nextEvent = data as SecureEventRecord;
     await applyEventState(nextEvent, token);
-  }, [applyEventState, getToken, id]);
+  }, [applyEventState, id]);
 
   const fetchEvent = useCallback(async () => {
     try {
@@ -153,7 +158,7 @@ export default function EventDetailsScreen() {
     }
 
     try {
-      const token = await getToken();
+      const token = await getTokenRef.current();
       const updated = await leaveEvent(event.id, token ?? undefined, undefined);
       setEvent(updated as SecureEventRecord);
       setShowLeaveModal(false);
@@ -169,7 +174,7 @@ export default function EventDetailsScreen() {
     }
 
     try {
-      const token = await getToken();
+      const token = await getTokenRef.current();
       const updated = await leaveEvent(event.id, token ?? undefined, leaveReason);
       setEvent(updated as SecureEventRecord);
       setShowLeaveModal(false);
@@ -215,7 +220,7 @@ export default function EventDetailsScreen() {
   const confirmDeleteEvent = async () => {
     try {
       setIsDeleting(true);
-      const token = await getToken({ template: "RollCallAuth" });
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
       await deleteEventRequest(String(id), token);
       router.replace(`/trips/${event.tripId}`);
     } catch {
@@ -264,7 +269,7 @@ export default function EventDetailsScreen() {
 
     try {
       setIsUpdatingParticipation(true);
-      const token = await getToken({ template: "RollCallAuth" });
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
       if (event.joinButtonState === 'leave') {
         setShowLeaveModal(true);
       } else {
@@ -286,7 +291,7 @@ export default function EventDetailsScreen() {
     }
 
     try {
-      const token = await getToken({ template: "RollCallAuth" });
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
       await checkinService.startSession(event.id, 'self', 15, token);
       setIsSelfCheckinActive(true);
       setCheckinMethodModalVisible(false);
@@ -302,7 +307,7 @@ export default function EventDetailsScreen() {
     }
 
     try {
-      const token = await getToken({ template: "RollCallAuth" });
+      const token = await getTokenRef.current({ template: "RollCallAuth" });
       const session = await checkinService.startSession(event.id, 'qr', 15, token);
       setCheckinMethodModalVisible(false);
       router.push(
