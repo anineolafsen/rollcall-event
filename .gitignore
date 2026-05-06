@@ -1,11 +1,3 @@
-# Environment files with secrets
-.env
-.env.local
-.env.*.local
-
-# Test/temporary projects
-PostgresTest/
-
 # OS files
 .DS_Store
 Thumbs.db
@@ -20,3 +12,9 @@ Thumbs.db
 
 # Config files
 expo-env.d.ts
+
+# Tests
+coverage/
+__tests__/coverage/
+test-results/
+playwright-report/
