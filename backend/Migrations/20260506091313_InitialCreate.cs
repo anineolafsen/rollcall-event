@@ -205,6 +205,29 @@ namespace MyApp.API.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Messages",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    EventId = table.Column<int>(type: "integer", nullable: false),
+                    SenderParticipantId = table.Column<int>(type: "integer", nullable: false),
+                    SenderName = table.Column<string>(type: "text", nullable: false),
+                    Body = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    SentAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Messages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Messages_Events_EventId",
+                        column: x => x.EventId,
+                        principalTable: "Events",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ChatMessages",
                 columns: table => new
                 {
@@ -320,6 +343,11 @@ namespace MyApp.API.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Messages_EventId",
+                table: "Messages",
+                column: "EventId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Participants_TripId_UserId",
                 table: "Participants",
                 columns: new[] { "TripId", "UserId" },
@@ -351,6 +379,9 @@ namespace MyApp.API.Migrations
 
             migrationBuilder.DropTable(
                 name: "Invitations");
+
+            migrationBuilder.DropTable(
+                name: "Messages");
 
             migrationBuilder.DropTable(
                 name: "Participants");
