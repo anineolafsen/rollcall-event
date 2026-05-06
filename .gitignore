@@ -1,0 +1,22 @@
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+
+# Test/temporary projects
+PostgresTest/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Git
+.gitkeep
+
+# Config files
+expo-env.d.ts
