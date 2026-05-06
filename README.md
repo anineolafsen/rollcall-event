@@ -263,13 +263,19 @@ rollcall-event/
 
 ### Environment Variables
 
-#### Backend (`.env` in `root folder`)
-```env
-POSTGRES_HOST=
-POSTGRES_PORT=
-POSTGRES_USER=
-POSTGRES_PASSWORD=
-POSTGRES_DB=
+#### Backend (`appsettings.json` in `/backend`)
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "{YOUR CONNECTION STRING}"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
 ```
 
 #### Frontend (`.env` in `/frontend`)
@@ -332,8 +338,10 @@ dotnet test
 ### Frontend Tests
 ```bash
 cd frontend
+npm run test:unit #unit testing
 npx playwright test #end-2-end test
-npx playwright test --ui #end-2-end watchmode
+
+npm run #to see additional possible runs
 ```
 
 ---
