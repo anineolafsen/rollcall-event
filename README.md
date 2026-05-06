@@ -338,7 +338,7 @@ EXPO_PUBLIC_API_BASE_URL=
 cd backend
 dotnet run
 ```
-The API will be available at `http://localhost:5000`
+The API will be available at `http://localhost:5118`
 
 ### Frontend (Terminal 2)
 ```bash
