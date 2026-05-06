@@ -4,7 +4,11 @@
 
 **Rollcall Event** is a full-stack event management platform designed to give organizers complete visibility into participant presence, location, and activity status throughout an event lifecycle. Know who is present, who is missing, and what is happening – at all times.
 
-[![Status](https://img.shields.io/badge/prototype%20%20-blue)]()
+[![Status](https://img.shields.io/badge/prototype%20%20-green)]()
+[![Status](https://img.shields.io/badge/-Expo-blue?&logo=expo)]() 
+[![Status](https://img.shields.io/badge/ASP.NET%20Core-5C2D91?style=badge&logo=.net&logoColor=white)]()
+[![Status](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white)]()
+
 
 ---
 
