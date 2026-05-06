@@ -277,13 +277,16 @@ rollcall-event/
 - **PostgreSQL 14** or higher
 - **Visual Studio 2022** or **Visual Studio Code** with C# extension
 
-### Environment Variables
+### ⚠️ Environment Variables
 
-#### Backend (`appsettings.json` in `/backend`)
+- Environment variables are currently included in this repository to allow the product owner and reviewers to test without configuring `application.development.json` and `.env`.
+- These variables will become non-functional once the supporting services are decommissioned post-review.
+
+#### Backend (`appsettings.development.json` in `/backend`)
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "{YOUR CONNECTION STRING}"
+    "DefaultConnection": "{CONNECTION STRING}"
   },
   "Logging": {
     "LogLevel": {
