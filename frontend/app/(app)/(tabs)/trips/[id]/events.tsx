@@ -87,9 +87,6 @@ export default function TripEventsScreen() {
         trip.isOrganizer ? (
           <View style={styles.buttonRow}>
             <NotifyButton tripId={trip.id} tripName={trip.name} />
-
-
-
             <TripActionButton
               label="+ Emergency event"
               backgroundColor="#ffeaea"

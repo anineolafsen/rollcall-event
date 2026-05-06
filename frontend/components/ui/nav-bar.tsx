@@ -6,6 +6,9 @@ import { PlatformPressable } from '@react-navigation/elements';
 import { CalendarDays, House, MessageCircle, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnreadChats } from '@/hooks/use-unread-chats';
+import { useMobileTripStore } from '@/lib/mobile-trip-store';
+
+const TRIP_HOME_RE = /^\/trips\/[^/]+$/;
 
 export function AppNavbar() {
   const pathname = usePathname();
@@ -13,8 +16,11 @@ export function AppNavbar() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { hasUnreadChats } = useUnreadChats();
-  const isCalendarActive = pathname === '/events' || pathname.startsWith('/trips');
-  const isHomeActive = pathname === '/' || pathname === '/index';
+  const selectedTripId = useMobileTripStore((state) => state.selectedTripId);
+
+  const isTripHome = TRIP_HOME_RE.test(pathname);
+  const isHomeActive = pathname === '/' || pathname === '/index' || isTripHome;
+  const isCalendarActive = pathname === '/events' || (pathname.startsWith('/trips') && !isTripHome);
   const isChatsActive = pathname === '/chats' || pathname.startsWith('/chats/');
   const isProfileActive = pathname.startsWith('/profile');
   const shouldHideNavbar = pathname === '/trips' || pathname === '/trips/create';
@@ -41,7 +47,9 @@ export function AppNavbar() {
           accessibilityRole="tab"
           accessibilityLabel="Home"
           accessibilityState={{ selected: isHomeActive }}
-          onPress={() => router.navigate('/')}
+          onPress={() =>
+            selectedTripId ? router.navigate(`/trips/${selectedTripId}`) : router.navigate('/trips')
+          }
           style={[styles.tabButton, isHomeActive && styles.tabButtonActive]}
         >
           <View style={styles.iconScaleUp}>
