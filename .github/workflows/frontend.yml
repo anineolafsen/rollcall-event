@@ -31,8 +31,5 @@ jobs:
       - name: Run Jest tests
         run: npm run test:unit
 
-      - name: Install Expo CLI
-        run: npm install -g expo-cli
-
-      - name: Build Expo
-        run: expo export
+      - name: Expo check
+        run: npx expo-doctor
