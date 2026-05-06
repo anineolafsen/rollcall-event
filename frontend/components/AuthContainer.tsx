@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, useColorScheme } from 'react-native';
 import Mountains from './ui/mountains';
 
 interface AuthContainerProps {
@@ -7,17 +7,26 @@ interface AuthContainerProps {
 }
 
 export default function AuthContainer({ children }: AuthContainerProps) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   return (
     <View style={{ flex: 1 }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+        style={[
+          styles.container,
+          { backgroundColor: isDark ? '#020617' : '#1a2e44' }
+        ]}
       >
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.card}>
+          <View style={[
+            styles.card,
+            { backgroundColor: isDark ? '#1e293b' : '#eef5fb' }
+          ]}>
             {children}
           </View>
         </ScrollView>
@@ -30,7 +39,6 @@ export default function AuthContainer({ children }: AuthContainerProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a2e44', 
   },
   scrollContent: {
     flexGrow: 1,
@@ -43,7 +51,6 @@ const styles = StyleSheet.create({
     maxWidth: 400, // Standard modern web width for auth cards
     padding: 24,
     borderRadius: 16,
-    backgroundColor: '#eef5fb', 
     // On web we'll have a subtle shadow/border
     ...Platform.select({
       web: {
