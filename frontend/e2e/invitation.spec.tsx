@@ -3,8 +3,8 @@ import { test, expect } from "@playwright/test";
 test.describe.configure({ mode: "serial" });
 test.setTimeout(200000);
 
-const user1 = `alice${Date.now()}+clerk_test@example.com`;
-const user2 = `bob${Date.now()}+clerk_test@example.com`;
+const user1 = `alice3${Date.now()}+clerk_test@example.com`;
+const user2 = `bob3${Date.now()}+clerk_test@example.com`;
 const user3 = `charlie${Date.now()}+clerk_test@example.com`;
 const password = "password";
 

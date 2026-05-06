@@ -12,6 +12,7 @@
 
 - [Concept](#concept)
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
@@ -56,7 +57,20 @@ The system aims to reduce manual coordination, improve safety, and give organize
 
 ---
 
-## 🛠 Tech Stack
+## 🖥️ Screenshots
+<a id="screenshots"></a>
+
+### Authentication
+![Sign In Page](frontend\assets\docs\sign-in.png)
+*User login with email/password and OAuth options (Google, Microsoft, Apple)*
+
+### Main Application
+![My Invitations](frontend\assets\docs\after-login.png)
+*Invitations dashboard with sidebar navigation*
+
+---
+
+### 👾 Tech Stack
 <a id="tech-stack"></a>
 
 ### Backend
@@ -338,6 +352,7 @@ dotnet test
 ```
 
 ### Frontend Tests
+- End-2-end tests use actual endpoints so backend must be running.
 ```bash
 cd frontend
 npm run test:unit #unit testing
