@@ -136,7 +136,9 @@ The backend uses a layered architecture with clear separation of concerns:
 
 - **Data** - Data access layer:
   - `AppDbContext.cs` - Entity Framework Core context
-  - Migrations directory - Database schema versioning
+
+- **Migrations** Database schema versioning
+  - `ÌnitialCreate.cs` - Consolidated migrations into a single file to resolve out-of-sync history issues, ensuring the database updates correctly for continuous development.
 
 ### Frontend (`/frontend`)
 
