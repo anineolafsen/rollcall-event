@@ -112,8 +112,8 @@ The system aims to reduce manual coordination, improve safety, and give organize
 
 ### ⚠️ Environment Variables
 
-- Environment variables are currently included in this repository to allow the product owner and reviewers to test without configuring `application.development.json` and `.env`.
-- These variables will become non-functional once the supporting services are decommissioned post-review.
+- Environment variables needs to be configured to test the application.
+- Files to be configured are `application.development.json` and `.env`.
 
 #### Backend (`appsettings.development.json` in `/backend`)
 ```json
