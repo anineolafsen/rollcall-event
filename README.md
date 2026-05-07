@@ -66,11 +66,11 @@ The system aims to reduce manual coordination, improve safety, and give organize
 <a id="screenshots"></a>
 
 ### Authentication
-![Sign In Page](docs/images/snapshot-2.png)
+![Sign In Page](docs/images/snapshots/snapshot-sign-in.png)
 *User login with email/password and OAuth options (Google, Microsoft, Apple)*
 
 ### Main Application
-![My Invitations](docs/images/snapshot-1.png)
+![My Invitations](docs/images/snapshots/snapshot-home.png)
 *Invitations dashboard with sidebar navigation*
 
 ---
