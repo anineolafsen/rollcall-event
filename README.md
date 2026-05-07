@@ -18,6 +18,7 @@
 - [Features](#features)
 - [Screenshots](#screenshots)
 - [Tech Stack](#tech-stack)
+- [Documentation](#documentation)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
@@ -65,11 +66,11 @@ The system aims to reduce manual coordination, improve safety, and give organize
 <a id="screenshots"></a>
 
 ### Authentication
-![Sign In Page](frontend/assets/docs/sign-in.png)
+![Sign In Page](docs/images/snapshot-2.png)
 *User login with email/password and OAuth options (Google, Microsoft, Apple)*
 
 ### Main Application
-![My Invitations](frontend/assets/docs/after-login.png)
+![My Invitations](docs/images/snapshot-1.png)
 *Invitations dashboard with sidebar navigation*
 
 ---
@@ -98,10 +99,40 @@ The system aims to reduce manual coordination, improve safety, and give organize
 
 ---
 
+## Documentation
+<a id="documentation"></a>
+
+Comprehensive documentation is available for developers and users:
+
+### Developer Documentation
+
+- **[API Reference](docs/API.md)** - Complete REST API documentation
+  - All endpoints across controller groups
+  - Request/response examples with HTTP status codes
+  - Authentication via Clerk JWT tokens
+  - Error handling and rate limiting guidance
+
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and technical overview
+  - Layered architecture with 5 security layers
+  - Entity Relationship Diagram (14 tables)
+  - Authentication flow with Clerk integration
+  - Service layer responsibilities
+  - Production deployment on Azure
+
+### User Documentation
+
+- **[User Guide](docs/USER_GUIDE.md)** - Step-by-step walkthroughs
+  - First-time login and profile setup
+  - Organizer workflows (trip creation, invitations, events, check-in)
+  - Participant workflows (joining trips, checking in)
+  - Troubleshooting with 10+ solutions
+
+---
+
 ## 🏗 Architecture
 <a id="architecture"></a>
 
-The application follows a client-server architecture with clear separation between frontend mobile app and backend API:
+The application follows a client-server architecture with clear separation between frontend mobile app and backend API. For detailed architecture documentation including system diagrams, authentication flows, and deployment architecture, see the [Architecture Guide](docs/ARCHITECTURE.md).
 
 ```
 ┌──────────────────────┐        HTTP/REST       ┌─────────────────────┐
