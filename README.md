@@ -50,7 +50,6 @@ The system aims to reduce manual coordination, improve safety, and give organize
 
 ### Current Features
 - ✅ Multiple check-in methods (self and manual fallback)
-- ✅ Real-time participant presence tracking
 - ✅ Live overview of participants across locations and activities
 - ✅ Quick access to participant information (contact, special needs)
 - ✅ Messaging system for schedule changes and updates
@@ -79,7 +78,7 @@ The system aims to reduce manual coordination, improve safety, and give organize
 <a id="tech-stack"></a>
 
 ### Backend
-- **[.NET 8](https://dotnet.microsoft.com/)** - Modern C# framework
+- **[.NET 10](https://dotnet.microsoft.com/)** - Modern C# framework
 - **[C#](https://learn.microsoft.com/en-us/dotnet/csharp/)** - Primary backend language
 - **[Entity Framework Core](https://learn.microsoft.com/en-us/ef/core/)** - ORM for database access
 - **[PostgreSQL](https://www.postgresql.org/)** - Relational database
@@ -96,6 +95,107 @@ The system aims to reduce manual coordination, improve safety, and give organize
 - **[Node.js](https://nodejs.org/)** - JavaScript runtime for frontend
 - **[Node Package Manager (NPM)](https://www.npmjs.com/)** - Package manager
 - **[ESLint](https://eslint.org/)** - Code linting
+
+---
+
+## 🚀 Getting Started
+<a id="getting-started"></a>
+
+### Prerequisites
+
+- **Clerk Application** for authentication
+- **.NET 10 SDK** or higher
+- **Node.js 18** or higher
+- **npm** or **yarn**
+- **PostgreSQL 14** or higher
+- **Visual Studio 2022** or **Visual Studio Code** with C# extension
+
+### ⚠️ Environment Variables
+
+- Environment variables are currently included in this repository to allow the product owner and reviewers to test without configuring `application.development.json` and `.env`.
+- These variables will become non-functional once the supporting services are decommissioned post-review.
+
+#### Backend (`appsettings.development.json` in `/backend`)
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "{CONNECTION STRING}"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+```
+
+#### Frontend (`.env` in `/frontend`)
+```env
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=
+EXPO_PUBLIC_API_BASE_URL=
+```
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd rollcall-event
+   ```
+
+2. **Backend Setup**
+   ```bash
+   cd backend
+   dotnet restore
+   dotnet ef database update
+   ```
+
+3. **Frontend Setup**
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+---
+
+## ▶️ Running the Application
+<a id="running-the-application"></a>
+
+### Backend (Terminal 1)
+```bash
+cd backend
+dotnet run
+```
+The API will be available at `http://localhost:5118`
+
+### Frontend (Terminal 2)
+```bash
+cd frontend
+npm start #or npx expo start
+```
+Follow the Expo CLI prompts to run on your device or emulator.
+
+---
+
+## 🧪 Testing
+<a id="testing"></a>
+
+### Backend Tests
+```bash
+cd backend
+dotnet test
+```
+
+### Frontend Tests
+- End-2-end tests use actual endpoints so backend must be running. Running the frontend in browser can also interfere with the test runs.
+```bash
+cd frontend
+npm run test:unit #unit testing
+npx playwright test #end-2-end test
+
+npm run #to see additional possible runs
+```
 
 ---
 
@@ -300,107 +400,6 @@ rollcall-event/
 
 ---
 
-## 🚀 Getting Started
-<a id="getting-started"></a>
-
-### Prerequisites
-
-- **Clerk Application** for authentication
-- **.NET 10 SDK** or higher
-- **Node.js 18** or higher
-- **npm** or **yarn**
-- **PostgreSQL 14** or higher
-- **Visual Studio 2022** or **Visual Studio Code** with C# extension
-
-### ⚠️ Environment Variables
-
-- Environment variables are currently included in this repository to allow the product owner and reviewers to test without configuring `application.development.json` and `.env`.
-- These variables will become non-functional once the supporting services are decommissioned post-review.
-
-#### Backend (`appsettings.development.json` in `/backend`)
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "{CONNECTION STRING}"
-  },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  }
-}
-```
-
-#### Frontend (`.env` in `/frontend`)
-```env
-EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=
-EXPO_PUBLIC_API_BASE_URL=
-```
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd rollcall-event
-   ```
-
-2. **Backend Setup**
-   ```bash
-   cd backend
-   dotnet restore
-   dotnet ef database update
-   ```
-
-3. **Frontend Setup**
-   ```bash
-   cd frontend
-   npm install
-   ```
-
----
-
-## ▶️ Running the Application
-<a id="running-the-application"></a>
-
-### Backend (Terminal 1)
-```bash
-cd backend
-dotnet run
-```
-The API will be available at `http://localhost:5118`
-
-### Frontend (Terminal 2)
-```bash
-cd frontend
-npm start
-```
-Follow the Expo CLI prompts to run on your device or emulator.
-
----
-
-## 🧪 Testing
-<a id="testing"></a>
-
-### Backend Tests
-```bash
-cd backend
-dotnet test
-```
-
-### Frontend Tests
-- End-2-end tests use actual endpoints so backend must be running.
-```bash
-cd frontend
-npm run test:unit #unit testing
-npx playwright test #end-2-end test
-
-npm run #to see additional possible runs
-```
-
----
-
 ## 🤖 AI Usage
 <a id="ai-usage"></a>
 
@@ -432,7 +431,6 @@ AI serves as a productivity tool, but critical thinking remains essential.
 ## 🐛 Known Issues
 <a id="known-issues"></a>
 
-- 🚧 Mobile responsiveness improvements needed
 - 🚧 Real-time chat push notifications needed
 - 🚧 Map view for events and trips needed
 - 🚧 Email and SMS services are currently only mocked

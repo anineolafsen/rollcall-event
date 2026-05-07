@@ -18,3 +18,12 @@ coverage/
 __tests__/coverage/
 test-results/
 playwright-report/
+
+# Environment files
+.env
+.env.local
+
+# Build files
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
